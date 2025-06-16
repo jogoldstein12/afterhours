@@ -8,10 +8,17 @@ export default {
     './src/app/**/*.{js,ts,jsx,tsx,mdx}',
   ],
   theme: {
+    container: {
+      center: true,
+      padding: "2rem",
+      screens: {
+        "2xl": "1400px",
+      },
+    },
     extend: {
       fontFamily: {
-        body: ['Inter', 'sans-serif'],
-        headline: ['Inter', 'sans-serif'],
+        body: ['var(--font-space-grotesk)', 'var(--font-inter)', 'sans-serif'],
+        headline: ['var(--font-space-grotesk)', 'var(--font-inter)', 'sans-serif'],
         code: ['monospace'],
       },
       colors: {
@@ -88,10 +95,20 @@ export default {
             height: '0',
           },
         },
+        'card-enter-anim': { // Renamed to avoid conflict with existing animation
+          from: { opacity: '0', transform: 'translateY(20px) scale(0.95)' },
+          to: { opacity: '1', transform: 'translateY(0) scale(1)' },
+        },
+        'fade-in-anim': { // Renamed to avoid conflict
+          from: { opacity: '0' },
+          to: { opacity: '1'},
+        }
       },
       animation: {
         'accordion-down': 'accordion-down 0.2s ease-out',
         'accordion-up': 'accordion-up 0.2s ease-out',
+        'card-enter': 'card-enter-anim 0.5s ease-out forwards', // Use renamed animation
+        'fade-in': 'fade-in-anim 0.3s ease-in-out', // Use renamed animation
       },
     },
   },
