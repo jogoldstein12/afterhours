@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useEffect, useState, useCallback, Suspense } from 'react';
@@ -17,6 +18,7 @@ function GamePageContent() {
   const [nsfwLevel, setNsfwLevel] = useState<NsfwLevel>('Mild');
   const [currentPlayerIndex, setCurrentPlayerIndex] = useState(0);
   const [currentPrompt, setCurrentPrompt] = useState<Prompt | null>(null);
+  const [processedPromptText, setProcessedPromptText] = useState<string>('');
   const [availablePrompts, setAvailablePrompts] = useState<Prompt[]>([]);
   const [usedPromptIds, setUsedPromptIds] = useState<Set<number>>(new Set());
   const [gameEnded, setGameEnded] = useState(false);
@@ -67,6 +69,36 @@ function GamePageContent() {
     return newPrompt;
   }, []);
 
+  useEffect(() => {
+    if (gameEnded) {
+      setProcessedPromptText("Game Over! You've gone through all the prompts for this level.");
+    } else if (currentPrompt && players.length > 0) {
+      let text = currentPrompt.text;
+      // Handle {{randomOtherPlayer}} placeholder
+      if (text.includes('{{randomOtherPlayer}}')) {
+        if (players.length > 1) {
+          // Get players other than the current player
+          const otherPlayers = players.filter((_, index) => index !== currentPlayerIndex);
+          if (otherPlayers.length > 0) {
+            const randomPlayerName = otherPlayers[Math.floor(Math.random() * otherPlayers.length)];
+            text = text.replace(/\{\{randomOtherPlayer\}\}/g, randomPlayerName);
+          } else {
+            // This case should ideally not be reached if MIN_PLAYERS is 2 and currentPlayerIndex is valid
+            text = text.replace(/\{\{randomOtherPlayer\}\}/g, 'another player (error: no other players found)');
+          }
+        } else {
+          // Only one player in the game, cannot select another
+          text = text.replace(/\{\{randomOtherPlayer\}\}/g, 'another player (error: only one player)');
+        }
+      }
+      setProcessedPromptText(text);
+    } else if (players.length > 0) { 
+      setProcessedPromptText("No prompts available for this level. Try restarting or changing the NSFW level.");
+    } else { 
+      setProcessedPromptText("Loading prompt..."); 
+    }
+  }, [currentPrompt, players, currentPlayerIndex, gameEnded]);
+
 
   const handleNextPlayer = () => {
     if (gameEnded || !currentPrompt) return;
@@ -83,7 +115,6 @@ function GamePageContent() {
     const newPrompt = selectNewPrompt(availablePrompts, newUsedPromptIds);
     if (!newPrompt) {
       // Game has ended because all prompts were used
-      // The selectNewPrompt function already sets gameEnded and currentPrompt
     }
   };
   
@@ -95,7 +126,7 @@ function GamePageContent() {
       setGameEnded(false);
     } else {
       setCurrentPrompt(null);
-      setGameEnded(true); // Still ended if no prompts
+      setGameEnded(true); 
     }
   };
 
@@ -141,10 +172,10 @@ function GamePageContent() {
               </div>
             ) : currentPrompt ? (
               <p key={cardKey} className="text-xl md:text-2xl lg:text-3xl font-medium leading-relaxed text-foreground animate-card-enter">
-                {currentPrompt.text}
+                {processedPromptText}
               </p>
             ) : (
-              <p className="text-xl text-muted-foreground animate-fade-in">No prompts available for this level. Try restarting or changing the NSFW level.</p>
+              <p className="text-xl text-muted-foreground animate-fade-in">{processedPromptText}</p>
             )}
           </CardContent>
           <CardFooter className="flex flex-col sm:flex-row gap-4 pt-6">
@@ -175,3 +206,4 @@ export default function GamePage() {
     </Suspense>
   );
 }
+
