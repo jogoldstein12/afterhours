@@ -16,7 +16,7 @@ const spaceGrotesk = Space_Grotesk({
 });
 
 export const metadata: Metadata = {
-  title: 'GlowUp: After Hours',
+  title: 'After Hours',
   description: 'Neon-styled party game for adults.',
 };
 
