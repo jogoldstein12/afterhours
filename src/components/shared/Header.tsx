@@ -11,9 +11,6 @@ export function Header() {
           <Link href="/" className="text-sm sm:text-base text-accent hover:text-primary transition-colors">
             New Game
           </Link>
-          <Link href="/moderator-test" className="text-sm sm:text-base text-accent hover:text-primary transition-colors">
-            Moderator Test
-          </Link>
         </nav>
       </div>
     </header>
