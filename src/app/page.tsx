@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Header } from '@/components/shared/Header';
-import { Users, MinusCircle, PlusCircle, ShieldAlert, Zap, Mars, Venus } from 'lucide-react';
+import { Users, MinusCircle, PlusCircle, ShieldAlert, Mars, Venus } from 'lucide-react';
 import type { NsfwLevel } from '@/lib/prompts';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
@@ -184,7 +184,7 @@ export default function HomePage() {
           </CardContent>
           <CardFooter>
             <Button onClick={startGame} className="w-full bg-primary hover:bg-primary/90 text-primary-foreground text-lg py-6 font-bold neon-border-primary">
-              <Zap className="mr-2 h-5 w-5" /> Start Game
+              Start Game
             </Button>
           </CardFooter>
         </Card>
