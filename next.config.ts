@@ -29,7 +29,6 @@ const pwaConfig = withPWA({
           maxEntries: 50,
           maxAgeSeconds: 60 * 5,
         },
-        networkTimeoutSeconds: 10,
       },
     },
     // Add more rules for other assets or API calls if needed
