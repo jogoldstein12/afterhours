@@ -16,7 +16,7 @@ const spaceGrotesk = Space_Grotesk({
 });
 
 export const metadata: Metadata = {
-  title: 'After Hours',
+  title: 'After Hours Party Game',
   description: 'Neon-styled party game for adults.',
 };
 
