@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useEffect, useState, useCallback, Suspense } from 'react';
@@ -13,7 +12,7 @@ import { cn } from '@/lib/utils';
 function GamePageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  
+
   const [players, setPlayers] = useState<string[]>([]);
   const [nsfwLevel, setNsfwLevel] = useState<NsfwLevel>('Mild');
   const [currentPlayerIndex, setCurrentPlayerIndex] = useState(0);
@@ -74,6 +73,8 @@ function GamePageContent() {
       setProcessedPromptText("Game Over! You've gone through all the prompts for this level.");
     } else if (currentPrompt && players.length > 0) {
       let text = currentPrompt.text;
+      const currentPlayerName = players[currentPlayerIndex]; // Get current player's name
+
       // Handle {{randomOtherPlayer}} placeholder
       if (text.includes('{{randomOtherPlayer}}')) {
         if (players.length > 1) {
@@ -91,11 +92,27 @@ function GamePageContent() {
           text = text.replace(/\{\{randomOtherPlayer\}\}/g, 'another player (error: only one player)');
         }
       }
+       // Convert the first letter of the prompt text to lowercase
+       if (text.length > 0) {
+        text = text.charAt(0).toLowerCase() + text.slice(1);
+      }
+
+      // Adjust phrasing based on whether the prompt is a question or starts with "if"
+      if (text.trim().endsWith('?')) {
+        text = `${currentPlayerName}, ${text}`;
+      } else if (text.trim().toLowerCase().startsWith('if')) {
+        text = `${currentPlayerName}, ${text}`;
+      }
+      else {
+        text = `${currentPlayerName} must ${text}`;
+      }
+
+
       setProcessedPromptText(text);
-    } else if (players.length > 0) { 
+    } else if (players.length > 0) {
       setProcessedPromptText("No prompts available for this level. Try restarting or changing the NSFW level.");
-    } else { 
-      setProcessedPromptText("Loading prompt..."); 
+    } else {
+      setProcessedPromptText("Loading prompt...");
     }
   }, [currentPrompt, players, currentPlayerIndex, gameEnded]);
 
@@ -111,13 +128,13 @@ function GamePageContent() {
 
     const nextPlayerIndex = (currentPlayerIndex + 1) % players.length;
     setCurrentPlayerIndex(nextPlayerIndex);
-    
+
     const newPrompt = selectNewPrompt(availablePrompts, newUsedPromptIds);
     if (!newPrompt) {
       // Game has ended because all prompts were used
     }
   };
-  
+
   const restartGame = () => {
     setCurrentPlayerIndex(0);
     const freshPrompts = loadAndFilterPrompts();
@@ -126,7 +143,7 @@ function GamePageContent() {
       setGameEnded(false);
     } else {
       setCurrentPrompt(null);
-      setGameEnded(true); 
+      setGameEnded(true);
     }
   };
 
@@ -157,8 +174,9 @@ function GamePageContent() {
       <main className="flex-grow flex items-center justify-center p-4">
         <Card className="w-full max-w-2xl shadow-2xl neon-border-accent bg-card/80 backdrop-blur-sm text-center overflow-hidden">
           <CardHeader>
+            {/* Changed CardTitle to be a generic title or removed if preferred */}
             <CardTitle className="text-3xl md:text-4xl font-headline text-primary neon-text-primary">
-              {players[currentPlayerIndex]}'s Turn
+              Current Prompt {/* Or something like "GlowUp After Hours" */}
             </CardTitle>
             <CardDescription className="text-sm text-muted-foreground">
               NSFW Level: <span className="font-semibold text-accent">{nsfwLevel}</span>
@@ -206,4 +224,3 @@ export default function GamePage() {
     </Suspense>
   );
 }
-
