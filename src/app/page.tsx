@@ -189,9 +189,6 @@ export default function HomePage() {
           </CardFooter>
         </Card>
       </main>
-      <footer className="text-center p-4 text-sm text-muted-foreground">
-        Remember to play responsibly! For ages 17+.
-      </footer>
     </div>
     </TooltipProvider>
   );
