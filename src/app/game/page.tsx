@@ -97,7 +97,7 @@ function GamePageContent() {
       // Only prepend the player's name if the prompt is a direct action for them.
       // Avoid prepending for questions, or prompts starting with "if", "everyone", "anyone", etc.
       if (
-        !trimmedLower.endsWith('?') &&
+        !text.includes('?') &&
         !trimmedLower.startsWith('if') &&
         !trimmedLower.startsWith('everyone') &&
         !trimmedLower.startsWith('anybody') &&
@@ -239,3 +239,5 @@ export default function GamePage() {
     </Suspense>
   );
 }
+
+    
