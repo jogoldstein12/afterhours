@@ -92,19 +92,34 @@ function GamePageContent() {
           text = text.replace(/\{\{randomOtherPlayer\}\}/g, 'another player (error: only one player)');
         }
       }
-       // Convert the first letter of the prompt text to lowercase
-       if (text.length > 0) {
-        text = text.charAt(0).toLowerCase() + text.slice(1);
-      }
-
-      // Adjust phrasing based on whether the prompt is a question or starts with "if"
-      if (text.trim().endsWith('?')) {
-        text = `${currentPlayerName}, ${text}`;
-      } else if (text.trim().toLowerCase().startsWith('if')) {
-        text = `${currentPlayerName}, ${text}`;
-      }
-      else {
+       
+      const trimmedLower = text.trim().toLowerCase();
+      // Only prepend the player's name if the prompt is a direct action for them.
+      // Avoid prepending for questions, or prompts starting with "if", "everyone", "anyone", etc.
+      if (
+        !trimmedLower.endsWith('?') &&
+        !trimmedLower.startsWith('if') &&
+        !trimmedLower.startsWith('everyone') &&
+        !trimmedLower.startsWith('anybody') &&
+        !trimmedLower.startsWith('anyone') &&
+        !trimmedLower.startsWith('the ') &&
+        !trimmedLower.startsWith('girls') &&
+        !trimmedLower.startsWith('men') &&
+        !trimmedLower.startsWith('women') &&
+        !trimmedLower.startsWith('no one') &&
+        !trimmedLower.startsWith('shortest') &&
+        !trimmedLower.startsWith('dominant')
+      ) {
+         // Convert the first letter of the prompt text to lowercase if we are prepending text
+        if (text.length > 0) {
+          text = text.charAt(0).toLowerCase() + text.slice(1);
+        }
         text = `${currentPlayerName} must ${text}`;
+      } else {
+         // Capitalize the first letter if we are not prepending.
+         if(text.length > 0) {
+           text = text.charAt(0).toUpperCase() + text.slice(1);
+         }
       }
 
 
