@@ -8,6 +8,16 @@ import { Header } from '@/components/shared/Header';
 import { PROMPTS, Prompt, NsfwLevel } from '@/lib/prompts';
 import { ArrowRightCircle, Home, RotateCcw } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 function GamePageContent() {
   const router = useRouter();
@@ -22,6 +32,7 @@ function GamePageContent() {
   const [usedPromptIds, setUsedPromptIds] = useState<Set<number>>(new Set());
   const [gameEnded, setGameEnded] = useState(false);
   const [cardKey, setCardKey] = useState(0); // For re-triggering animation
+  const [isNewGameDialogOpen, setIsNewGameDialogOpen] = useState(false);
 
   useEffect(() => {
     const playersQuery = searchParams.get('players');
@@ -42,18 +53,6 @@ function GamePageContent() {
     return filtered;
   }, [nsfwLevel]);
 
-  useEffect(() => {
-    if (players.length > 0 && nsfwLevel) {
-      const initialPrompts = loadAndFilterPrompts();
-      if (initialPrompts.length > 0) {
-        selectNewPrompt(initialPrompts, new Set());
-      } else {
-        setCurrentPrompt(null); // No prompts available for this level
-      }
-    }
-  }, [players, nsfwLevel, loadAndFilterPrompts]);
-
-
   const selectNewPrompt = useCallback((promptsToUse: Prompt[], currentUsedIds: Set<number>) => {
     const remainingPrompts = promptsToUse.filter(p => !currentUsedIds.has(p.id));
     if (remainingPrompts.length === 0) {
@@ -67,6 +66,30 @@ function GamePageContent() {
     setCardKey(prevKey => prevKey + 1); // Update key to re-trigger animation
     return newPrompt;
   }, []);
+  
+  const restartGame = useCallback(() => {
+    setCurrentPlayerIndex(0);
+    const freshPrompts = loadAndFilterPrompts();
+    if (freshPrompts.length > 0) {
+      selectNewPrompt(freshPrompts, new Set());
+      setGameEnded(false);
+    } else {
+      setCurrentPrompt(null);
+      setGameEnded(true);
+    }
+  }, [loadAndFilterPrompts, selectNewPrompt]);
+
+  useEffect(() => {
+    if (players.length > 0 && nsfwLevel) {
+      const initialPrompts = loadAndFilterPrompts();
+      if (initialPrompts.length > 0) {
+        selectNewPrompt(initialPrompts, new Set());
+      } else {
+        setCurrentPrompt(null); // No prompts available for this level
+      }
+    }
+  }, [players, nsfwLevel, loadAndFilterPrompts, selectNewPrompt]);
+
 
   useEffect(() => {
     if (gameEnded) {
@@ -114,14 +137,13 @@ function GamePageContent() {
         if (text.length > 0) {
           text = text.charAt(0).toLowerCase() + text.slice(1);
         }
-        text = `${currentPlayerName} must ${text}`;
+        text = `${currentPlayerName}, ${text}`;
       } else {
          // Capitalize the first letter if we are not prepending.
          if(text.length > 0) {
            text = text.charAt(0).toUpperCase() + text.slice(1);
          }
       }
-
 
       setProcessedPromptText(text);
     } else if (players.length > 0) {
@@ -150,18 +172,6 @@ function GamePageContent() {
     }
   };
 
-  const restartGame = () => {
-    setCurrentPlayerIndex(0);
-    const freshPrompts = loadAndFilterPrompts();
-    if (freshPrompts.length > 0) {
-      selectNewPrompt(freshPrompts, new Set());
-      setGameEnded(false);
-    } else {
-      setCurrentPrompt(null);
-      setGameEnded(true);
-    }
-  };
-
   if (players.length === 0) {
     return (
       <div className="flex flex-col min-h-screen">
@@ -184,50 +194,67 @@ function GamePageContent() {
   }
 
   return (
-    <div className="flex flex-col min-h-screen bg-background text-foreground">
-      <Header />
-      <main className="flex-grow flex items-center justify-center p-4">
-        <Card className="w-full max-w-2xl shadow-2xl neon-border-accent bg-card/80 backdrop-blur-sm text-center overflow-hidden">
-          <CardHeader>
-            {/* Changed CardTitle to be a generic title or removed if preferred */}
-            <CardTitle className="text-3xl md:text-4xl font-headline text-primary neon-text-primary">
-              Current Prompt {/* Or something like "GlowUp After Hours" */}
-            </CardTitle>
-            <CardDescription className="text-sm text-muted-foreground">
-              NSFW Level: <span className="font-semibold text-accent">{nsfwLevel}</span>
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="min-h-[200px] md:min-h-[250px] flex items-center justify-center p-6">
-            {gameEnded ? (
-              <div className="space-y-4 animate-fade-in">
-                <p className="text-2xl font-semibold text-accent">Game Over!</p>
-                <p className="text-muted-foreground">You've gone through all the prompts for this level.</p>
-              </div>
-            ) : currentPrompt ? (
-              <p key={cardKey} className="text-xl md:text-2xl lg:text-3xl font-medium leading-relaxed text-foreground animate-card-enter">
-                {processedPromptText}
-              </p>
-            ) : (
-              <p className="text-xl text-muted-foreground animate-fade-in">{processedPromptText}</p>
-            )}
-          </CardContent>
-          <CardFooter className="flex flex-col sm:flex-row gap-4 pt-6">
-            {gameEnded || !currentPrompt ? (
-              <Button onClick={restartGame} className="w-full sm:w-auto bg-accent hover:bg-accent/90 text-accent-foreground py-3 text-lg">
-                <RotateCcw className="mr-2 h-5 w-5" /> Restart Game
+    <>
+      <AlertDialog open={isNewGameDialogOpen} onOpenChange={setIsNewGameDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Start a New Game?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Do you want to restart with the same players or go back to the setup screen to enter new players?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={() => router.push('/')}>New Players</AlertDialogAction>
+            <AlertDialogAction onClick={restartGame}>Restart Game</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <div className="flex flex-col min-h-screen bg-background text-foreground">
+        <Header onNewGameClick={() => setIsNewGameDialogOpen(true)} />
+        <main className="flex-grow flex items-center justify-center p-4">
+          <Card className="w-full max-w-2xl shadow-2xl neon-border-accent bg-card/80 backdrop-blur-sm text-center overflow-hidden">
+            <CardHeader>
+              <CardTitle className="text-3xl md:text-4xl font-headline text-primary neon-text-primary">
+                Current Prompt
+              </CardTitle>
+              <CardDescription className="text-sm text-muted-foreground">
+                NSFW Level: <span className="font-semibold text-accent">{nsfwLevel}</span>
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="min-h-[200px] md:min-h-[250px] flex items-center justify-center p-6">
+              {gameEnded ? (
+                <div className="space-y-4 animate-fade-in">
+                  <p className="text-2xl font-semibold text-accent">Game Over!</p>
+                  <p className="text-muted-foreground">You've gone through all the prompts for this level.</p>
+                </div>
+              ) : currentPrompt ? (
+                <p key={cardKey} className="text-xl md:text-2xl lg:text-3xl font-medium leading-relaxed text-foreground animate-card-enter">
+                  {processedPromptText}
+                </p>
+              ) : (
+                <p className="text-xl text-muted-foreground animate-fade-in">{processedPromptText}</p>
+              )}
+            </CardContent>
+            <CardFooter className="flex flex-col sm:flex-row gap-4 pt-6">
+              {gameEnded || !currentPrompt ? (
+                <Button onClick={restartGame} className="w-full sm:w-auto bg-accent hover:bg-accent/90 text-accent-foreground py-3 text-lg">
+                  <RotateCcw className="mr-2 h-5 w-5" /> Restart Game
+                </Button>
+              ) : (
+                <Button onClick={handleNextPlayer} className="w-full sm:w-auto bg-primary hover:bg-primary/90 text-primary-foreground py-3 text-lg neon-border-primary">
+                  Next Player <ArrowRightCircle className="ml-2 h-5 w-5" />
+                </Button>
+              )}
+              <Button onClick={() => setIsNewGameDialogOpen(true)} variant="outline" className="w-full sm:w-auto text-accent border-accent hover:bg-accent/10 py-3 text-lg">
+                <Home className="mr-2 h-5 w-5" /> End Game
               </Button>
-            ) : (
-              <Button onClick={handleNextPlayer} className="w-full sm:w-auto bg-primary hover:bg-primary/90 text-primary-foreground py-3 text-lg neon-border-primary">
-                Next Player <ArrowRightCircle className="ml-2 h-5 w-5" />
-              </Button>
-            )}
-            <Button onClick={() => router.push('/')} variant="outline" className="w-full sm:w-auto text-accent border-accent hover:bg-accent/10 py-3 text-lg">
-              <Home className="mr-2 h-5 w-5" /> End Game
-            </Button>
-          </CardFooter>
-        </Card>
-      </main>
-    </div>
+            </CardFooter>
+          </Card>
+        </main>
+      </div>
+    </>
   );
 }
 
@@ -239,5 +266,3 @@ export default function GamePage() {
     </Suspense>
   );
 }
-
-    
