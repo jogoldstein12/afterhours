@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Header } from '@/components/shared/Header';
 import { PROMPTS, Prompt, NsfwLevel } from '@/lib/prompts';
-import { ArrowRightCircle, Home, RotateCcw } from 'lucide-react';
+import { ArrowRightCircle, Home, RotateCcw, Trash2, UserPlus, Users } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import {
   AlertDialog,
@@ -18,10 +18,18 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from '@/components/ui/sheet';
+import { Input } from '@/components/ui/input';
+import { useToast } from '@/hooks/use-toast';
+import { Label } from '@/components/ui/label';
+
+const MIN_PLAYERS = 2;
+const MAX_PLAYERS = 10;
 
 function GamePageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { toast } = useToast();
 
   const [players, setPlayers] = useState<string[]>([]);
   const [nsfwLevel, setNsfwLevel] = useState<NsfwLevel>('Mild');
@@ -33,6 +41,9 @@ function GamePageContent() {
   const [gameEnded, setGameEnded] = useState(false);
   const [cardKey, setCardKey] = useState(0); // For re-triggering animation
   const [isNewGameDialogOpen, setIsNewGameDialogOpen] = useState(false);
+  const [isEditSheetOpen, setIsEditSheetOpen] = useState(false);
+  const [newPlayerName, setNewPlayerName] = useState('');
+
 
   useEffect(() => {
     const playersQuery = searchParams.get('players');
@@ -77,6 +88,7 @@ function GamePageContent() {
       setCurrentPrompt(null);
       setGameEnded(true);
     }
+    setIsNewGameDialogOpen(false);
   }, [loadAndFilterPrompts, selectNewPrompt]);
 
   useEffect(() => {
@@ -107,18 +119,15 @@ function GamePageContent() {
             const randomPlayerName = otherPlayers[Math.floor(Math.random() * otherPlayers.length)];
             text = text.replace(/\{\{randomOtherPlayer\}\}/g, randomPlayerName);
           } else {
-            // This case should ideally not be reached if MIN_PLAYERS is 2 and currentPlayerIndex is valid
-            text = text.replace(/\{\{randomOtherPlayer\}\}/g, 'another player (error: no other players found)');
+            text = text.replace(/\{\{randomOtherPlayer\}\}/g, 'another player');
           }
         } else {
           // Only one player in the game, cannot select another
-          text = text.replace(/\{\{randomOtherPlayer\}\}/g, 'another player (error: only one player)');
+          text = text.replace(/\{\{randomOtherPlayer\}\}/g, 'another player');
         }
       }
        
       const trimmedLower = text.trim().toLowerCase();
-      // Only prepend the player's name if the prompt is a direct action for them.
-      // Avoid prepending for questions, or prompts starting with "if", "everyone", "anyone", etc.
       if (
         !text.includes('?') &&
         !trimmedLower.startsWith('if') &&
@@ -133,13 +142,11 @@ function GamePageContent() {
         !trimmedLower.startsWith('shortest') &&
         !trimmedLower.startsWith('dominant')
       ) {
-         // Convert the first letter of the prompt text to lowercase if we are prepending text
         if (text.length > 0) {
           text = text.charAt(0).toLowerCase() + text.slice(1);
         }
         text = `${currentPlayerName}, ${text}`;
       } else {
-         // Capitalize the first letter if we are not prepending.
          if(text.length > 0) {
            text = text.charAt(0).toUpperCase() + text.slice(1);
          }
@@ -171,6 +178,37 @@ function GamePageContent() {
       // Game has ended because all prompts were used
     }
   };
+
+  const handleAddPlayer = () => {
+    const trimmedName = newPlayerName.trim();
+    if (trimmedName === '') {
+      toast({ title: 'Player name cannot be empty.', variant: 'destructive' });
+      return;
+    }
+    if (players.length >= MAX_PLAYERS) {
+      toast({ title: `Cannot add more than ${MAX_PLAYERS} players.`, variant: 'destructive' });
+      return;
+    }
+    setPlayers(prev => [...prev, trimmedName]);
+    setNewPlayerName('');
+  };
+
+  const handleRemovePlayer = (indexToRemove: number) => {
+    if (players.length <= MIN_PLAYERS) {
+      toast({ title: `You need at least ${MIN_PLAYERS} players.`, description: "Go to the home page to start a new game with fewer players.", variant: 'destructive' });
+      return;
+    }
+
+    setPlayers(prev => prev.filter((_, index) => index !== indexToRemove));
+
+    // Adjust currentPlayerIndex if necessary
+    if (currentPlayerIndex >= indexToRemove) {
+      // If the removed player was before or at the current player's index,
+      // shift the current index back. The modulo will handle wrapping around.
+      setCurrentPlayerIndex(prev => (prev - 1 + players.length) % (players.length - 1));
+    }
+  };
+
 
   if (players.length === 0) {
     return (
@@ -211,8 +249,51 @@ function GamePageContent() {
         </AlertDialogContent>
       </AlertDialog>
 
+      <Sheet open={isEditSheetOpen} onOpenChange={setIsEditSheetOpen}>
+        <SheetContent>
+          <SheetHeader>
+            <SheetTitle>Edit Players</SheetTitle>
+            <SheetDescription>
+              Add or remove players from the current game.
+            </SheetDescription>
+          </SheetHeader>
+          <div className="py-4 space-y-4">
+            <Label>Current Players</Label>
+            <div className="space-y-2">
+              {players.map((player, index) => (
+                <div key={index} className="flex items-center justify-between gap-2 p-2 rounded-md bg-muted/50">
+                   <span className="font-medium">{player}</span>
+                   <Button variant="ghost" size="icon" onClick={() => handleRemovePlayer(index)} disabled={players.length <= MIN_PLAYERS}>
+                     <Trash2 className="h-4 w-4 text-destructive" />
+                   </Button>
+                </div>
+              ))}
+            </div>
+             <div className="space-y-2 pt-4">
+                <Label htmlFor="new-player-name">Add New Player</Label>
+                <div className="flex gap-2">
+                  <Input 
+                    id="new-player-name"
+                    value={newPlayerName}
+                    onChange={(e) => setNewPlayerName(e.target.value)}
+                    placeholder="New player name"
+                    onKeyDown={(e) => e.key === 'Enter' && handleAddPlayer()}
+                  />
+                  <Button onClick={handleAddPlayer} disabled={players.length >= MAX_PLAYERS}>
+                    <UserPlus />
+                  </Button>
+                </div>
+            </div>
+          </div>
+          <SheetFooter>
+            <Button onClick={() => setIsEditSheetOpen(false)}>Done</Button>
+          </SheetFooter>
+        </SheetContent>
+      </Sheet>
+
+
       <div className="flex flex-col min-h-screen bg-background text-foreground">
-        <Header onNewGameClick={() => setIsNewGameDialogOpen(true)} />
+        <Header onNewGameClick={() => setIsNewGameDialogOpen(true)} onEditPlayersClick={() => setIsEditSheetOpen(true)} />
         <main className="flex-grow flex items-center justify-center p-4">
           <Card className="w-full max-w-2xl shadow-2xl neon-border-accent bg-card/80 backdrop-blur-sm text-center overflow-hidden">
             <CardHeader>
@@ -220,7 +301,7 @@ function GamePageContent() {
                 Current Prompt
               </CardTitle>
               <CardDescription className="text-sm text-muted-foreground">
-                NSFW Level: <span className="font-semibold text-accent">{nsfwLevel}</span>
+                NSFW Level: <span className="font-semibold text-accent">{nsfwLevel}</span> | Player: <span className="font-semibold text-primary">{players[currentPlayerIndex]}</span>
               </CardDescription>
             </CardHeader>
             <CardContent className="min-h-[200px] md:min-h-[250px] flex items-center justify-center p-6">
@@ -247,8 +328,8 @@ function GamePageContent() {
                   Next Player <ArrowRightCircle className="ml-2 h-5 w-5" />
                 </Button>
               )}
-              <Button onClick={() => setIsNewGameDialogOpen(true)} variant="outline" className="w-full sm:w-auto text-accent border-accent hover:bg-accent/10 py-3 text-lg">
-                <Home className="mr-2 h-5 w-5" /> End Game
+              <Button onClick={() => router.push('/')} variant="outline" className="w-full sm:w-auto text-accent border-accent hover:bg-accent/10 py-3 text-lg">
+                <Home className="mr-2 h-5 w-5" /> Home Page
               </Button>
             </CardFooter>
           </Card>
