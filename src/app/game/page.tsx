@@ -170,7 +170,7 @@ function GamePageContent() {
     }
     setUsedPromptIds(newUsedPromptIds);
 
-    const nextPlayerIndex = (currentPlayerIndex + 1) % players.length;
+    const nextPlayerIndex = Math.floor(Math.random() * players.length);
     setCurrentPlayerIndex(nextPlayerIndex);
 
     const newPrompt = selectNewPrompt(availablePrompts, newUsedPromptIds);
