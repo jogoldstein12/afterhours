@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState } from 'react';
@@ -7,17 +8,15 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Header } from '@/components/shared/Header';
-import { Users, MinusCircle, PlusCircle, ShieldAlert, Mars, Venus } from 'lucide-react';
+import { Users, MinusCircle, PlusCircle, ShieldAlert } from 'lucide-react';
 import type { NsfwLevel } from '@/lib/prompts';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 
 
 type Player = {
   name: string;
-  gender: 'male' | 'female' | null;
 };
 
 const MIN_PLAYERS = 2;
@@ -25,8 +24,8 @@ const MAX_PLAYERS = 10;
 
 export default function HomePage() {
   const [players, setPlayers] = useState<Player[]>([
-    { name: '', gender: null },
-    { name: '', gender: null }
+    { name: '' },
+    { name: '' }
   ]);
   const [nsfwLevel, setNsfwLevel] = useState<NsfwLevel>('Mild');
   const router = useRouter();
@@ -38,17 +37,9 @@ export default function HomePage() {
     setPlayers(newPlayers);
   };
 
-  const handleGenderChange = (index: number, gender: 'male' | 'female') => {
-    const newPlayers = [...players];
-    // Toggle off if the same gender is clicked again
-    newPlayers[index].gender = newPlayers[index].gender === gender ? null : gender;
-    setPlayers(newPlayers);
-  };
-
-
   const addPlayer = () => {
     if (players.length < MAX_PLAYERS) {
-      setPlayers([...players, { name: '', gender: null }]);
+      setPlayers([...players, { name: '' }]);
     } else {
       toast({
         title: "Max Players Reached",
@@ -86,7 +77,6 @@ export default function HomePage() {
   };
 
   return (
-    <TooltipProvider>
     <div className="flex flex-col min-h-screen bg-background text-foreground">
       <Header />
       <main className="flex-grow flex items-center justify-center p-4">
@@ -111,34 +101,6 @@ export default function HomePage() {
                     className="bg-input border-border focus:neon-border-accent text-foreground placeholder:text-muted-foreground"
                     aria-label={`Player ${index + 1} name`}
                   />
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => handleGenderChange(index, 'male')}
-                        className={cn('hover:bg-blue-500/20', player.gender === 'male' ? 'bg-blue-500/20 text-blue-400' : 'text-muted-foreground')}
-                        aria-label="Select male"
-                      >
-                        <Mars className="h-5 w-5" />
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>Male</TooltipContent>
-                  </Tooltip>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => handleGenderChange(index, 'female')}
-                        className={cn('hover:bg-pink-500/20', player.gender === 'female' ? 'bg-pink-500/20 text-pink-400' : 'text-muted-foreground')}
-                        aria-label="Select female"
-                      >
-                        <Venus className="h-5 w-5" />
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>Female</TooltipContent>
-                  </Tooltip>
                    {players.length > MIN_PLAYERS && (
                     <Button variant="ghost" size="icon" onClick={() => removePlayer(index)} aria-label={`Remove player ${index + 1}`}>
                       <MinusCircle className="h-5 w-5 text-destructive" />
@@ -190,6 +152,5 @@ export default function HomePage() {
         </Card>
       </main>
     </div>
-    </TooltipProvider>
   );
 }
