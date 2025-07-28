@@ -227,13 +227,13 @@ function GamePageContent() {
           <AlertDialogHeader>
             <AlertDialogTitle>Start a New Game?</AlertDialogTitle>
             <AlertDialogDescription>
-              Do you want to restart with the same players or go back to the setup screen to enter new players?
+              Do you want to restart with the same players or go back to the setup screen and start a new game?
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={() => router.push('/')}>New Players</AlertDialogAction>
-            <AlertDialogAction onClick={restartGame}>Restart Game</AlertDialogAction>
+            <AlertDialogAction onClick={() => router.push('/')} className="bg-rose-400 hover:bg-rose-600 text-white">Start New Game</AlertDialogAction>
+            <AlertDialogAction onClick={restartGame} className="bg-primary hover:bg-primary/90 text-primary-foreground">Restart Game</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
