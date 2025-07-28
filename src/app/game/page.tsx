@@ -6,8 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Header } from '@/components/shared/Header';
 import { PROMPTS, Prompt, NsfwLevel } from '@/lib/prompts';
-import { ArrowRightCircle, Home, RotateCcw, Trash2, UserPlus, Users } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { ArrowRightCircle, Home, RotateCcw, Trash2, UserPlus } from 'lucide-react';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -173,10 +172,7 @@ function GamePageContent() {
     const nextPlayerIndex = Math.floor(Math.random() * players.length);
     setCurrentPlayerIndex(nextPlayerIndex);
 
-    const newPrompt = selectNewPrompt(availablePrompts, newUsedPromptIds);
-    if (!newPrompt) {
-      // Game has ended because all prompts were used
-    }
+    selectNewPrompt(availablePrompts, newUsedPromptIds);
   };
 
   const handleAddPlayer = () => {
@@ -318,7 +314,7 @@ function GamePageContent() {
                 <p className="text-xl text-muted-foreground animate-fade-in">{processedPromptText}</p>
               )}
             </CardContent>
-            <CardFooter className="flex flex-col sm:flex-row gap-4 pt-6">
+            <CardFooter className="flex flex-col sm:flex-row justify-center gap-4 pt-6">
               {gameEnded || !currentPrompt ? (
                 <Button onClick={restartGame} className="w-full sm:w-auto bg-accent hover:bg-accent/90 text-accent-foreground py-3 text-lg">
                   <RotateCcw className="mr-2 h-5 w-5" /> Restart Game
@@ -328,9 +324,6 @@ function GamePageContent() {
                   Next Player <ArrowRightCircle className="ml-2 h-5 w-5" />
                 </Button>
               )}
-              <Button onClick={() => router.push('/')} variant="outline" className="w-full sm:w-auto text-accent border-accent hover:bg-accent/10 py-3 text-lg">
-                <Home className="mr-2 h-5 w-5" /> Home Page
-              </Button>
             </CardFooter>
           </Card>
         </main>
