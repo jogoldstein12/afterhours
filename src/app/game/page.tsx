@@ -4,9 +4,8 @@ import { useEffect, useState, useCallback, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { Header } from '@/components/shared/Header';
 import { PROMPTS, Prompt, NsfwLevel } from '@/lib/prompts';
-import { ArrowRightCircle, RotateCcw, Trash2, UserPlus } from 'lucide-react';
+import { ArrowRightCircle, RotateCcw, Trash2, UserPlus, Users, Edit } from 'lucide-react';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -208,18 +207,15 @@ function GamePageContent() {
 
   if (players.length === 0) {
     return (
-      <div className="flex flex-col min-h-screen">
-        <Header />
-        <main className="flex-grow flex items-center justify-center p-4">
-          <Card className="w-full max-w-md text-center bg-card/80 backdrop-blur-sm">
-            <CardHeader>
-              <CardTitle className="text-2xl text-primary neon-text-primary">Loading Game...</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-muted-foreground">If this takes too long, please return to the home page and start a new game.</p>
-            </CardContent>
-          </Card>
-        </main>
+      <div className="flex flex-col min-h-screen items-center justify-center">
+        <Card className="w-full max-w-md text-center bg-card/80 backdrop-blur-sm">
+          <CardHeader>
+            <CardTitle className="text-2xl text-primary neon-text-primary">Loading Game...</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-muted-foreground">If this takes too long, please return to the home page and start a new game.</p>
+          </CardContent>
+        </Card>
       </div>
     );
   }
@@ -286,12 +282,11 @@ function GamePageContent() {
 
 
       <div className="flex flex-col min-h-screen bg-background text-foreground">
-        <Header onNewGameClick={() => setIsNewGameDialogOpen(true)} onEditPlayersClick={() => setIsEditSheetOpen(true)} />
         <main className="flex-grow flex items-center justify-center p-2">
           <Card className="w-full max-w-2xl shadow-2xl neon-border-accent bg-card/80 backdrop-blur-sm text-center overflow-hidden">
             <CardHeader className="p-4">
               <CardTitle className="text-2xl md:text-3xl font-headline text-primary neon-text-primary">
-                Current Prompt
+                After Hours Party Game
               </CardTitle>
               <CardDescription className="text-sm text-muted-foreground">
                 NSFW Level: <span className="font-semibold text-accent">{nsfwLevel}</span> | Player: <span className="font-semibold text-primary">{players[currentPlayerIndex]}</span>
@@ -311,7 +306,7 @@ function GamePageContent() {
                 <p className="text-lg text-muted-foreground animate-fade-in">{processedPromptText}</p>
               )}
             </CardContent>
-            <CardFooter className="flex flex-col sm:flex-row justify-center gap-4 p-4">
+            <CardFooter className="flex flex-col items-center justify-center gap-4 p-4">
               {gameEnded || !currentPrompt ? (
                 <Button onClick={restartGame} className="w-full sm:w-auto bg-accent hover:bg-accent/90 text-accent-foreground py-2 text-md">
                   <RotateCcw className="mr-2 h-5 w-5" /> Restart Game
@@ -321,6 +316,14 @@ function GamePageContent() {
                   Next Player <ArrowRightCircle className="ml-2 h-5 w-5" />
                 </Button>
               )}
+               <div className="flex items-center justify-center gap-2 pt-4">
+                  <Button variant="outline" size="sm" onClick={() => setIsEditSheetOpen(true)}>
+                    <Users className="mr-2 h-4 w-4" /> Edit Players
+                  </Button>
+                  <Button variant="outline" size="sm" onClick={() => setIsNewGameDialogOpen(true)}>
+                    <RotateCcw className="mr-2 h-4 w-4" /> New Game
+                  </Button>
+              </div>
             </CardFooter>
           </Card>
         </main>
