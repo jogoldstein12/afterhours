@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Header } from '@/components/shared/Header';
 import { PROMPTS, Prompt, NsfwLevel } from '@/lib/prompts';
-import { ArrowRightCircle, Home, RotateCcw, Trash2, UserPlus } from 'lucide-react';
+import { ArrowRightCircle, RotateCcw, Trash2, UserPlus } from 'lucide-react';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -217,9 +217,6 @@ function GamePageContent() {
             </CardHeader>
             <CardContent>
               <p className="text-muted-foreground">If this takes too long, please return to the home page and start a new game.</p>
-              <Button onClick={() => router.push('/')} variant="outline" className="mt-4 text-accent border-accent hover:bg-accent/10">
-                <Home className="mr-2 h-4 w-4" /> Go Home
-              </Button>
             </CardContent>
           </Card>
         </main>
@@ -290,37 +287,37 @@ function GamePageContent() {
 
       <div className="flex flex-col min-h-screen bg-background text-foreground">
         <Header onNewGameClick={() => setIsNewGameDialogOpen(true)} onEditPlayersClick={() => setIsEditSheetOpen(true)} />
-        <main className="flex-grow flex items-center justify-center p-4">
+        <main className="flex-grow flex items-center justify-center p-2">
           <Card className="w-full max-w-2xl shadow-2xl neon-border-accent bg-card/80 backdrop-blur-sm text-center overflow-hidden">
-            <CardHeader>
-              <CardTitle className="text-3xl md:text-4xl font-headline text-primary neon-text-primary">
+            <CardHeader className="p-4">
+              <CardTitle className="text-2xl md:text-3xl font-headline text-primary neon-text-primary">
                 Current Prompt
               </CardTitle>
               <CardDescription className="text-sm text-muted-foreground">
                 NSFW Level: <span className="font-semibold text-accent">{nsfwLevel}</span> | Player: <span className="font-semibold text-primary">{players[currentPlayerIndex]}</span>
               </CardDescription>
             </CardHeader>
-            <CardContent className="min-h-[200px] md:min-h-[250px] flex items-center justify-center p-6">
+            <CardContent className="min-h-[25vh] md:min-h-[30vh] flex items-center justify-center p-4 md:p-6">
               {gameEnded ? (
                 <div className="space-y-4 animate-fade-in">
-                  <p className="text-2xl font-semibold text-accent">Game Over!</p>
+                  <p className="text-xl font-semibold text-accent">Game Over!</p>
                   <p className="text-muted-foreground">You've gone through all the prompts for this level.</p>
                 </div>
               ) : currentPrompt ? (
-                <p key={cardKey} className="text-xl md:text-2xl lg:text-3xl font-medium leading-relaxed text-foreground animate-card-enter">
+                <p key={cardKey} className="text-lg md:text-xl lg:text-2xl font-medium leading-relaxed text-foreground animate-card-enter">
                   {processedPromptText}
                 </p>
               ) : (
-                <p className="text-xl text-muted-foreground animate-fade-in">{processedPromptText}</p>
+                <p className="text-lg text-muted-foreground animate-fade-in">{processedPromptText}</p>
               )}
             </CardContent>
-            <CardFooter className="flex flex-col sm:flex-row justify-center gap-4 pt-6">
+            <CardFooter className="flex flex-col sm:flex-row justify-center gap-4 p-4">
               {gameEnded || !currentPrompt ? (
-                <Button onClick={restartGame} className="w-full sm:w-auto bg-accent hover:bg-accent/90 text-accent-foreground py-3 text-lg">
+                <Button onClick={restartGame} className="w-full sm:w-auto bg-accent hover:bg-accent/90 text-accent-foreground py-2 text-md">
                   <RotateCcw className="mr-2 h-5 w-5" /> Restart Game
                 </Button>
               ) : (
-                <Button onClick={handleNextPlayer} className="w-full sm:w-auto bg-primary hover:bg-primary/90 text-primary-foreground py-3 text-lg neon-border-primary">
+                <Button onClick={handleNextPlayer} className="w-full sm:w-auto bg-primary hover:bg-primary/90 text-primary-foreground py-2 text-md neon-border-primary">
                   Next Player <ArrowRightCircle className="ml-2 h-5 w-5" />
                 </Button>
               )}
