@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useEffect, useState, useCallback, Suspense } from 'react';
@@ -20,6 +21,9 @@ import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetT
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { Label } from '@/components/ui/label';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { cn } from '@/lib/utils';
+import { Separator } from '@/components/ui/separator';
 
 const MIN_PLAYERS = 2;
 const MAX_PLAYERS = 10;
@@ -55,13 +59,6 @@ function GamePageContent() {
     }
   }, [searchParams]);
 
-  const loadAndFilterPrompts = useCallback(() => {
-    const filtered = PROMPTS.filter(p => p.nsfwLevel === nsfwLevel);
-    setAvailablePrompts(filtered);
-    setUsedPromptIds(new Set()); // Reset used prompts when level/players change (or on initial load)
-    return filtered;
-  }, [nsfwLevel]);
-
   const selectNewPrompt = useCallback((promptsToUse: Prompt[], currentUsedIds: Set<number>) => {
     const remainingPrompts = promptsToUse.filter(p => !currentUsedIds.has(p.id));
     if (remainingPrompts.length === 0) {
@@ -76,12 +73,21 @@ function GamePageContent() {
     return newPrompt;
   }, []);
   
+  const loadAndFilterPrompts = useCallback(() => {
+    console.log(`Loading prompts for level: ${nsfwLevel}`);
+    const filtered = PROMPTS.filter(p => p.nsfwLevel === nsfwLevel);
+    setAvailablePrompts(filtered);
+    setUsedPromptIds(new Set()); // Reset used prompts when level changes
+    setGameEnded(false); // Reset game ended state
+    return filtered;
+  }, [nsfwLevel]);
+
+  
   const restartGame = useCallback(() => {
     setCurrentPlayerIndex(0);
     const freshPrompts = loadAndFilterPrompts();
     if (freshPrompts.length > 0) {
       selectNewPrompt(freshPrompts, new Set());
-      setGameEnded(false);
     } else {
       setCurrentPrompt(null);
       setGameEnded(true);
@@ -89,16 +95,16 @@ function GamePageContent() {
     setIsNewGameDialogOpen(false);
   }, [loadAndFilterPrompts, selectNewPrompt]);
 
+  const handleNsfwLevelChange = (newLevel: NsfwLevel) => {
+    setNsfwLevel(newLevel);
+  };
+  
   useEffect(() => {
-    if (players.length > 0 && nsfwLevel) {
-      const initialPrompts = loadAndFilterPrompts();
-      if (initialPrompts.length > 0) {
-        selectNewPrompt(initialPrompts, new Set());
-      } else {
-        setCurrentPrompt(null); // No prompts available for this level
-      }
+    if (players.length > 0) {
+      const newPrompts = loadAndFilterPrompts();
+      selectNewPrompt(newPrompts, new Set());
     }
-  }, [players, nsfwLevel, loadAndFilterPrompts, selectNewPrompt]);
+  }, [nsfwLevel, players.length]); // Re-run when nsfwLevel or player count changes.
 
 
   useEffect(() => {
@@ -241,38 +247,72 @@ function GamePageContent() {
       <Sheet open={isEditSheetOpen} onOpenChange={setIsEditSheetOpen}>
         <SheetContent>
           <SheetHeader>
-            <SheetTitle>Edit Players</SheetTitle>
+            <SheetTitle>Edit Game</SheetTitle>
             <SheetDescription>
-              Add or remove players from the current game.
+              Add or remove players, or change the NSFW level.
             </SheetDescription>
           </SheetHeader>
-          <div className="py-4 space-y-4">
-            <Label>Current Players</Label>
-            <div className="space-y-2">
-              {players.map((player, index) => (
-                <div key={index} className="flex items-center justify-between gap-2 p-2 rounded-md bg-muted/50">
-                   <span className="font-medium">{player}</span>
-                   <Button variant="ghost" size="icon" onClick={() => handleRemovePlayer(index)} disabled={players.length <= MIN_PLAYERS}>
-                     <Trash2 className="h-4 w-4 text-destructive" />
-                   </Button>
-                </div>
-              ))}
+          <div className="py-4 space-y-6">
+             {/* Player Management */}
+            <div className="space-y-4">
+              <Label className="text-lg font-medium text-accent neon-text-accent">Players</Label>
+              <div className="space-y-2">
+                {players.map((player, index) => (
+                  <div key={index} className="flex items-center justify-between gap-2 p-2 rounded-md bg-muted/50">
+                    <span className="font-medium">{player}</span>
+                    <Button variant="ghost" size="icon" onClick={() => handleRemovePlayer(index)} disabled={players.length <= MIN_PLAYERS}>
+                      <Trash2 className="h-4 w-4 text-destructive" />
+                    </Button>
+                  </div>
+                ))}
+              </div>
+              <div className="space-y-2 pt-2">
+                  <Label htmlFor="new-player-name">Add New Player</Label>
+                  <div className="flex gap-2">
+                    <Input 
+                      id="new-player-name"
+                      value={newPlayerName}
+                      onChange={(e) => setNewPlayerName(e.target.value)}
+                      placeholder="New player name"
+                      onKeyDown={(e) => e.key === 'Enter' && handleAddPlayer()}
+                    />
+                    <Button onClick={handleAddPlayer} disabled={players.length >= MAX_PLAYERS}>
+                      <UserPlus />
+                    </Button>
+                  </div>
+              </div>
             </div>
-             <div className="space-y-2 pt-4">
-                <Label htmlFor="new-player-name">Add New Player</Label>
-                <div className="flex gap-2">
-                  <Input 
-                    id="new-player-name"
-                    value={newPlayerName}
-                    onChange={(e) => setNewPlayerName(e.target.value)}
-                    placeholder="New player name"
-                    onKeyDown={(e) => e.key === 'Enter' && handleAddPlayer()}
-                  />
-                  <Button onClick={handleAddPlayer} disabled={players.length >= MAX_PLAYERS}>
-                    <UserPlus />
-                  </Button>
-                </div>
+
+            <Separator />
+            
+            {/* NSFW Level Selection */}
+            <div className="space-y-4">
+              <Label className="text-lg font-medium text-accent neon-text-accent">NSFW Level</Label>
+              <RadioGroup
+                value={nsfwLevel}
+                onValueChange={(value: string) => handleNsfwLevelChange(value as NsfwLevel)}
+                className="grid grid-cols-3 gap-2 rounded-lg bg-input p-1"
+              >
+                {(['Mild', 'Medium', 'Extreme'] as NsfwLevel[]).map((level) => (
+                    <Label 
+                      key={level} 
+                      htmlFor={`nsfw-${level.toLowerCase()}`} 
+                      className={cn(
+                        "flex items-center justify-center space-x-2 rounded-md px-3 py-2 text-center text-sm font-medium cursor-pointer transition-colors",
+                        nsfwLevel === level ? 'bg-primary text-primary-foreground neon-border-primary shadow' : 'hover:bg-primary/20'
+                      )}
+                    >
+                      <RadioGroupItem 
+                        value={level} 
+                        id={`nsfw-${level.toLowerCase()}`} 
+                        className="sr-only"
+                      />
+                      {level}
+                    </Label>
+                ))}
+              </RadioGroup>
             </div>
+
           </div>
           <SheetFooter>
             <Button onClick={() => setIsEditSheetOpen(false)}>Done</Button>
@@ -318,7 +358,7 @@ function GamePageContent() {
               )}
                <div className="flex items-center justify-center gap-2 pt-4">
                   <Button variant="outline" size="sm" onClick={() => setIsEditSheetOpen(true)}>
-                    <Users className="mr-2 h-4 w-4" /> Edit Players
+                    <Users className="mr-2 h-4 w-4" /> Edit Game
                   </Button>
                   <Button variant="outline" size="sm" onClick={() => setIsNewGameDialogOpen(true)}>
                     <RotateCcw className="mr-2 h-4 w-4" /> New Game
@@ -340,3 +380,6 @@ export default function GamePage() {
     </Suspense>
   );
 }
+
+
+    
