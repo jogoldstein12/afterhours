@@ -96,9 +96,12 @@ body {
 .neon-text-primary {
   text-shadow:
     0 0 5px hsl(var(--primary)),
-    0 0 10px hsl(var(--primary)),
-    0 0 15px hsl(var(--primary)),
-    0 0 20px hsl(var(--primary) / 0.5);
+    0 0 10px hsl(var(--primary) / 0.7),
+    0 0 20px hsl(var(--primary) / 0.3);
+}
+
+.text-secondary {
+  color: hsl(var(--secondary));
 }
 
 .neon-text-accent {
@@ -140,4 +143,46 @@ body {
 
 .animate-fade-in {
   animation: fadeIn 0.3s ease-in-out;
+}
+
+@layer utilities {
+  /* Neon Borders */
+  .neon-border-pink {
+    box-shadow: 
+      0 0 5px hsl(var(--secondary)),
+      0 0 10px hsl(var(--secondary) / 0.5),
+      inset 0 0 10px hsl(var(--secondary) / 0.3);
+    border-color: hsl(var(--secondary));
+  }
+
+  .neon-border-violet {
+    box-shadow: 
+      0 0 5px hsl(var(--primary)),
+      0 0 10px hsl(var(--primary) / 0.5),
+      inset 0 0 10px hsl(var(--primary) / 0.3);
+    border-color: hsl(var(--primary));
+  }
+
+  /* Glassmorphism */
+  .glass-card {
+    background: rgba(10, 4, 15, 0.8);
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+  }
+
+  /* Smoke Animation */
+  @keyframes drift {
+    from { transform: translateX(-10%) translateY(-10%) rotate(0deg); }
+    to { transform: translateX(10%) translateY(10%) rotate(5deg); }
+  }
+
+  .animate-smoke {
+    animation: drift 20s ease-in-out infinite alternate;
+    filter: blur(60px);
+    opacity: 0.4;
+  }
+
+  .bg-nightclub {
+    background: radial-gradient(circle at 50% 50%, #1a0b2e 0%, #0a040f 100%);
+  }
 }

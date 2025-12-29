@@ -3,6 +3,7 @@ import { Inter, Space_Grotesk } from 'next/font/google';
 import './globals.css';
 import { Toaster } from "@/components/ui/toaster";
 import { cn } from '@/lib/utils';
+import { Atmosphere } from '@/components/shared/Atmosphere';
 
 const inter = Inter({
   subsets: ['latin'],
@@ -42,8 +43,9 @@ export default function RootLayout({
           inter.variable,
           spaceGrotesk.variable
         )}
-        suppressHydrationWarning // Added to fix hydration mismatch from browser extensions
+        suppressHydrationWarning 
       >
+        <Atmosphere />
         {children}
         <Toaster />
       </body>

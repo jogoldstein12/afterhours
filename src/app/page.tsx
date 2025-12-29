@@ -84,7 +84,7 @@ export default function HomePage() {
           <CardHeader className="text-center">
             <Users className="mx-auto h-12 w-12 text-primary mb-2" />
             <CardTitle className="text-3xl font-headline text-primary neon-text-primary">Game Setup</CardTitle>
-            <CardDescription className="text-muted-foreground">Get ready for some after hours fun!</CardDescription>
+            <CardDescription className="text-muted-foreground">Where the night gets interesting!</CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
             <div className="space-y-3">
