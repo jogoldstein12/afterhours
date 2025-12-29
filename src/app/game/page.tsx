@@ -241,36 +241,35 @@ function GamePageContent() {
             nsfwLevel === 'Medium' && "neon-border-pink",
             nsfwLevel === 'Extreme' && "border-destructive shadow-[0_0_20px_rgba(255,0,0,0.4)]"
           )}>
-            <CardHeader className="border-b border-white/5 bg-white/5 p-4 md:p-6">
-              <div className="flex justify-between items-start w-full">
-                {/* Left Side: Mode Badge and Player Name underneath */}
+            <CardHeader className="border-b border-white/5 bg-white/5 p-4 md:p-6 relative min-h-[90px] flex items-center">
+              <div className="flex justify-between items-start w-full relative z-10">
+                {/* Left Side: Mode Badge and Player Name centered under it */}
                 <div className="flex flex-col gap-1 items-center min-w-[100px]">
-                  <Badge variant="outline" className="text-[10px] px-2 py-0 uppercase tracking-widest border-white/20 text-white/50 shrink-0">
+                  <Badge variant="outline" className="text-[9px] sm:text-[10px] px-2 py-0 uppercase tracking-widest border-white/20 text-white/50 shrink-0">
                     {nsfwLevel} Mode
                   </Badge>
-                  <CardTitle className="text-2xl md:text-3xl font-headline font-bold text-white tracking-tight">
+                  <CardTitle className="text-xl sm:text-2xl md:text-3xl font-headline font-bold text-white tracking-tight leading-none h-[28px] sm:h-[32px] flex items-center">
                     {players[currentPlayerIndex]}
                   </CardTitle>
                 </div>
                 
-                {/* Middle: Centered Logo */}
-                <div className="absolute left-1/2 -translate-x-1/2 scale-75 md:scale-90">
+                {/* Middle: Centered Logo - Absolutely positioned for perfect alignment */}
+                <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 scale-[0.6] sm:scale-[0.75] z-0">
                   <Logo />
                 </div>
 
-                {/* Right Side: Player Count */}
+                {/* Right Side: Group Label and Player Count below it */}
                 <div className="flex flex-col gap-1 items-center min-w-[100px]">
-                  <Badge variant="outline" className="text-[10px] px-2 py-0 uppercase tracking-widest border-white/20 text-white/50 shrink-0">
-                  # of Players
+                  <Badge variant="outline" className="text-[9px] sm:text-[10px] px-2 py-0 uppercase tracking-widest border-white/20 text-white/50 shrink-0">
+                    # Of Players
                   </Badge>
-                <div className="flex items-center gap-1.5 opacity-50 h-[32px] md:h-[40px]"> {/* Matches CardTitle height for symmetry */}
-                  
-                  <span className="text-[10px] uppercase font-bold tracking-tighter">{players.length} Players</span>
+                  <div className="flex items-center gap-1.5 opacity-50 h-[28px] sm:h-[32px]">
+                    <span className="text-[9px] sm:text-[10px] uppercase font-bold tracking-tighter">{players.length} Players</span>
                   </div>
                 </div>
               </div>
             </CardHeader>
-            
+                        
             <CardContent className="min-h-[25vh] md:min-h-[30vh] flex items-center justify-center p-6 md:p-10">
               {gameEnded ? (
                 <div className="space-y-4 animate-fade-in text-center">

@@ -1,17 +1,17 @@
 {
   "name": "After Hours Party Game",
-  "short_name": "AfterHours",
+  "short_name": "After Hours",
   "start_url": "/",
   "display": "standalone",
-  "description": "After Hours Party Game with PWA capabilities.",
+  "description": "After Hours Party Game.",
   "icons": [
     {
-      "src": "/icons/icon-192x192.png",
+      "src": "/icons/After_Hours_App_Icon.png",
       "sizes": "192x192",
       "type": "image/png"
     },
     {
-      "src": "/icons/icon-512x512.png",
+      "src": "/icons/After_Hours_App_Icon.png",
       "sizes": "512x512",
       "type": "image/png"
     }
