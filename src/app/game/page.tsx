@@ -236,32 +236,41 @@ function GamePageContent() {
       <div className="flex flex-col min-h-screen bg-background text-foreground">
         <main className="flex-grow flex items-center justify-center p-4">
           <Card className={cn(
-            "w-full max-w-2xl transition-all duration-500 glass-card overflow-hidden border-[1px]",
+            "w-full max-w-4xl transition-all duration-500 glass-card overflow-hidden border-[1px]",
             nsfwLevel === 'Mild' && "neon-border-violet",
             nsfwLevel === 'Medium' && "neon-border-pink",
             nsfwLevel === 'Extreme' && "border-destructive shadow-[0_0_20px_rgba(255,0,0,0.4)]"
           )}>
             <CardHeader className="border-b border-white/5 bg-white/5 p-4 md:p-6">
-              <div className="flex justify-between items-center w-full mb-4">
-                <Badge variant="outline" className="text-[10px] px-2 py-0 uppercase tracking-widest border-white/20 text-white/50 shrink-0">
-                  {nsfwLevel} Mode
-                </Badge>
+              <div className="flex justify-between items-start w-full">
+                {/* Left Side: Mode Badge and Player Name underneath */}
+                <div className="flex flex-col gap-1 items-center min-w-[100px]">
+                  <Badge variant="outline" className="text-[10px] px-2 py-0 uppercase tracking-widest border-white/20 text-white/50 shrink-0">
+                    {nsfwLevel} Mode
+                  </Badge>
+                  <CardTitle className="text-2xl md:text-3xl font-headline font-bold text-white tracking-tight">
+                    {players[currentPlayerIndex]}
+                  </CardTitle>
+                </div>
                 
-                <div className="scale-75 md:scale-90">
+                {/* Middle: Centered Logo */}
+                <div className="absolute left-1/2 -translate-x-1/2 scale-75 md:scale-90">
                   <Logo />
                 </div>
 
-                <div className="flex items-center gap-1.5 opacity-50 shrink-0">
-                  <Users className="h-3 w-3" />
+                {/* Right Side: Player Count */}
+                <div className="flex flex-col gap-1 items-center min-w-[100px]">
+                  <Badge variant="outline" className="text-[10px] px-2 py-0 uppercase tracking-widest border-white/20 text-white/50 shrink-0">
+                  # of Players
+                  </Badge>
+                <div className="flex items-center gap-1.5 opacity-50 h-[32px] md:h-[40px]"> {/* Matches CardTitle height for symmetry */}
+                  
                   <span className="text-[10px] uppercase font-bold tracking-tighter">{players.length} Players</span>
+                  </div>
                 </div>
               </div>
-
-              <CardTitle className="text-3xl md:text-4xl font-headline font-bold text-white tracking-tight text-center">
-                {players[currentPlayerIndex]}
-              </CardTitle>
             </CardHeader>
-
+            
             <CardContent className="min-h-[25vh] md:min-h-[30vh] flex items-center justify-center p-6 md:p-10">
               {gameEnded ? (
                 <div className="space-y-4 animate-fade-in text-center">
