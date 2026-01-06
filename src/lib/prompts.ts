@@ -462,5 +462,55 @@ export const PROMPTS: Prompt[] = [
   { id: 481, text: "Seven minutes in heaven with {{randomOtherPlayer}} — or both take 5 drinks.", nsfwLevel: 'Extreme' },
   { id: 482, text: "Go into a private room with {{randomOtherPlayer}} for 3 minutes or take 4 drinks.", nsfwLevel: 'Extreme' },
   { id: 483, text: "Wild Card: Skip this prompt and take {{randomOtherPlayer}} somewhere private for 2 minutes — or both finish your drinks.", nsfwLevel: 'Extreme' },
-  { id: 484, text: "Hookup with {{randomOtherPlayer}} or take 3 drinks.", nsfwLevel: 'Extreme' }
+  { id: 484, text: "Hookup with {{randomOtherPlayer}} or take 3 drinks.", nsfwLevel: 'Extreme' },
+
+  // --- Extreme: Drink If (Explicit Sexual) ---
+  { id: 485, text: "Drink if you've ever had a threesome. If you haven't but want to, remove an article of clothing.", nsfwLevel: 'Extreme' },
+  { id: 486, text: "Drink if you've ever been spit on during sex — and liked it.", nsfwLevel: 'Extreme' },
+  { id: 487, text: "Drink if you've ever asked someone to choke you harder.", nsfwLevel: 'Extreme' },
+  { id: 488, text: "Drink if you've ever had sex with more than one person in 24 hours.", nsfwLevel: 'Extreme' },
+  { id: 489, text: "Drink if you've ever been double penetrated.", nsfwLevel: 'Extreme' },
+  { id: 490, text: "Drink if you've ever given or received a golden shower.", nsfwLevel: 'Extreme' },
+  { id: 491, text: "Drink if you've ever let someone finish on your face.", nsfwLevel: 'Extreme' },
+  { id: 492, text: "Drink if you've ever swallowed. If you haven't, take 2 drinks instead.", nsfwLevel: 'Extreme' },
+  { id: 493, text: "Drink if you've ever been fisted or fisted someone.", nsfwLevel: 'Extreme' },
+  { id: 494, text: "Drink if you've ever had sex while on your period.", nsfwLevel: 'Extreme' },
+  { id: 495, text: "Drink if you've ever done anal without lube.", nsfwLevel: 'Extreme' },
+  { id: 496, text: "Drink if you've ever had sex so loud the neighbors complained.", nsfwLevel: 'Extreme' },
+
+  // --- Extreme: Drink If (Public / Risky Sex) ---
+  { id: 497, text: "Drink if you've ever had sex in front of other people (intentionally).", nsfwLevel: 'Extreme' },
+  { id: 498, text: "Drink if you've ever had sex at work — in the office, not just the building.", nsfwLevel: 'Extreme' },
+  { id: 499, text: "Drink if you've ever had sex in a bathroom stall at a bar or club.", nsfwLevel: 'Extreme' },
+  { id: 500, text: "Drink if you've ever had sex on a plane, train, or bus.", nsfwLevel: 'Extreme' },
+  { id: 501, text: "Drink if you've ever had sex in someone else's bed without them knowing.", nsfwLevel: 'Extreme' },
+  { id: 502, text: "Drink if you've ever been walked in on mid-orgasm.", nsfwLevel: 'Extreme' },
+
+  // --- Extreme: Drink If (Toys, Props & Filming) ---
+  { id: 503, text: "Drink if you've ever used a butt plug during sex.", nsfwLevel: 'Extreme' },
+  { id: 504, text: "Drink if you've ever filmed yourself masturbating.", nsfwLevel: 'Extreme' },
+  { id: 505, text: "Drink if you've ever watched your own sex tape back.", nsfwLevel: 'Extreme' },
+  { id: 506, text: "Drink if you've ever had sex while on a video call with someone else.", nsfwLevel: 'Extreme' },
+  { id: 507, text: "Drink if you've ever used food during sex (and not just whipped cream).", nsfwLevel: 'Extreme' },
+
+  // --- Extreme: Drink If (Stripping & Exposure Penalties) ---
+  { id: 508, text: "Drink if you've ever been paid for anything sexual. If yes, remove an article of clothing.", nsfwLevel: 'Extreme' },
+  { id: 509, text: "Drink if you've ever had a sugar daddy or sugar mommy. Remove clothing if still active.", nsfwLevel: 'Extreme' },
+  { id: 510, text: "Drink if you've ever sent nudes to more than 5 different people. Remove an item if over 10.", nsfwLevel: 'Extreme' },
+  { id: 511, text: "Drink if you've ever been fully naked in front of a group. If not, you are now — strip or finish your drink.", nsfwLevel: 'Extreme' },
+  { id: 512, text: "Drink if you've ever masturbated thinking about someone in this room. Make eye contact with them or take 3 more.", nsfwLevel: 'Extreme' },
+
+  // --- Extreme: Drink If (Confessions with Consequences) ---
+  { id: 513, text: "Drink if you've ever been someone's 'first.' Name them or take 3 more drinks.", nsfwLevel: 'Extreme' },
+  { id: 514, text: "Drink if you've ever had sex with someone in this room. Confirm it or both of you finish your drinks.", nsfwLevel: 'Extreme' },
+  { id: 515, text: "Drink if you've ever faked an orgasm with someone in this room. Look at them while you drink.", nsfwLevel: 'Extreme' },
+  { id: 516, text: "Drink if you've ever paid for sex or sexual services. Admit it or remove an article of clothing.", nsfwLevel: 'Extreme' },
+  { id: 517, text: "Drink if you've ever made someone cry during sex (good or bad). Tell the story or take 4 drinks.", nsfwLevel: 'Extreme' },
+
+  // --- Extreme: Drink If (Wild / Taboo) ---
+  { id: 518, text: "Drink if you've ever hooked up with a family member's friend.", nsfwLevel: 'Extreme' },
+  { id: 519, text: "Drink if you've ever hooked up with someone at a funeral or wedding.", nsfwLevel: 'Extreme' },
+  { id: 520, text: "Drink if you've ever had sex in a church, temple, or place of worship.", nsfwLevel: 'Extreme' },
+  { id: 521, text: "Drink if you've ever had sex with someone 15+ years older or younger than you.", nsfwLevel: 'Extreme' },
+  { id: 522, text: "Drink if you've ever hooked up with someone whose name you still don't know.", nsfwLevel: 'Extreme' }
 ];
