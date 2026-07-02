@@ -319,7 +319,7 @@ export const PROMPTS: Prompt[] = [
   { id: 264, text: "Everyone who's ever caught feelings faster than they'd admit, drink.", nsfwLevel: 'Medium' },
 
   // ============================================================================
-  // EXTREME (IDs 300-491) - Escalating heat: confessions, dares & explicit play
+  // EXTREME (IDs 300-538) - Escalating heat: confessions, dares & explicit play
   // ============================================================================
 
   // --- Extreme: Explicit Confessions ---
@@ -564,5 +564,60 @@ export const PROMPTS: Prompt[] = [
   { id: 488, text: "Let {{randomOtherPlayer}} write one dare on your skin that you have to complete before your next turn, or take 3 drinks.", nsfwLevel: 'Extreme' },
   { id: 489, text: "Give {{randomOtherPlayer}} the most convincing preview of what a night with you looks like, or finish your drink.", nsfwLevel: 'Extreme' },
   { id: 490, text: "Let {{randomOtherPlayer}} choose: two layers gone or their dare, no questions asked.", nsfwLevel: 'Extreme' },
-  { id: 491, text: "Close the round however you want with {{randomOtherPlayer}}, as long as it's bolder than your last turn, or finish your drink.", nsfwLevel: 'Extreme' }
+  { id: 491, text: "Close the round however you want with {{randomOtherPlayer}}, as long as it's bolder than your last turn, or finish your drink.", nsfwLevel: 'Extreme' },
+
+  // --- Extreme: Drink If (Explicit Acts) ---
+  { id: 492, text: "Drink if you've ever swallowed; if you never have, take 2 instead.", nsfwLevel: 'Extreme' },
+  { id: 493, text: "Drink if you've ever let someone finish on your face.", nsfwLevel: 'Extreme' },
+  { id: 494, text: "Drink if you've ever been double-penetrated.", nsfwLevel: 'Extreme' },
+  { id: 495, text: "Drink if you've ever given or received a golden shower.", nsfwLevel: 'Extreme' },
+  { id: 496, text: "Drink if you've ever been fisted, or done the fisting.", nsfwLevel: 'Extreme' },
+  { id: 497, text: "Drink if you've ever had sex on your period.", nsfwLevel: 'Extreme' },
+  { id: 498, text: "Drink if you've ever done anal without lube; respect.", nsfwLevel: 'Extreme' },
+  { id: 499, text: "Drink if you've ever used a butt plug in the bedroom.", nsfwLevel: 'Extreme' },
+  { id: 500, text: "Drink if you've ever been spit on in bed and liked it.", nsfwLevel: 'Extreme' },
+  { id: 501, text: "Drink if you've ever squirted, or made someone else.", nsfwLevel: 'Extreme' },
+  { id: 502, text: "Drink if you've ever had a hand around your throat and asked for more.", nsfwLevel: 'Extreme' },
+  { id: 503, text: "Drink if you've ever finished more than once in a single session.", nsfwLevel: 'Extreme' },
+  { id: 504, text: "Drink if you've ever deep-throated, dare or otherwise.", nsfwLevel: 'Extreme' },
+  { id: 505, text: "Drink if you've ever tasted yourself.", nsfwLevel: 'Extreme' },
+  { id: 506, text: "Drink if you've ever rimmed someone, or been rimmed.", nsfwLevel: 'Extreme' },
+  { id: 507, text: "Drink if you've ever pegged someone, or been pegged.", nsfwLevel: 'Extreme' },
+  { id: 508, text: "Drink if you've ever left nail marks down someone's back.", nsfwLevel: 'Extreme' },
+  { id: 509, text: "Drink if you've ever come so hard you saw stars.", nsfwLevel: 'Extreme' },
+
+  // --- Extreme: Drink If (Taboo & Wild) ---
+  { id: 510, text: "Drink if you've ever had sex in a church, temple, or anywhere holy.", nsfwLevel: 'Extreme' },
+  { id: 511, text: "Drink if you've ever hooked up at a funeral or a wedding.", nsfwLevel: 'Extreme' },
+  { id: 512, text: "Drink if you've ever hooked up with a family member's friend.", nsfwLevel: 'Extreme' },
+  { id: 513, text: "Drink if you've ever slept with someone 15+ years older or younger than you.", nsfwLevel: 'Extreme' },
+  { id: 514, text: "Drink if you've ever slept with a friend's ex and never confessed.", nsfwLevel: 'Extreme' },
+  { id: 515, text: "Drink if you've ever had sex at your workplace after hours.", nsfwLevel: 'Extreme' },
+  { id: 516, text: "Drink if you've ever hooked up with someone twice your age.", nsfwLevel: 'Extreme' },
+  { id: 517, text: "Drink if you've ever been the other person in an affair.", nsfwLevel: 'Extreme' },
+  { id: 518, text: "Drink if you've ever hooked up with two people in the same night.", nsfwLevel: 'Extreme' },
+  { id: 519, text: "Drink if you've ever hooked up with someone you wouldn't dare name out loud.", nsfwLevel: 'Extreme' },
+  { id: 520, text: "Drink if you've ever had sex in your childhood bedroom as a grown adult.", nsfwLevel: 'Extreme' },
+
+  // --- Extreme: Drink If (Paid & Provocative) ---
+  { id: 521, text: "Drink if you've ever been paid for anything sexual; strip a layer if yes.", nsfwLevel: 'Extreme' },
+  { id: 522, text: "Drink if you've ever had a sugar daddy or sugar mommy; lose a layer if it's still active.", nsfwLevel: 'Extreme' },
+  { id: 523, text: "Drink if you've ever paid for sex; admit it or lose a layer.", nsfwLevel: 'Extreme' },
+  { id: 524, text: "Drink if you've ever made money from a photo of yourself.", nsfwLevel: 'Extreme' },
+  { id: 525, text: "Drink if you've ever had a spicy subscription account, or paid for someone else's.", nsfwLevel: 'Extreme' },
+
+  // --- Extreme: Explicit Dares (Hands & Simulation) ---
+  { id: 526, text: "Let {{randomOtherPlayer}} slip a hand into your waistband for 10 seconds, or take 3 drinks.", nsfwLevel: 'Extreme' },
+  { id: 527, text: "Slide a hand under {{randomOtherPlayer}}'s clothes and tease for 15 seconds, or drink 3.", nsfwLevel: 'Extreme' },
+  { id: 528, text: "Let {{randomOtherPlayer}} undo your pants and slip a hand exactly where they like, or finish your drink.", nsfwLevel: 'Extreme' },
+  { id: 529, text: "Suck {{randomOtherPlayer}}'s toe like you actually mean it, or take 3 drinks.", nsfwLevel: 'Extreme' },
+  { id: 530, text: "Guide {{randomOtherPlayer}}'s hand exactly where you'd want it and hold it there for 10 seconds, or take 3 drinks.", nsfwLevel: 'Extreme' },
+  { id: 531, text: "Let {{randomOtherPlayer}} decide where your hands go for the next 20 seconds, or drink 3.", nsfwLevel: 'Extreme' },
+  { id: 532, text: "Simulate going down on {{randomOtherPlayer}} for 10 seconds, fully clothed, or finish your drink.", nsfwLevel: 'Extreme' },
+  { id: 533, text: "Let {{randomOtherPlayer}} grind against your thigh until the song changes, or take 3 drinks.", nsfwLevel: 'Extreme' },
+  { id: 534, text: "Whisper to {{randomOtherPlayer}} exactly how you'd finish them off, or drink 3.", nsfwLevel: 'Extreme' },
+  { id: 535, text: "Put two fingers in {{randomOtherPlayer}}'s mouth and let them show you what they'd do, or take 3 drinks.", nsfwLevel: 'Extreme' },
+  { id: 536, text: "Kiss and bite your way down {{randomOtherPlayer}}'s stomach to their waistband, or finish your drink.", nsfwLevel: 'Extreme' },
+  { id: 537, text: "Press against {{randomOtherPlayer}} from behind and set the pace for 15 seconds, or drink 3.", nsfwLevel: 'Extreme' },
+  { id: 538, text: "Let {{randomOtherPlayer}} slide your underwear off using only their teeth, or take 3 drinks.", nsfwLevel: 'Extreme' }
 ];
