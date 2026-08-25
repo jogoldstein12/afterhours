@@ -35,7 +35,7 @@ body{
 
 /* ---------- Atmosphere ---------- */
 .atmosphere{
-  position:fixed;inset:0;z-index:-10;overflow:hidden;pointer-events:none;
+  position:fixed;inset:0;z-index:0;overflow:hidden;pointer-events:none;
   background:radial-gradient(circle at 50% 50%,#1a0b2e 0%,#0a040f 100%);
 }
 .smoke{position:absolute;animation:drift 20s ease-in-out infinite alternate;filter:blur(60px);opacity:.4;}
@@ -57,7 +57,7 @@ body{
 .glass-card{background:rgba(10,4,15,.8);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border:1px solid rgba(255,255,255,.1);}
 
 /* ---------- Layout ---------- */
-.screen{display:none;min-height:100vh;min-height:100dvh;flex-direction:column;}
+.screen{display:none;min-height:100vh;min-height:100dvh;flex-direction:column;position:relative;z-index:1;}
 .screen.active{display:flex;}
 main{flex:1;display:flex;align-items:center;justify-content:center;padding:1rem;}
 
