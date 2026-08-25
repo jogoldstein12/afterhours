@@ -1,0 +1,1348 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>After Hours Party Game</title>
+<meta name="description" content="Neon-styled party game for adults." />
+<meta name="theme-color" content="#0A040F" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous" />
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;700&family=Inter:wght@400;700&display=swap" rel="stylesheet" />
+<style>
+:root{
+  --background:285 56% 5%;
+  --foreground:0 0% 98%;
+  --card:285 50% 10%;
+  --primary:283 85% 63%;
+  --secondary:328 86% 64%;
+  --muted-foreground:0 0% 63.9%;
+  --accent:328 86% 64%;
+  --destructive:0 72% 51%;
+  --border:285 30% 25%;
+  --input:285 40% 15%;
+  --radius:0.5rem;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+html,body{min-height:100%;}
+body{
+  font-family:'Space Grotesk','Inter',system-ui,-apple-system,sans-serif;
+  background:hsl(var(--background));
+  color:hsl(var(--foreground));
+  -webkit-font-smoothing:antialiased;
+  overflow-x:hidden;
+}
+
+/* ---------- Atmosphere ---------- */
+.atmosphere{
+  position:fixed;inset:0;z-index:-10;overflow:hidden;pointer-events:none;
+  background:radial-gradient(circle at 50% 50%,#1a0b2e 0%,#0a040f 100%);
+}
+.smoke{position:absolute;animation:drift 20s ease-in-out infinite alternate;filter:blur(60px);opacity:.4;}
+.smoke svg{width:100%;height:100%;}
+.smoke-1{top:-10%;left:-10%;width:120%;height:120%;color:hsl(var(--primary)/.2);}
+.smoke-2{bottom:-10%;right:-10%;width:100%;height:100%;color:hsl(var(--secondary)/.3);animation-duration:25s;animation-delay:-5s;}
+@keyframes drift{
+  from{transform:translateX(-10%) translateY(-10%) rotate(0deg);}
+  to{transform:translateX(10%) translateY(10%) rotate(5deg);}
+}
+
+/* ---------- Neon helpers ---------- */
+.neon-text-primary{text-shadow:0 0 5px hsl(var(--primary)),0 0 10px hsl(var(--primary)/.7),0 0 20px hsl(var(--primary)/.3);}
+.neon-text-accent{text-shadow:0 0 5px hsl(var(--accent)),0 0 10px hsl(var(--accent)),0 0 15px hsl(var(--accent)),0 0 20px hsl(var(--accent)/.5);}
+.neon-border-primary{box-shadow:0 0 5px hsl(var(--primary)),0 0 10px hsl(var(--primary)/.7);}
+.neon-border-violet{border-color:hsl(var(--primary));box-shadow:0 0 5px hsl(var(--primary)),0 0 10px hsl(var(--primary)/.5),inset 0 0 10px hsl(var(--primary)/.3);}
+.neon-border-pink{border-color:hsl(var(--secondary));box-shadow:0 0 5px hsl(var(--secondary)),0 0 10px hsl(var(--secondary)/.5),inset 0 0 10px hsl(var(--secondary)/.3);}
+.neon-border-red{border-color:hsl(var(--destructive));box-shadow:0 0 20px rgba(255,0,0,.4),inset 0 0 10px rgba(255,0,0,.2);}
+.glass-card{background:rgba(10,4,15,.8);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border:1px solid rgba(255,255,255,.1);}
+
+/* ---------- Layout ---------- */
+.screen{display:none;min-height:100vh;min-height:100dvh;flex-direction:column;}
+.screen.active{display:flex;}
+main{flex:1;display:flex;align-items:center;justify-content:center;padding:1rem;}
+
+/* ---------- Logo ---------- */
+.logo{display:flex;align-items:center;gap:1rem;}
+.logo svg{color:hsl(var(--secondary));filter:drop-shadow(0 0 10px rgba(242,82,169,.9));flex-shrink:0;}
+.logo-words{display:flex;flex-direction:column;line-height:1.1;}
+.logo-title{font-size:1.5rem;font-weight:700;letter-spacing:-.025em;color:hsl(var(--primary));}
+.logo-sub{font-size:10px;text-transform:uppercase;letter-spacing:.2em;color:hsl(var(--muted-foreground));opacity:.7;}
+@media(min-width:768px){.logo-title{font-size:1.875rem;}}
+
+/* ---------- Cards ---------- */
+.card{width:100%;border-radius:var(--radius);overflow:hidden;}
+.setup-card{max-width:28rem;border:1px solid rgba(255,255,255,.1);}
+.card-header{text-align:center;padding:1.5rem;}
+.card-title{font-size:1.875rem;font-weight:700;color:hsl(var(--primary));}
+.card-desc{color:hsl(var(--muted-foreground));font-size:.875rem;margin-top:.25rem;}
+.card-content{padding:0 1.5rem 1.5rem;display:flex;flex-direction:column;gap:1.5rem;}
+.card-footer{padding:0 1.5rem 1.5rem;}
+.field{display:flex;flex-direction:column;gap:.75rem;}
+.field-label{font-size:1.125rem;font-weight:500;color:hsl(var(--accent));display:flex;align-items:center;gap:.5rem;}
+
+/* ---------- Controls ---------- */
+input[type=text]{
+  width:100%;padding:.5rem .75rem;font:inherit;font-size:.95rem;
+  background:hsl(var(--input));color:hsl(var(--foreground));
+  border:1px solid hsl(var(--border));border-radius:calc(var(--radius) - 2px);
+}
+input[type=text]::placeholder{color:hsl(var(--muted-foreground));}
+input[type=text]:focus{outline:none;box-shadow:0 0 5px hsl(var(--accent)),0 0 10px hsl(var(--accent)/.7);border-color:hsl(var(--accent));}
+.player-row{display:flex;align-items:center;gap:.5rem;}
+button{font:inherit;cursor:pointer;border:none;background:none;color:inherit;}
+button:disabled{opacity:.4;cursor:not-allowed;}
+.btn{
+  display:inline-flex;align-items:center;justify-content:center;gap:.5rem;
+  border-radius:calc(var(--radius) - 2px);padding:.6rem 1rem;font-weight:500;
+  transition:background-color .2s,transform .1s,opacity .2s;
+}
+.btn-primary{background:hsl(var(--primary));color:#fff;}
+.btn-primary:hover{background:hsl(var(--primary)/.9);}
+.btn-destructive{background:hsl(var(--destructive));color:#fff;}
+.btn-outline{border:1px solid hsl(var(--accent));color:hsl(var(--accent));width:100%;}
+.btn-outline:hover{background:hsl(var(--accent)/.1);}
+.btn-ghost{padding:.35rem .6rem;border-radius:calc(var(--radius) - 2px);}
+.btn-ghost:hover{background:rgba(255,255,255,.05);}
+.btn-icon{display:inline-flex;align-items:center;justify-content:center;padding:0;width:2.25rem;height:2.25rem;border-radius:calc(var(--radius) - 2px);flex-shrink:0;}
+.btn-start{width:100%;font-size:1.125rem;padding:1.1rem;font-weight:700;}
+.icon-destructive{color:hsl(var(--destructive));}
+
+/* ---------- Segmented radio ---------- */
+.segmented{display:grid;grid-template-columns:repeat(3,1fr);gap:.5rem;background:hsl(var(--input));padding:.25rem;border-radius:var(--radius);}
+.segmented.subtle{background:rgba(255,255,255,.05);border-radius:.75rem;}
+.seg{
+  display:flex;align-items:center;justify-content:center;text-align:center;
+  padding:.5rem .75rem;font-size:.875rem;font-weight:500;cursor:pointer;
+  border-radius:calc(var(--radius) - 2px);transition:background-color .2s,box-shadow .2s;
+}
+.seg:hover{background:hsl(var(--primary)/.2);}
+.seg[aria-checked=true]{background:hsl(var(--primary));color:#fff;box-shadow:0 0 5px hsl(var(--primary)),0 0 10px hsl(var(--primary)/.7);}
+.seg input{position:absolute;width:1px;height:1px;opacity:0;pointer-events:none;}
+
+/* ---------- Game card ---------- */
+.game-card{max-width:56rem;border:1px solid rgba(255,255,255,.1);transition:box-shadow .5s,border-color .5s;}
+.game-header{
+  border-bottom:1px solid rgba(255,255,255,.05);background:rgba(255,255,255,.05);
+  padding:1rem;position:relative;min-height:90px;display:flex;align-items:center;
+}
+.header-row{display:flex;justify-content:space-between;align-items:flex-start;width:100%;position:relative;z-index:10;}
+.header-side{display:flex;flex-direction:column;gap:.25rem;align-items:center;min-width:100px;}
+.badge{
+  font-size:9px;text-transform:uppercase;letter-spacing:.1em;padding:.1rem .5rem;
+  border:1px solid rgba(255,255,255,.2);color:rgba(255,255,255,.5);border-radius:9999px;white-space:nowrap;
+}
+.current-player{
+  font-size:1.25rem;font-weight:700;color:#fff;letter-spacing:-.025em;line-height:1;
+  height:28px;display:flex;align-items:center;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+}
+.header-logo{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%) scale(.6);z-index:0;}
+.player-count{font-size:9px;text-transform:uppercase;font-weight:700;letter-spacing:-.02em;opacity:.5;height:28px;display:flex;align-items:center;}
+@media(min-width:640px){
+  .game-header{padding:1rem 1.5rem;}
+  .badge{font-size:10px;}
+  .current-player{font-size:1.5rem;height:32px;}
+  .header-logo{transform:translate(-50%,-50%) scale(.75);}
+  .player-count{font-size:10px;height:32px;}
+}
+@media(min-width:768px){.current-player{font-size:1.875rem;}}
+
+.prompt-area{min-height:25vh;display:flex;align-items:center;justify-content:center;padding:1.5rem;}
+@media(min-width:768px){.prompt-area{min-height:30vh;padding:2.5rem;}}
+.prompt-text{
+  font-size:1.25rem;font-weight:500;line-height:1.25;color:#fff;text-align:center;
+  filter:drop-shadow(0 1px 2px rgba(0,0,0,.5));animation:cardEnter .5s ease-out forwards;
+}
+@media(min-width:768px){.prompt-text{font-size:1.875rem;}}
+@keyframes cardEnter{
+  from{opacity:0;transform:translateY(20px) scale(.95);}
+  to{opacity:1;transform:translateY(0) scale(1);}
+}
+.game-over{text-align:center;display:flex;flex-direction:column;gap:1rem;animation:fadeIn .3s ease-in-out;}
+.game-over h2{font-size:1.875rem;font-weight:700;color:hsl(var(--secondary));}
+.game-over p{color:hsl(var(--muted-foreground));font-size:1.125rem;font-style:italic;}
+@keyframes fadeIn{from{opacity:0;}to{opacity:1;}}
+
+.game-footer{background:rgba(255,255,255,.05);padding:1rem;display:flex;flex-direction:column;gap:1rem;align-items:center;}
+@media(min-width:768px){.game-footer{padding:1.5rem;}}
+.btn-next{min-width:200px;font-size:1.125rem;font-weight:700;padding:1.1rem 1.5rem;border-radius:.75rem;box-shadow:0 20px 25px -5px rgba(0,0,0,.4);}
+.btn-next:hover{transform:scale(1.02);}
+.btn-next:active{transform:scale(.95);}
+.footer-actions{display:flex;align-items:center;justify-content:center;gap:1rem;flex-wrap:wrap;padding-top:.5rem;}
+.btn-mini{font-size:.7rem;text-transform:uppercase;letter-spacing:.1em;opacity:.6;display:inline-flex;align-items:center;gap:.5rem;}
+.btn-mini:hover{opacity:1;background:rgba(255,255,255,.05);}
+
+/* ---------- Overlays ---------- */
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:50;display:none;align-items:center;justify-content:center;padding:1rem;animation:fadeIn .2s ease-out;}
+.overlay.open{display:flex;}
+.dialog{max-width:32rem;width:100%;border-radius:var(--radius);padding:1.5rem;display:flex;flex-direction:column;gap:1rem;}
+.dialog h2{font-size:1.125rem;font-weight:700;}
+.dialog p{color:hsl(var(--muted-foreground));font-size:.875rem;}
+.dialog-actions{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:.5rem;}
+.btn-cancel{background:transparent;border:1px solid rgba(255,255,255,.1);}
+.btn-cancel:hover{background:rgba(255,255,255,.05);}
+
+.sheet-overlay{position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:50;display:none;animation:fadeIn .2s ease-out;}
+.sheet-overlay.open{display:block;}
+.sheet{
+  position:fixed;top:0;right:0;bottom:0;width:100%;max-width:24rem;z-index:51;
+  border-left:1px solid rgba(255,255,255,.1);padding:1.5rem;overflow-y:auto;
+  display:flex;flex-direction:column;gap:1rem;transform:translateX(100%);transition:transform .3s ease-out;
+}
+.sheet.open{transform:translateX(0);}
+.sheet h2{font-size:1.125rem;font-weight:700;}
+.sheet-desc{color:hsl(var(--muted-foreground));font-size:.875rem;}
+.sheet-section{display:flex;flex-direction:column;gap:1rem;}
+.sheet-label{color:hsl(var(--accent));text-transform:uppercase;letter-spacing:-.02em;font-size:.7rem;font-weight:700;}
+.roster{display:flex;flex-direction:column;gap:.5rem;max-height:40vh;overflow-y:auto;padding-right:.5rem;}
+.roster-row{display:flex;align-items:center;justify-content:space-between;padding:.75rem;border-radius:.5rem;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.05);gap:.5rem;}
+.roster-row span{font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.add-row{display:flex;gap:.5rem;padding-top:.5rem;}
+.add-row input{background:rgba(255,255,255,.05);}
+.btn-add{background:hsl(var(--accent));color:#fff;}
+.btn-add:hover{background:hsl(var(--accent)/.8);}
+.separator{height:1px;background:rgba(255,255,255,.1);border:0;}
+.sheet-footer{margin-top:auto;padding-top:1rem;}
+.sheet-footer .btn{width:100%;}
+
+/* ---------- Toasts ---------- */
+.toasts{position:fixed;bottom:1rem;right:1rem;z-index:100;display:flex;flex-direction:column;gap:.5rem;max-width:calc(100vw - 2rem);}
+.toast{
+  min-width:16rem;padding:.75rem 1rem;border-radius:var(--radius);
+  background:hsl(var(--card));border:1px solid hsl(var(--border));
+  box-shadow:0 10px 20px rgba(0,0,0,.5);animation:toastIn .2s ease-out;
+}
+.toast.destructive{border-color:hsl(var(--destructive));background:hsl(var(--destructive)/.15);}
+.toast-title{font-weight:700;font-size:.875rem;}
+.toast-desc{font-size:.8rem;color:hsl(var(--muted-foreground));margin-top:.15rem;}
+@keyframes toastIn{from{opacity:0;transform:translateY(10px);}to{opacity:1;transform:translateY(0);}}
+
+.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0;}
+</style>
+</head>
+<body>
+
+<div class="atmosphere" aria-hidden="true">
+  <div class="smoke smoke-1">
+    <svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg"><path fill="currentColor" d="M44.7,-76.4C58.8,-69.2,71.8,-59.1,79.6,-45.8C87.4,-32.5,90.1,-16.3,88.5,-0.9C86.9,14.4,81.1,28.8,72.1,40.4C63.1,52,50.8,60.8,37.7,67.8C24.5,74.8,10.6,80,0,80C-10.6,80,-21.2,74.8,-32.4,68.4C-43.7,62,-55.5,54.4,-65.4,43.5C-75.3,32.7,-83.1,18.5,-84,3.7C-84.9,-11.1,-78.9,-26.4,-69.8,-38.7C-60.7,-51,-48.5,-60.3,-35.4,-68C-22.3,-75.7,-8.4,-81.8,4.7,-89.9C17.7,-98,30.6,-83.6,44.7,-76.4Z" transform="translate(100 100)"/></svg>
+  </div>
+  <div class="smoke smoke-2">
+    <svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg"><path fill="currentColor" d="M39.9,-65.7C50.3,-59.5,56.1,-45.6,62.2,-32.1C68.3,-18.6,74.7,-5.5,73.5,7.1C72.3,19.7,63.5,31.8,53.2,41.9C42.9,52,31.1,60.2,18.2,64.2C5.4,68.2,-8.4,68,-21.6,63.9C-34.8,59.8,-47.4,51.8,-56.3,40.8C-65.2,29.8,-70.4,15.9,-71.4,1.8C-72.3,-12.3,-69.1,-26.5,-61.2,-38.6C-53.3,-50.7,-40.7,-60.8,-27.4,-65.4C-14,-70.1,0.1,-69.2,14.6,-70.8C29.2,-72.4,39.9,-71.9,39.9,-65.7Z" transform="translate(100 100)"/></svg>
+  </div>
+</div>
+
+<!-- ============ SETUP SCREEN ============ -->
+<div class="screen active" id="setup-screen">
+  <header style="padding:1.5rem 1rem;display:flex;justify-content:center;">
+    <div class="logo">
+      <svg width="42" height="42" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M6 3h12l-6 9Z"/><path d="M12 12v9"/><path d="M7 21h10"/><path d="m15 3 1 4"/>
+        <circle cx="12" cy="7" r="1" fill="currentColor"><animate attributeName="opacity" values="0;1;0" dur="2s" repeatCount="indefinite"/></circle>
+      </svg>
+      <div class="logo-words">
+        <span class="logo-title neon-text-primary">AFTER HOURS</span>
+        <span class="logo-sub">Party Game</span>
+      </div>
+    </div>
+  </header>
+  <main>
+    <div class="card setup-card glass-card neon-border-primary">
+      <div class="card-header">
+        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:hsl(var(--primary));margin:0 auto .5rem;">
+          <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+        </svg>
+        <h1 class="card-title neon-text-primary">Game Setup</h1>
+        <p class="card-desc">Where the night gets interesting!</p>
+      </div>
+      <div class="card-content">
+        <div class="field">
+          <span class="field-label neon-text-accent">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+            Players
+          </span>
+          <div id="setup-players"></div>
+          <button class="btn btn-outline" id="add-player-btn">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M8 12h8"/><path d="M12 8v8"/></svg>
+            Add Player
+          </button>
+        </div>
+        <div class="field">
+          <span class="field-label neon-text-accent">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/><path d="M12 8v4"/><path d="M12 16h.01"/></svg>
+            NSFW Level
+          </span>
+          <div class="segmented" id="setup-level" role="radiogroup" aria-label="NSFW Level"></div>
+        </div>
+      </div>
+      <div class="card-footer">
+        <button class="btn btn-primary btn-start neon-border-primary" id="start-game-btn">Start Game</button>
+      </div>
+    </div>
+  </main>
+</div>
+
+<!-- ============ GAME SCREEN ============ -->
+<div class="screen" id="game-screen">
+  <main>
+    <div class="card game-card glass-card" id="game-card">
+      <div class="game-header">
+        <div class="header-row">
+          <div class="header-side">
+            <span class="badge" id="level-badge">Mild Mode</span>
+            <h2 class="current-player" id="current-player"></h2>
+          </div>
+          <div class="header-logo">
+            <div class="logo">
+              <svg width="42" height="42" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M6 3h12l-6 9Z"/><path d="M12 12v9"/><path d="M7 21h10"/><path d="m15 3 1 4"/>
+                <circle cx="12" cy="7" r="1" fill="currentColor"><animate attributeName="opacity" values="0;1;0" dur="2s" repeatCount="indefinite"/></circle>
+              </svg>
+              <div class="logo-words">
+                <span class="logo-title neon-text-primary">AFTER HOURS</span>
+                <span class="logo-sub">Party Game</span>
+              </div>
+            </div>
+          </div>
+          <div class="header-side">
+            <span class="badge"># Of Players</span>
+            <div class="player-count" id="player-count"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="prompt-area" id="prompt-area"></div>
+
+      <div class="game-footer">
+        <button class="btn btn-primary btn-next" id="next-btn">
+          <span id="next-btn-label">Next Player</span>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M8 12h8"/><path d="m12 16 4-4-4-4"/></svg>
+        </button>
+        <div class="footer-actions">
+          <button class="btn btn-ghost btn-mini" id="manage-btn">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+            Manage Group
+          </button>
+          <button class="btn btn-ghost btn-mini" id="end-game-btn">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+            End Game
+          </button>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<!-- ============ NEW GAME DIALOG ============ -->
+<div class="overlay" id="newgame-overlay" role="dialog" aria-modal="true" aria-labelledby="newgame-title">
+  <div class="dialog glass-card">
+    <h2 id="newgame-title">Start a New Session?</h2>
+    <p>Restart the current deck or head back to setup.</p>
+    <div class="dialog-actions">
+      <button class="btn btn-cancel" id="dialog-cancel">Cancel</button>
+      <button class="btn btn-destructive" id="dialog-newgame">New Game</button>
+      <button class="btn btn-primary" id="dialog-restart">Restart Deck</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ MANAGE GROUP SHEET ============ -->
+<div class="sheet-overlay" id="sheet-overlay"></div>
+<aside class="sheet glass-card" id="manage-sheet" role="dialog" aria-modal="true" aria-labelledby="sheet-title">
+  <div>
+    <h2 id="sheet-title">Game Settings</h2>
+    <p class="sheet-desc">Modify players and intensity on the fly.</p>
+  </div>
+  <div class="sheet-section">
+    <span class="sheet-label neon-text-accent">Manage Players</span>
+    <div class="roster" id="roster"></div>
+    <div class="add-row">
+      <input type="text" id="new-player-input" placeholder="Player Name" aria-label="New player name" />
+      <button class="btn btn-icon btn-add" id="sheet-add-btn" aria-label="Add player">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M19 8v6"/><path d="M22 11h-6"/></svg>
+      </button>
+    </div>
+  </div>
+  <hr class="separator" />
+  <div class="sheet-section">
+    <span class="sheet-label neon-text-accent">Intensity Level</span>
+    <div class="segmented subtle" id="sheet-level" role="radiogroup" aria-label="Intensity Level"></div>
+  </div>
+  <div class="sheet-footer">
+    <button class="btn btn-primary" id="sheet-close">Save Changes</button>
+  </div>
+</aside>
+
+<div class="toasts" id="toasts" aria-live="polite"></div>
+
+<script>
+"use strict";
+
+/* ------------------------------------------------------------------
+   Prompt deck — generated from src/lib/prompts.ts
+   ------------------------------------------------------------------ */
+const PROMPTS = [
+  {"id":1,"text":"Share your most embarrassing childhood nickname and the story behind it.","nsfwLevel":"Mild"},
+  {"id":2,"text":"What's your go-to karaoke song, even if you can't sing?","nsfwLevel":"Mild"},
+  {"id":3,"text":"If you could have any superpower, what would it be and why?","nsfwLevel":"Mild"},
+  {"id":4,"text":"Describe your dream vacation in detail.","nsfwLevel":"Mild"},
+  {"id":5,"text":"What's a weird food combination you secretly enjoy?","nsfwLevel":"Mild"},
+  {"id":100,"text":"Describe the most awkward first date you've ever been on.","nsfwLevel":"Medium"},
+  {"id":101,"text":"What's a white lie you've told that spiraled out of control?","nsfwLevel":"Medium"},
+  {"id":102,"text":"What's the most trouble you got into as a teenager?","nsfwLevel":"Medium"},
+  {"id":103,"text":"Share a secret you've never told anyone in this room.","nsfwLevel":"Medium"},
+  {"id":104,"text":"What's one thing you've done that you'd never tell your parents?","nsfwLevel":"Medium"},
+  {"id":105,"text":"What's the craziest place you've ever had sex?","nsfwLevel":"Medium"},
+  {"id":106,"text":"Share the dirtiest DM you've ever sent or received.","nsfwLevel":"Medium"},
+  {"id":107,"text":"Have you ever cheated? Be honest or drink 3 times.","nsfwLevel":"Medium"},
+  {"id":108,"text":"What's the most romantic thing someone's done for you?","nsfwLevel":"Medium"},
+  {"id":109,"text":"If you've ever stood someone up on a date drink 8 times.","nsfwLevel":"Medium"},
+  {"id":110,"text":"Have you ever used a cheesy pickup line? Say it now.","nsfwLevel":"Medium"},
+  {"id":111,"text":"If you've ever used a pickup line online or in real life, drink 4 times and tell the group.","nsfwLevel":"Medium"},
+  {"id":112,"text":"Admit what the worst porn you've watched to give out 5 drinks.","nsfwLevel":"Medium"},
+  {"id":113,"text":"Come up with a name for an erotic fiction book and detail what it's about.","nsfwLevel":"Medium"},
+  {"id":114,"text":"What's your favorite body part on {{randomOtherPlayer}}?","nsfwLevel":"Medium"},
+  {"id":115,"text":"What part of your body do you love being touched?","nsfwLevel":"Medium"},
+  {"id":116,"text":"If you had to be stuck in an elevator with one person here — who?","nsfwLevel":"Medium"},
+  {"id":117,"text":"What's your biggest turn-on that isn't sexual?","nsfwLevel":"Medium"},
+  {"id":118,"text":"When did you first realize you were hot?","nsfwLevel":"Medium"},
+  {"id":119,"text":"What's your favorite compliment to receive?","nsfwLevel":"Medium"},
+  {"id":120,"text":"If someone in this room kissed you right now, who'd you want it to be?","nsfwLevel":"Medium"},
+  {"id":121,"text":"What's the longest dry spell you've ever had?","nsfwLevel":"Medium"},
+  {"id":122,"text":"If you had to choose, would you rather give up cheese or oral sex for a year?","nsfwLevel":"Medium"},
+  {"id":123,"text":"Dominant or submissive? Those that are dominant give out 4 drinks, while those that are submissive can drink 2.","nsfwLevel":"Medium"},
+  {"id":124,"text":"How many people do you wish you'd had sex with in your life? Each player drinks that number.","nsfwLevel":"Medium"},
+  {"id":125,"text":"Point at a player that you would want to have sex with and make them drink 6 times.","nsfwLevel":"Medium"},
+  {"id":126,"text":"Drink if you have ever fantasized about someone in this room.","nsfwLevel":"Medium"},
+  {"id":127,"text":"Take a drink for each person you've kissed in this room.","nsfwLevel":"Medium"},
+  {"id":128,"text":"Take a sip every time you've sexted in the past week.","nsfwLevel":"Medium"},
+  {"id":129,"text":"Drink if you've ever skinny-dipped.","nsfwLevel":"Medium"},
+  {"id":130,"text":"Drink if you've ever sent a nude to the wrong person.","nsfwLevel":"Medium"},
+  {"id":131,"text":"Drink if you've ever hooked up with a coworker.","nsfwLevel":"Medium"},
+  {"id":132,"text":"Drink if you've ever faked an orgasm.","nsfwLevel":"Medium"},
+  {"id":133,"text":"Finish your drink if you've ever faked an orgasm and the other person called you out on it.","nsfwLevel":"Medium"},
+  {"id":134,"text":"Drink if you've ever texted 'you up?' past midnight.","nsfwLevel":"Medium"},
+  {"id":135,"text":"Take 1 drink for every sex toy you own.","nsfwLevel":"Medium"},
+  {"id":136,"text":"If you've ever moaned someone else's name by accident — drink twice.","nsfwLevel":"Medium"},
+  {"id":137,"text":"If you've ever hooked up with someone from a dating app, take 2 drinks.","nsfwLevel":"Medium"},
+  {"id":138,"text":"Drink if you've ever lied about your body count.","nsfwLevel":"Medium"},
+  {"id":139,"text":"Drink if you've ever had a crush on a teacher.","nsfwLevel":"Medium"},
+  {"id":140,"text":"Drink if you've flirted to get something for free.","nsfwLevel":"Medium"},
+  {"id":141,"text":"If you have ever done anal drink 6 times.","nsfwLevel":"Medium"},
+  {"id":142,"text":"Anyone who masturbated today drink 4 times.","nsfwLevel":"Medium"},
+  {"id":143,"text":"Anyone that has been skinny dipping drink 4 times.","nsfwLevel":"Medium"},
+  {"id":144,"text":"If you've ever sucked your partner's toes drink 4 times.","nsfwLevel":"Medium"},
+  {"id":145,"text":"If you've had sex 3 or more times in one night drink 6 times.","nsfwLevel":"Medium"},
+  {"id":146,"text":"If you've ever faked an orgasm drink 4 times.","nsfwLevel":"Medium"},
+  {"id":147,"text":"Drink 8 times if you've seen another one of the players naked.","nsfwLevel":"Medium"},
+  {"id":148,"text":"If you've ever had sex in a car drink 5 times.","nsfwLevel":"Medium"},
+  {"id":149,"text":"If you've ever used handcuffs or rope in bed give out 7 drinks.","nsfwLevel":"Medium"},
+  {"id":150,"text":"If your body count is over 20 drink 4 times.","nsfwLevel":"Medium"},
+  {"id":151,"text":"If you've had sex with more than one person in one night drink 8 times.","nsfwLevel":"Medium"},
+  {"id":152,"text":"If you've ever participated in an orgy drink 4 times.","nsfwLevel":"Medium"},
+  {"id":153,"text":"If you've ever given oral sex, give out 6 drinks for being so generous.","nsfwLevel":"Medium"},
+  {"id":154,"text":"Anyone who has filmed a porn film drink 4 times.","nsfwLevel":"Medium"},
+  {"id":155,"text":"If you've taken someone's virginity drink 3 times.","nsfwLevel":"Medium"},
+  {"id":156,"text":"If you've ever had sex in a hot tub or pool drink 5 times.","nsfwLevel":"Medium"},
+  {"id":157,"text":"If you've ever been streaking drink 5 times.","nsfwLevel":"Medium"},
+  {"id":158,"text":"If you've ever had sex with a person you only met within 24 hours drink 4 times.","nsfwLevel":"Medium"},
+  {"id":159,"text":"If you have ever had sex in public drink 5 times.","nsfwLevel":"Medium"},
+  {"id":160,"text":"Have you ever done 69 before? Drink 4 if yes.","nsfwLevel":"Medium"},
+  {"id":161,"text":"Anyone that has had sex outdoors can drink 4 times.","nsfwLevel":"Medium"},
+  {"id":162,"text":"If you've ever given or received a hickey drink 4.","nsfwLevel":"Medium"},
+  {"id":163,"text":"If you've ever masturbated while in a public place drink 3 times.","nsfwLevel":"Medium"},
+  {"id":246,"text":"Drink if you've ever had sex on the first date.","nsfwLevel":"Medium"},
+  {"id":247,"text":"Drink if you've ever hooked up with someone twice your age (or half your age).","nsfwLevel":"Medium"},
+  {"id":248,"text":"Drink if you've ever had a friends-with-benefits situation that got messy.","nsfwLevel":"Medium"},
+  {"id":249,"text":"Drink if you've ever slept with someone whose name you didn't know.","nsfwLevel":"Medium"},
+  {"id":250,"text":"Drink if you've ever had sex while someone else was in the room.","nsfwLevel":"Medium"},
+  {"id":251,"text":"Drink if you've ever woken up and regretted who was next to you.","nsfwLevel":"Medium"},
+  {"id":252,"text":"Drink if you've ever had a one-night stand and snuck out before they woke up.","nsfwLevel":"Medium"},
+  {"id":253,"text":"Drink if you've ever hooked up with two people in the same friend group.","nsfwLevel":"Medium"},
+  {"id":254,"text":"Drink if you've ever had sex somewhere you could have been arrested.","nsfwLevel":"Medium"},
+  {"id":255,"text":"Drink if you've ever been caught having sex.","nsfwLevel":"Medium"},
+  {"id":256,"text":"Drink if you have nudes of someone in this room saved on your phone.","nsfwLevel":"Medium"},
+  {"id":257,"text":"Drink if you've ever screenshot someone's nudes to send to a friend.","nsfwLevel":"Medium"},
+  {"id":258,"text":"Drink if you've ever had sex while at work.","nsfwLevel":"Medium"},
+  {"id":259,"text":"Drink if you've ever sent a nude to multiple people.","nsfwLevel":"Medium"},
+  {"id":260,"text":"Drink if you've ever had facetime sex.","nsfwLevel":"Medium"},
+  {"id":261,"text":"Drink if you've ever watched porn with a partner.","nsfwLevel":"Medium"},
+  {"id":262,"text":"Drink if you've ever tried roleplay in the bedroom.","nsfwLevel":"Medium"},
+  {"id":263,"text":"Drink if you've ever been choked during sex (and liked it).","nsfwLevel":"Medium"},
+  {"id":264,"text":"Drink if you've ever called someone 'daddy' or 'mommy' in bed.","nsfwLevel":"Medium"},
+  {"id":265,"text":"Drink if you've ever used a sex toy with a partner.","nsfwLevel":"Medium"},
+  {"id":266,"text":"Drink if you've ever been tied up or tied someone else up.","nsfwLevel":"Medium"},
+  {"id":267,"text":"Drink if you've ever hooked up with an ex.","nsfwLevel":"Medium"},
+  {"id":268,"text":"Drink if you've ever hooked up with someone who was in a relationship.","nsfwLevel":"Medium"},
+  {"id":269,"text":"Drink if you've ever hooked up with a friend's significant other.","nsfwLevel":"Medium"},
+  {"id":270,"text":"Drink if you've ever lied about your body count to someone you were dating.","nsfwLevel":"Medium"},
+  {"id":164,"text":"Anyone with a tattoo drinks 4 times.","nsfwLevel":"Medium"},
+  {"id":165,"text":"If you've ever been arrested drink once.","nsfwLevel":"Medium"},
+  {"id":166,"text":"If you've ever been in a car accident, drink 4 times.","nsfwLevel":"Medium"},
+  {"id":167,"text":"Anyone that has vomited in public drinks 3 times.","nsfwLevel":"Medium"},
+  {"id":168,"text":"Everyone wearing glasses (or contacts) right now drink 3 times.","nsfwLevel":"Medium"},
+  {"id":169,"text":"If you've had the police called on you drink 4 times.","nsfwLevel":"Medium"},
+  {"id":170,"text":"Anyone that has done drugs tonight, drink twice.","nsfwLevel":"Medium"},
+  {"id":171,"text":"If you're wearing some whacky socks give out 2 drinks.","nsfwLevel":"Medium"},
+  {"id":172,"text":"Anyone whose name starts with 'J' can choose someone to finish half their drink.","nsfwLevel":"Medium"},
+  {"id":173,"text":"Anyone holding a drink has to drink twice.","nsfwLevel":"Medium"},
+  {"id":174,"text":"Everyone that doesn't wear glasses drinks 3 times.","nsfwLevel":"Medium"},
+  {"id":175,"text":"{{randomOtherPlayer}}, Give a drink to who you think has the best lips in the group.","nsfwLevel":"Medium"},
+  {"id":176,"text":"Pick which player is most likely to give the best head, the winner gets to give out 4 drinks.","nsfwLevel":"Medium"},
+  {"id":177,"text":"Who here is most likely to be a freak in the sheets? They drink 3 times.","nsfwLevel":"Medium"},
+  {"id":178,"text":"Who would you most want to receive a lap dance from? That person gives out 5 drinks.","nsfwLevel":"Medium"},
+  {"id":179,"text":"Who here is most likely to have a secret OnlyFans? They drink 4 times.","nsfwLevel":"Medium"},
+  {"id":180,"text":"{{randomOtherPlayer}}, who do you think is the be the best kisser in this room? They have to prove it on someone of their choice.","nsfwLevel":"Medium"},
+  {"id":181,"text":"Pick who is most likely to send the best sexts. They have to show their most recent sext or drink 4 times.","nsfwLevel":"Medium"},
+  {"id":182,"text":"Who has the best ass in the room? Everyone has to slap it once or drink twice.","nsfwLevel":"Medium"},
+  {"id":183,"text":"{{randomOtherPlayer}}, who do you think is secretly the kinkiest? They have to confirm or deny.","nsfwLevel":"Medium"},
+  {"id":184,"text":"Pick who is the least drunk and they will finish their drink.","nsfwLevel":"Medium"},
+  {"id":185,"text":"Everyone vote for a player to down half their drink.","nsfwLevel":"Medium"},
+  {"id":186,"text":"The person with the smallest boobs must drink.","nsfwLevel":"Medium"},
+  {"id":187,"text":"The person with the biggest boobs must allow everyone to feel them.","nsfwLevel":"Medium"},
+  {"id":188,"text":"{{randomOtherPlayer}}, who has the most 'innocent face but dirty mind' energy? They drink 4.","nsfwLevel":"Medium"},
+  {"id":189,"text":"{{randomOtherPlayer}}, choose whose nude you would most like to see. They can either do it or drink 4 times.","nsfwLevel":"Medium"},
+  {"id":190,"text":"{{randomOtherPlayer}}, Pick someone else to drink with you.","nsfwLevel":"Medium"},
+  {"id":191,"text":"Give {{randomOtherPlayer}} a quick peck on the lips — or take 1 drink.","nsfwLevel":"Medium"},
+  {"id":192,"text":"Let {{randomOtherPlayer}} kiss you anywhere above the shoulders — or take 2 drinks.","nsfwLevel":"Medium"},
+  {"id":193,"text":"Kiss {{randomOtherPlayer}} anywhere you choose above the waist — or take 2 drinks.","nsfwLevel":"Medium"},
+  {"id":194,"text":"Let {{randomOtherPlayer}} run their hands through your hair for 15 seconds — or take 1 drink.","nsfwLevel":"Medium"},
+  {"id":195,"text":"Hold {{randomOtherPlayer}}'s face in your hands and stare into their eyes for 30 seconds — first to laugh drinks.","nsfwLevel":"Medium"},
+  {"id":196,"text":"Trace your finger slowly from {{randomOtherPlayer}}'s wrist to their shoulder — or take 2 drinks.","nsfwLevel":"Medium"},
+  {"id":197,"text":"Let {{randomOtherPlayer}} whisper something dirty in your ear — you have to keep a straight face or drink.","nsfwLevel":"Medium"},
+  {"id":198,"text":"Whisper your biggest turn-on into {{randomOtherPlayer}}'s ear — or take 2 drinks.","nsfwLevel":"Medium"},
+  {"id":199,"text":"Get blindfolded and guess who kisses you — if wrong, drink.","nsfwLevel":"Medium"},
+  {"id":200,"text":"Lick {{randomOtherPlayer}}'s neck — no hands.","nsfwLevel":"Medium"},
+  {"id":201,"text":"Give {{randomOtherPlayer}} a massage with both hands — no speaking.","nsfwLevel":"Medium"},
+  {"id":202,"text":"Make intense eye contact with {{randomOtherPlayer}} while slowly taking a sip of their drink.","nsfwLevel":"Medium"},
+  {"id":203,"text":"Stare into {{randomOtherPlayer}}'s eyes without breaking eye contact for 60 seconds.","nsfwLevel":"Medium"},
+  {"id":204,"text":"Perform their best attempt at a romantic movie scene with {{randomOtherPlayer}}.","nsfwLevel":"Medium"},
+  {"id":205,"text":"Slow dance with {{randomOtherPlayer}} to the next song, regardless of what comes on.","nsfwLevel":"Medium"},
+  {"id":206,"text":"Do a sexual dance in front of the group, or finish your drink.","nsfwLevel":"Medium"},
+  {"id":207,"text":"Make an orgasm face until another player makes eye contact with you.","nsfwLevel":"Medium"},
+  {"id":208,"text":"Give a lap dance to {{randomOtherPlayer}}.","nsfwLevel":"Medium"},
+  {"id":209,"text":"Sit on {{randomOtherPlayer}}'s lap for the next two rounds.","nsfwLevel":"Medium"},
+  {"id":210,"text":"Remove one article of your own clothing — or take 3 drinks.","nsfwLevel":"Medium"},
+  {"id":211,"text":"Let {{randomOtherPlayer}} choose which article of clothing you remove — or take 4 drinks.","nsfwLevel":"Medium"},
+  {"id":212,"text":"Anyone willing to take their pants off can give out 10 drinks.","nsfwLevel":"Medium"},
+  {"id":213,"text":"Anyone willing to take their top off can give out 8 drinks.","nsfwLevel":"Medium"},
+  {"id":214,"text":"Anyone with buttons on their shirt must unbutton all of them and drink 2 times for each.","nsfwLevel":"Medium"},
+  {"id":215,"text":"Anyone with their nipples out right now can give out 6 drinks.","nsfwLevel":"Medium"},
+  {"id":216,"text":"Ask {{randomOtherPlayer}} 'truth or dare?' — you pick their outcome.","nsfwLevel":"Medium"},
+  {"id":217,"text":"Let {{randomOtherPlayer}} come up with a dare for you — no backing out.","nsfwLevel":"Medium"},
+  {"id":218,"text":"Go around the room and take a turn each to ask another player any question, 10 drinks in case of refusal.","nsfwLevel":"Medium"},
+  {"id":219,"text":"Anyone willing to reveal their weirdest sexual kink can give out 6 drinks.","nsfwLevel":"Medium"},
+  {"id":220,"text":"Anyone willing to say the weirdest place they've had sex can give out 7 drinks.","nsfwLevel":"Medium"},
+  {"id":221,"text":"The player to most recently shave their pubic area gives out 6 drinks.","nsfwLevel":"Medium"},
+  {"id":222,"text":"The person who most recently measured their penis gives out 5 drinks.","nsfwLevel":"Medium"},
+  {"id":223,"text":"Any player willing to admit the weirdest thing they've masturbated to gives out 6 drinks.","nsfwLevel":"Medium"},
+  {"id":224,"text":"Any player willing to show a nude to the group gives out 10 drinks.","nsfwLevel":"Medium"},
+  {"id":225,"text":"Say your body count to give out 12 drinks, if not, drink 2.","nsfwLevel":"Medium"},
+  {"id":226,"text":"Gives the group free access to their phone for 2 minutes and can give out 10 drinks.","nsfwLevel":"Medium"},
+  {"id":227,"text":"{{randomOtherPlayer}} and you have to admit what you like to be called in bed to give out 5 drinks.","nsfwLevel":"Medium"},
+  {"id":228,"text":"{{randomOtherPlayer}} and you share your weirdest sexual fantasy and give out 5 drinks.","nsfwLevel":"Medium"},
+  {"id":229,"text":"{{randomOtherPlayer}} and you reveal your weirdest turn on. Everyone votes for the weirdest one, who can give out 8 drinks.","nsfwLevel":"Medium"},
+  {"id":230,"text":"Compliment {{randomOtherPlayer}} for 15 seconds without stopping.","nsfwLevel":"Medium"},
+  {"id":231,"text":"{{randomOtherPlayer}} and you give a personalized compliment to everyone in the room or drink 7 times.","nsfwLevel":"Medium"},
+  {"id":232,"text":"Play 'Thumb War' with {{randomOtherPlayer}} — loser drinks twice.","nsfwLevel":"Medium"},
+  {"id":233,"text":"Act out another player, first person to guess it gives out 8 drinks.","nsfwLevel":"Medium"},
+  {"id":234,"text":"The most chatty person has to stop talking for 2 minutes and give out 9 drinks.","nsfwLevel":"Medium"},
+  {"id":235,"text":"{{randomOtherPlayer}} can give out a drink every time you have to drink.","nsfwLevel":"Medium"},
+  {"id":236,"text":"Everyone vote for the person that can do the most pushups, they can give out 2 drinks for every 5 pushups that they do.","nsfwLevel":"Medium"},
+  {"id":237,"text":"Everyone take a sip of your drink.","nsfwLevel":"Medium"},
+  {"id":238,"text":"Youngest person in the room drinks 3 times.","nsfwLevel":"Medium"},
+  {"id":239,"text":"Down your drink.","nsfwLevel":"Medium"},
+  {"id":240,"text":"Women finish your drink.","nsfwLevel":"Medium"},
+  {"id":241,"text":"Men drink 5 times.","nsfwLevel":"Medium"},
+  {"id":242,"text":"Men finish your drink.","nsfwLevel":"Medium"},
+  {"id":243,"text":"Anyone that has had an STI drinks 5 times.","nsfwLevel":"Medium"},
+  {"id":244,"text":"Anyone whose partner is older than them gives out 3 drinks.","nsfwLevel":"Medium"},
+  {"id":245,"text":"Drink as many times as people you've slept with.","nsfwLevel":"Medium"},
+  {"id":246,"text":"Anyone born in the summer, drink","nsfwLevel":"Medium"},
+  {"id":247,"text":"Anyone born in the spring, drink","nsfwLevel":"Medium"},
+  {"id":248,"text":"Anyone born in the winter, drink","nsfwLevel":"Medium"},
+  {"id":249,"text":"Anyone born in the Fall, drink","nsfwLevel":"Medium"},
+  {"id":250,"text":"Anyone who has looked at an ex's instagram profile this week, drink","nsfwLevel":"Medium"},
+  {"id":251,"text":"Anyone who has lied about their age to sleep with someone, drink","nsfwLevel":"Medium"},
+  {"id":252,"text":"Anyone who has been cheated on, the group drinks for you","nsfwLevel":"Medium"},
+  {"id":253,"text":"Anyone wearing black, drinks 3 times","nsfwLevel":"Medium"},
+  {"id":254,"text":"Anyone wearing white, drinks 2 times","nsfwLevel":"Medium"},
+  {"id":255,"text":"Anyone with a piercing (other than ears), drinks 3 times","nsfwLevel":"Medium"},
+  {"id":256,"text":"Anyone not wearing socks rights now, take a drink","nsfwLevel":"Medium"},
+  {"id":257,"text":"Anyone not wearing underwear, take a drink","nsfwLevel":"Medium"},
+  {"id":258,"text":"Anyone showing cleavage right now, take a drink","nsfwLevel":"Medium"},
+  {"id":259,"text":"Shortest person in the room, finish your drink","nsfwLevel":"Medium"},
+  {"id":300,"text":"What's the kinkiest thing you've ever considered trying?","nsfwLevel":"Extreme"},
+  {"id":301,"text":"Describe your most scandalous public display of affection.","nsfwLevel":"Extreme"},
+  {"id":302,"text":"Who in this room would you most likely have a one-night stand with, and why?","nsfwLevel":"Extreme"},
+  {"id":303,"text":"What's the riskiest place you've ever had sex?","nsfwLevel":"Extreme"},
+  {"id":304,"text":"Share your raunchiest, most NSFW fantasy in detail.","nsfwLevel":"Extreme"},
+  {"id":305,"text":"Truth: Have you ever sent a nude to the wrong person? Dare: Send a flirty text to your latest contact.","nsfwLevel":"Extreme"},
+  {"id":306,"text":"What's the most embarrassing thing on your phone right now?","nsfwLevel":"Extreme"},
+  {"id":307,"text":"Reveal your dirtiest sexual fantasy or take 4 drinks.","nsfwLevel":"Extreme"},
+  {"id":308,"text":"Share your most recent sex dream or take 3 shots.","nsfwLevel":"Extreme"},
+  {"id":309,"text":"Tell the group how many people you've slept with.","nsfwLevel":"Extreme"},
+  {"id":310,"text":"Tell the group your biggest sexual secret or take 4 shots.","nsfwLevel":"Extreme"},
+  {"id":311,"text":"Describe the kinkiest thing you've done, or take 3 drinks.","nsfwLevel":"Extreme"},
+  {"id":312,"text":"Reveal your wildest sexual fantasy — or take 5 drinks.","nsfwLevel":"Extreme"},
+  {"id":313,"text":"Describe exactly what you'd do to {{randomOtherPlayer}} if you were alone — or take 5 drinks.","nsfwLevel":"Extreme"},
+  {"id":314,"text":"Tell the group your body count — anyone who guesses within 3 gets to give you a dare.","nsfwLevel":"Extreme"},
+  {"id":315,"text":"If you've ever slept with anyone in this room, name them or take 5 drinks.","nsfwLevel":"Extreme"},
+  {"id":316,"text":"Describe how you like to be touched then let {{randomOtherPlayer}} try or drink 3 times.","nsfwLevel":"Extreme"},
+  {"id":317,"text":"Whisper a dirty fantasy to {{randomOtherPlayer}} or take 2 drinks.","nsfwLevel":"Extreme"},
+  {"id":318,"text":"Whisper the last dirty text you sent into {{randomOtherPlayer}}'s ear.","nsfwLevel":"Extreme"},
+  {"id":319,"text":"Whisper your dirtiest fantasy into {{randomOtherPlayer}}'s ear — or take 3 drinks.","nsfwLevel":"Extreme"},
+  {"id":320,"text":"Let {{randomOtherPlayer}} whisper their dirtiest thought into your ear — or take 2 drinks.","nsfwLevel":"Extreme"},
+  {"id":321,"text":"If you've had a threesome, take 3 drinks.","nsfwLevel":"Extreme"},
+  {"id":322,"text":"If you've had sex outdoors, take 3 drinks.","nsfwLevel":"Extreme"},
+  {"id":323,"text":"If you've ever joined the mile high club, take 4 drinks.","nsfwLevel":"Extreme"},
+  {"id":324,"text":"If you've ever filmed yourself having sex, take 2 drinks.","nsfwLevel":"Extreme"},
+  {"id":325,"text":"If you've had a one-night stand this year, remove one item of clothing.","nsfwLevel":"Extreme"},
+  {"id":326,"text":"Remove one piece of clothing for each person here you've kissed.","nsfwLevel":"Extreme"},
+  {"id":327,"text":"Start with a teasing kiss to {{randomOtherPlayer}} — just a peck — or take 2 drinks.","nsfwLevel":"Extreme"},
+  {"id":328,"text":"Make out with {{randomOtherPlayer}} for 15 seconds.","nsfwLevel":"Extreme"},
+  {"id":329,"text":"Make out with {{randomOtherPlayer}} for 30 seconds or take 3 drinks.","nsfwLevel":"Extreme"},
+  {"id":330,"text":"Full makeout session with {{randomOtherPlayer}} — or finish your drink.","nsfwLevel":"Extreme"},
+  {"id":331,"text":"French kiss {{randomOtherPlayer}} while the group watches.","nsfwLevel":"Extreme"},
+  {"id":332,"text":"Pull {{randomOtherPlayer}} into a passionate kiss or drink 3 times.","nsfwLevel":"Extreme"},
+  {"id":333,"text":"Kiss everyone in the room on the lips.","nsfwLevel":"Extreme"},
+  {"id":334,"text":"Kiss any spot {{randomOtherPlayer}} chooses — or take 2 shots.","nsfwLevel":"Extreme"},
+  {"id":335,"text":"Pick any body part on {{randomOtherPlayer}} and plant a long, wet kiss — or take 2 drinks.","nsfwLevel":"Extreme"},
+  {"id":336,"text":"Let {{randomOtherPlayer}} kiss anywhere on your body they choose — or take 4 drinks.","nsfwLevel":"Extreme"},
+  {"id":337,"text":"Hover your lips close to {{randomOtherPlayer}}'s without kissing for 30 seconds — or take 3 drinks.","nsfwLevel":"Extreme"},
+  {"id":338,"text":"Put an ice cube in your mouth and kiss {{randomOtherPlayer}}.","nsfwLevel":"Extreme"},
+  {"id":339,"text":"Demonstrate on {{randomOtherPlayer}} how you like to be kissed — or take 3 drinks.","nsfwLevel":"Extreme"},
+  {"id":340,"text":"Kiss {{randomOtherPlayer}}'s neck for 15 seconds — or take 3 drinks.","nsfwLevel":"Extreme"},
+  {"id":341,"text":"Let {{randomOtherPlayer}} bite or suck your neck or take 2 drinks.","nsfwLevel":"Extreme"},
+  {"id":342,"text":"Kiss {{randomOtherPlayer}}'s collarbone for 10 seconds — or take 2 drinks.","nsfwLevel":"Extreme"},
+  {"id":343,"text":"Gently bite {{randomOtherPlayer}}'s earlobe — or take 2 drinks.","nsfwLevel":"Extreme"},
+  {"id":344,"text":"Kiss {{randomOtherPlayer}}'s stomach for 10 seconds — or take 3 drinks.","nsfwLevel":"Extreme"},
+  {"id":345,"text":"Kiss a trail down {{randomOtherPlayer}}'s stomach — or take 2 drinks.","nsfwLevel":"Extreme"},
+  {"id":346,"text":"Kiss down the length of {{randomOtherPlayer}}'s spine — or take 2 drinks.","nsfwLevel":"Extreme"},
+  {"id":347,"text":"Lick {{randomOtherPlayer}}'s inner thigh.","nsfwLevel":"Extreme"},
+  {"id":348,"text":"Kiss {{randomOtherPlayer}}'s inner thighs — or take 3 drinks.","nsfwLevel":"Extreme"},
+  {"id":349,"text":"Kiss from {{randomOtherPlayer}}'s ankle to their inner thigh or take 3 drinks.","nsfwLevel":"Extreme"},
+  {"id":350,"text":"Let {{randomOtherPlayer}} kiss your body (excluding genitals) for 1 minute or take 3 drinks.","nsfwLevel":"Extreme"},
+  {"id":351,"text":"Lie down and let {{randomOtherPlayer}} kiss their way down your body or drink 3 times.","nsfwLevel":"Extreme"},
+  {"id":352,"text":"Lick or kiss any body part that {{randomOtherPlayer}} chooses no clothes in the way or drink 4 times.","nsfwLevel":"Extreme"},
+  {"id":353,"text":"Crawl seductively to {{randomOtherPlayer}} and kiss their chest or drink 2 times.","nsfwLevel":"Extreme"},
+  {"id":354,"text":"Give {{randomOtherPlayer}} a hickey for 15 seconds.","nsfwLevel":"Extreme"},
+  {"id":355,"text":"Leave a visible hickey on {{randomOtherPlayer}} — or take 3 drinks.","nsfwLevel":"Extreme"},
+  {"id":356,"text":"Let {{randomOtherPlayer}} leave a mark anywhere on your body — or take 3 drinks.","nsfwLevel":"Extreme"},
+  {"id":357,"text":"Let {{randomOtherPlayer}} lightly mark you with a bite or hickey or drink 3 times.","nsfwLevel":"Extreme"},
+  {"id":358,"text":"Let {{randomOtherPlayer}} leave a lipstick mark (or kiss mark) anywhere visible on your body — or take 3 drinks.","nsfwLevel":"Extreme"},
+  {"id":359,"text":"Lick {{randomOtherPlayer}}'s nipples for 10 seconds.","nsfwLevel":"Extreme"},
+  {"id":360,"text":"Suck on {{randomOtherPlayer}}'s finger slowly.","nsfwLevel":"Extreme"},
+  {"id":361,"text":"Let {{randomOtherPlayer}} suck on your fingers or drink 2 times.","nsfwLevel":"Extreme"},
+  {"id":362,"text":"Suck on {{randomOtherPlayer}}'s toe or take 2 shots.","nsfwLevel":"Extreme"},
+  {"id":363,"text":"Run your lips gently over any body part of {{randomOtherPlayer}} above the waist — or take 2 drinks.","nsfwLevel":"Extreme"},
+  {"id":364,"text":"Run your lips gently over any body part of {{randomOtherPlayer}} below the waist — or take 3 drinks.","nsfwLevel":"Extreme"},
+  {"id":365,"text":"Let {{randomOtherPlayer}} trace every inch of your body with their finger or drink 3 times.","nsfwLevel":"Extreme"},
+  {"id":366,"text":"Slowly trace your fingertips across {{randomOtherPlayer}}'s bare ass — or take 3 drinks.","nsfwLevel":"Extreme"},
+  {"id":367,"text":"Let {{randomOtherPlayer}} slowly slide their hand up your inner thigh or drink 3 times.","nsfwLevel":"Extreme"},
+  {"id":368,"text":"Let {{randomOtherPlayer}} demonstrate on you how they like to be touched — or take 3 drinks.","nsfwLevel":"Extreme"},
+  {"id":369,"text":"Take a body shot off {{randomOtherPlayer}}.","nsfwLevel":"Extreme"},
+  {"id":370,"text":"Take a body shot off {{randomOtherPlayer}} — or take 2 shots yourself.","nsfwLevel":"Extreme"},
+  {"id":371,"text":"Pour a shot into {{randomOtherPlayer}}'s belly button and drink it.","nsfwLevel":"Extreme"},
+  {"id":372,"text":"Take a shot off {{randomOtherPlayer}}'s body — you pick the spot.","nsfwLevel":"Extreme"},
+  {"id":373,"text":"Let {{randomOtherPlayer}} take a shot off your body — they pick the spot.","nsfwLevel":"Extreme"},
+  {"id":374,"text":"Lick whipped cream off {{randomOtherPlayer}}'s neck.","nsfwLevel":"Extreme"},
+  {"id":375,"text":"Lick whipped cream off any body part {{randomOtherPlayer}} chooses — or finish your drink.","nsfwLevel":"Extreme"},
+  {"id":376,"text":"Cover any body part you choose on {{randomOtherPlayer}} with whipped cream and lick it clean — or take 3 drinks.","nsfwLevel":"Extreme"},
+  {"id":377,"text":"Let {{randomOtherPlayer}} lick whipped cream off your body or drink 3 times.","nsfwLevel":"Extreme"},
+  {"id":378,"text":"Put ice down your underwear for the next round.","nsfwLevel":"Extreme"},
+  {"id":379,"text":"Use only your mouth to melt ice on {{randomOtherPlayer}}'s body — or take 3 drinks.","nsfwLevel":"Extreme"},
+  {"id":380,"text":"Let {{randomOtherPlayer}} melt ice on your body using only their mouth — or take 2 drinks.","nsfwLevel":"Extreme"},
+  {"id":381,"text":"Tease {{randomOtherPlayer}}'s nipples with ice — or take 3 drinks.","nsfwLevel":"Extreme"},
+  {"id":382,"text":"Run an ice cube across {{randomOtherPlayer}}'s chest with your mouth — or take 3 drinks.","nsfwLevel":"Extreme"},
+  {"id":383,"text":"Let {{randomOtherPlayer}} run an ice cube anywhere on your body with their mouth — or take 3 drinks.","nsfwLevel":"Extreme"},
+  {"id":384,"text":"Pick {{randomOtherPlayer}} to give you a lap dance.","nsfwLevel":"Extreme"},
+  {"id":385,"text":"Give a full lap dance to {{randomOtherPlayer}} — or take 4 drinks.","nsfwLevel":"Extreme"},
+  {"id":386,"text":"Receive a lap dance from {{randomOtherPlayer}} — or take 3 drinks.","nsfwLevel":"Extreme"},
+  {"id":387,"text":"Grind on {{randomOtherPlayer}} for 2 minutes — or take 4 drinks.","nsfwLevel":"Extreme"},
+  {"id":388,"text":"Let {{randomOtherPlayer}} grind on you for 2 minutes — or take 4 drinks.","nsfwLevel":"Extreme"},
+  {"id":389,"text":"Let {{randomOtherPlayer}} grind on you for 30 seconds or take 3 drinks.","nsfwLevel":"Extreme"},
+  {"id":390,"text":"Grind on {{randomOtherPlayer}}'s lap for one full song — or finish your drink.","nsfwLevel":"Extreme"},
+  {"id":391,"text":"Straddle {{randomOtherPlayer}} for 30 seconds — or take 4 drinks.","nsfwLevel":"Extreme"},
+  {"id":392,"text":"Sit on {{randomOtherPlayer}}'s lap for the next 5 rounds.","nsfwLevel":"Extreme"},
+  {"id":393,"text":"Sit on {{randomOtherPlayer}}'s lap facing them for 1 minute or drink 3 times.","nsfwLevel":"Extreme"},
+  {"id":394,"text":"Strip down to your underwear for the next 3 rounds.","nsfwLevel":"Extreme"},
+  {"id":395,"text":"Flash the group or finish your drink.","nsfwLevel":"Extreme"},
+  {"id":396,"text":"Wear nothing but your underwear for the rest of the game.","nsfwLevel":"Extreme"},
+  {"id":397,"text":"Strip completely naked for the next round or take 5 drinks.","nsfwLevel":"Extreme"},
+  {"id":398,"text":"Strip down completely — or take 3 drinks.","nsfwLevel":"Extreme"},
+  {"id":399,"text":"Remove any piece of clothing — or take 2 drinks.","nsfwLevel":"Extreme"},
+  {"id":400,"text":"Let {{randomOtherPlayer}} remove any piece of your clothing — or take 3 drinks.","nsfwLevel":"Extreme"},
+  {"id":401,"text":"Remove {{randomOtherPlayer}}'s top.","nsfwLevel":"Extreme"},
+  {"id":402,"text":"Remove {{randomOtherPlayer}}'s pants using only your teeth.","nsfwLevel":"Extreme"},
+  {"id":403,"text":"Use only your teeth to remove one piece of {{randomOtherPlayer}}'s clothing — or take 4 drinks.","nsfwLevel":"Extreme"},
+  {"id":404,"text":"Remove any article of {{randomOtherPlayer}}'s clothing using only your teeth — or take 4 drinks.","nsfwLevel":"Extreme"},
+  {"id":405,"text":"Have {{randomOtherPlayer}} remove your underwear using only their teeth or drink 4 times.","nsfwLevel":"Extreme"},
+  {"id":406,"text":"Let {{randomOtherPlayer}} unhook your bra (or unzip your pants) with one hand or drink 3 times.","nsfwLevel":"Extreme"},
+  {"id":407,"text":"Swap a piece of clothing with {{randomOtherPlayer}}.","nsfwLevel":"Extreme"},
+  {"id":408,"text":"Swap underwear with {{randomOtherPlayer}} for the next 10 minutes.","nsfwLevel":"Extreme"},
+  {"id":409,"text":"Swap underwear with {{randomOtherPlayer}} and wear it for 2 rounds or take 3 drinks.","nsfwLevel":"Extreme"},
+  {"id":410,"text":"Remove your underwear and toss it to {{randomOtherPlayer}} or finish your drink.","nsfwLevel":"Extreme"},
+  {"id":411,"text":"Go in the bathroom with {{randomOtherPlayer}} and swap one item of clothing or drink 3 times.","nsfwLevel":"Extreme"},
+  {"id":412,"text":"{{randomOtherPlayer}} chooses: kiss them or lose an article of clothing.","nsfwLevel":"Extreme"},
+  {"id":413,"text":"Give {{randomOtherPlayer}} a strip tease for one full song.","nsfwLevel":"Extreme"},
+  {"id":414,"text":"Do a striptease for {{randomOtherPlayer}} or take 3 drinks.","nsfwLevel":"Extreme"},
+  {"id":415,"text":"Give {{randomOtherPlayer}} a private strip show to music or drink 3 times.","nsfwLevel":"Extreme"},
+  {"id":416,"text":"Put on a sexy song and strip one article of clothing — or take 3 drinks.","nsfwLevel":"Extreme"},
+  {"id":417,"text":"Put on a sexy song and let {{randomOtherPlayer}} remove one article of your clothing — or take 4 drinks.","nsfwLevel":"Extreme"},
+  {"id":418,"text":"Have {{randomOtherPlayer}} undress you slowly, the way you describe or take 4 drinks.","nsfwLevel":"Extreme"},
+  {"id":419,"text":"Massage {{randomOtherPlayer}}'s inner thighs for 30 seconds.","nsfwLevel":"Extreme"},
+  {"id":420,"text":"Give {{randomOtherPlayer}} a sensual massage above the waist for 1 minute — or take 2 drinks.","nsfwLevel":"Extreme"},
+  {"id":421,"text":"Give {{randomOtherPlayer}} a deep massage below the waist for 1 minute — or take 3 drinks.","nsfwLevel":"Extreme"},
+  {"id":422,"text":"Give {{randomOtherPlayer}} a 30-second massage anywhere below the waist (over clothes) — or take 3 drinks.","nsfwLevel":"Extreme"},
+  {"id":423,"text":"Explore {{randomOtherPlayer}}'s body with your hands for 30 seconds — or take 2 drinks.","nsfwLevel":"Extreme"},
+  {"id":424,"text":"Allow {{randomOtherPlayer}} to feel your chest or butt with both hands or drink 3 times.","nsfwLevel":"Extreme"},
+  {"id":425,"text":"Let {{randomOtherPlayer}} grope your entire body for 1 minute or drink 4 times.","nsfwLevel":"Extreme"},
+  {"id":426,"text":"Spank {{randomOtherPlayer}} — hard.","nsfwLevel":"Extreme"},
+  {"id":427,"text":"Spank {{randomOtherPlayer}} hard for 30 seconds — or take 3 drinks.","nsfwLevel":"Extreme"},
+  {"id":428,"text":"Get spanked hard by {{randomOtherPlayer}} for 30 seconds — or take 3 drinks.","nsfwLevel":"Extreme"},
+  {"id":429,"text":"Get spanked with a belt by {{randomOtherPlayer}} or take 3 shots.","nsfwLevel":"Extreme"},
+  {"id":430,"text":"Let {{randomOtherPlayer}} spank you while you moan their name or take 2 drinks.","nsfwLevel":"Extreme"},
+  {"id":431,"text":"Let {{randomOtherPlayer}} pull your pants down and bite your butt or drink 3 times.","nsfwLevel":"Extreme"},
+  {"id":432,"text":"Pinch {{randomOtherPlayer}}'s nipples — or take 2 drinks.","nsfwLevel":"Extreme"},
+  {"id":433,"text":"Let {{randomOtherPlayer}} pinch your nipples — or take 3 drinks.","nsfwLevel":"Extreme"},
+  {"id":434,"text":"Motorboat {{randomOtherPlayer}} — or take 2 shots.","nsfwLevel":"Extreme"},
+  {"id":435,"text":"Blindfold {{randomOtherPlayer}} and kiss them somewhere unexpected.","nsfwLevel":"Extreme"},
+  {"id":436,"text":"Blindfold {{randomOtherPlayer}} and kiss them somewhere they won't expect — or take 3 drinks.","nsfwLevel":"Extreme"},
+  {"id":437,"text":"Get blindfolded and allow {{randomOtherPlayer}} to touch you wherever they want for 15 seconds.","nsfwLevel":"Extreme"},
+  {"id":438,"text":"Blindfold yourself and let {{randomOtherPlayer}} control you — or take 2 drinks.","nsfwLevel":"Extreme"},
+  {"id":439,"text":"Be blindfolded while {{randomOtherPlayer}} explores your body for 60 seconds or take 3 drinks.","nsfwLevel":"Extreme"},
+  {"id":440,"text":"Get blindfolded. {{randomOtherPlayer}} does whatever they want to you for 30 seconds — or both take 3 drinks.","nsfwLevel":"Extreme"},
+  {"id":441,"text":"Get handcuffed to a chair for the next 5 rounds.","nsfwLevel":"Extreme"},
+  {"id":442,"text":"Let {{randomOtherPlayer}} tie you up with whatever's in the room.","nsfwLevel":"Extreme"},
+  {"id":443,"text":"Tie {{randomOtherPlayer}} up completely — or take 3 drinks.","nsfwLevel":"Extreme"},
+  {"id":444,"text":"Get tied up by {{randomOtherPlayer}} — or take 3 drinks.","nsfwLevel":"Extreme"},
+  {"id":445,"text":"Tie {{randomOtherPlayer}} up and tease for 2 minutes — or take 4 drinks.","nsfwLevel":"Extreme"},
+  {"id":446,"text":"Get tied up by {{randomOtherPlayer}} and teased for 2 minutes — or take 4 drinks.","nsfwLevel":"Extreme"},
+  {"id":447,"text":"Let {{randomOtherPlayer}} pin you to a wall or the floor or drink 3 times.","nsfwLevel":"Extreme"},
+  {"id":448,"text":"Let {{randomOtherPlayer}} do whatever they want to you for 30 seconds — or take 3 drinks.","nsfwLevel":"Extreme"},
+  {"id":449,"text":"Do anything you want to {{randomOtherPlayer}} for 30 seconds — or take 3 drinks.","nsfwLevel":"Extreme"},
+  {"id":450,"text":"{{randomOtherPlayer}} is your master for the next 3 rounds — you must do whatever they say or drink.","nsfwLevel":"Extreme"},
+  {"id":451,"text":"Let the group dare you to do anything to {{randomOtherPlayer}} — majority rules.","nsfwLevel":"Extreme"},
+  {"id":452,"text":"{{randomOtherPlayer}} gets to ask you any yes/no question — you must answer truthfully or strip.","nsfwLevel":"Extreme"},
+  {"id":453,"text":"Simulate 69 position with {{randomOtherPlayer}} for 30 seconds — or take 4 drinks.","nsfwLevel":"Extreme"},
+  {"id":454,"text":"Simulate oral sex (clothed) on {{randomOtherPlayer}} for 15 seconds or drink 3 times.","nsfwLevel":"Extreme"},
+  {"id":455,"text":"Simulate sex (clothed) with {{randomOtherPlayer}} for 30 seconds or drink 3 times.","nsfwLevel":"Extreme"},
+  {"id":456,"text":"Recreate a sex scene with {{randomOtherPlayer}} or take 4 drinks.","nsfwLevel":"Extreme"},
+  {"id":457,"text":"Reenact your favorite porn scene with {{randomOtherPlayer}} or take 4 drinks.","nsfwLevel":"Extreme"},
+  {"id":458,"text":"Act out a sex fantasy with {{randomOtherPlayer}} (clothed or not) or drink 4 drinks.","nsfwLevel":"Extreme"},
+  {"id":459,"text":"Demonstrate your favorite sex position (fully clothed) or take 3 shots.","nsfwLevel":"Extreme"},
+  {"id":460,"text":"Perform a fake orgasm for 10 seconds.","nsfwLevel":"Extreme"},
+  {"id":461,"text":"Knock {{randomOtherPlayer}} over and 'accidentally' get busy for a few seconds — or take 4 drinks.","nsfwLevel":"Extreme"},
+  {"id":462,"text":"Have a one-minute hookup simulation with {{randomOtherPlayer}} or drink 4 drinks.","nsfwLevel":"Extreme"},
+  {"id":463,"text":"Simulate being on top of {{randomOtherPlayer}} while telling them what you'd do or drink 3 times.","nsfwLevel":"Extreme"},
+  {"id":464,"text":"Pretend to give oral sex to a bottle while locking eyes with {{randomOtherPlayer}} or drink 3 times.","nsfwLevel":"Extreme"},
+  {"id":465,"text":"Simulate fingering or oral on yourself while describing it to {{randomOtherPlayer}} or take 4 drinks.","nsfwLevel":"Extreme"},
+  {"id":466,"text":"Let {{randomOtherPlayer}} put their hand down your pants for 10 seconds or take 3 drinks.","nsfwLevel":"Extreme"},
+  {"id":467,"text":"Finger (or simulate) {{randomOtherPlayer}} under clothes for 15 seconds or drink 3 times.","nsfwLevel":"Extreme"},
+  {"id":468,"text":"Strip completely and let {{randomOtherPlayer}} touch you anywhere but genitals for 60 seconds or finish your drink.","nsfwLevel":"Extreme"},
+  {"id":469,"text":"Get naked and lie down while {{randomOtherPlayer}} straddles you or drink 4 times.","nsfwLevel":"Extreme"},
+  {"id":470,"text":"Let {{randomOtherPlayer}} lie on top of you shirtless for 30 seconds or drink 3 times.","nsfwLevel":"Extreme"},
+  {"id":471,"text":"Sit naked while {{randomOtherPlayer}} gives you compliments on each body part or drink 3 times.","nsfwLevel":"Extreme"},
+  {"id":472,"text":"Dare: {{randomOtherPlayer}} must remove your pants and feel inside your underwear.","nsfwLevel":"Extreme"},
+  {"id":473,"text":"Use a toy of {{randomOtherPlayer}}'s choice on yourself for 30 seconds — or take 4 drinks.","nsfwLevel":"Extreme"},
+  {"id":474,"text":"Use a toy of your choice on {{randomOtherPlayer}} for 30 seconds — or take 3 drinks.","nsfwLevel":"Extreme"},
+  {"id":475,"text":"Call your last hookup and say 'I miss your body' or take 4 drinks.","nsfwLevel":"Extreme"},
+  {"id":476,"text":"Show the group the last nude you received (or take 5 drinks).","nsfwLevel":"Extreme"},
+  {"id":477,"text":"Take a naked selfie (not shared) or finish your drink.","nsfwLevel":"Extreme"},
+  {"id":478,"text":"Let {{randomOtherPlayer}} draw something on your chest — clothing off.","nsfwLevel":"Extreme"},
+  {"id":479,"text":"Everyone removes one article of clothing. Last person to do so finishes their drink.","nsfwLevel":"Extreme"},
+  {"id":480,"text":"Spin a bottle — whoever it lands on, you have to make out with for 20 seconds.","nsfwLevel":"Extreme"},
+  {"id":481,"text":"Seven minutes in heaven with {{randomOtherPlayer}} — or both take 5 drinks.","nsfwLevel":"Extreme"},
+  {"id":482,"text":"Go into a private room with {{randomOtherPlayer}} for 3 minutes or take 4 drinks.","nsfwLevel":"Extreme"},
+  {"id":483,"text":"Wild Card: Skip this prompt and take {{randomOtherPlayer}} somewhere private for 2 minutes — or both finish your drinks.","nsfwLevel":"Extreme"},
+  {"id":484,"text":"Hookup with {{randomOtherPlayer}} or take 3 drinks.","nsfwLevel":"Extreme"},
+  {"id":485,"text":"Drink if you've ever had a threesome. If you haven't but want to, remove an article of clothing.","nsfwLevel":"Extreme"},
+  {"id":486,"text":"Drink if you've ever been spit on during sex — and liked it.","nsfwLevel":"Extreme"},
+  {"id":487,"text":"Drink if you've ever asked someone to choke you harder.","nsfwLevel":"Extreme"},
+  {"id":488,"text":"Drink if you've ever had sex with more than one person in 24 hours.","nsfwLevel":"Extreme"},
+  {"id":489,"text":"Drink if you've ever been double penetrated.","nsfwLevel":"Extreme"},
+  {"id":490,"text":"Drink if you've ever given or received a golden shower.","nsfwLevel":"Extreme"},
+  {"id":491,"text":"Drink if you've ever let someone finish on your face.","nsfwLevel":"Extreme"},
+  {"id":492,"text":"Drink if you've ever swallowed. If you haven't, take 2 drinks instead.","nsfwLevel":"Extreme"},
+  {"id":493,"text":"Drink if you've ever been fisted or fisted someone.","nsfwLevel":"Extreme"},
+  {"id":494,"text":"Drink if you've ever had sex while on your period.","nsfwLevel":"Extreme"},
+  {"id":495,"text":"Drink if you've ever done anal without lube.","nsfwLevel":"Extreme"},
+  {"id":496,"text":"Drink if you've ever had sex so loud the neighbors complained.","nsfwLevel":"Extreme"},
+  {"id":497,"text":"Drink if you've ever had sex in front of other people (intentionally).","nsfwLevel":"Extreme"},
+  {"id":498,"text":"Drink if you've ever had sex at work — in the office, not just the building.","nsfwLevel":"Extreme"},
+  {"id":499,"text":"Drink if you've ever had sex in a bathroom stall at a bar or club.","nsfwLevel":"Extreme"},
+  {"id":500,"text":"Drink if you've ever had sex on a plane, train, or bus.","nsfwLevel":"Extreme"},
+  {"id":501,"text":"Drink if you've ever had sex in someone else's bed without them knowing.","nsfwLevel":"Extreme"},
+  {"id":502,"text":"Drink if you've ever been walked in on mid-orgasm.","nsfwLevel":"Extreme"},
+  {"id":503,"text":"Drink if you've ever used a butt plug during sex.","nsfwLevel":"Extreme"},
+  {"id":504,"text":"Drink if you've ever filmed yourself masturbating.","nsfwLevel":"Extreme"},
+  {"id":505,"text":"Drink if you've ever watched your own sex tape back.","nsfwLevel":"Extreme"},
+  {"id":506,"text":"Drink if you've ever had sex while on a video call with someone else.","nsfwLevel":"Extreme"},
+  {"id":507,"text":"Drink if you've ever used food during sex (and not just whipped cream).","nsfwLevel":"Extreme"},
+  {"id":508,"text":"Drink if you've ever been paid for anything sexual. If yes, remove an article of clothing.","nsfwLevel":"Extreme"},
+  {"id":509,"text":"Drink if you've ever had a sugar daddy or sugar mommy. Remove clothing if still active.","nsfwLevel":"Extreme"},
+  {"id":510,"text":"Drink if you've ever sent nudes to more than 5 different people. Remove an item if over 10.","nsfwLevel":"Extreme"},
+  {"id":511,"text":"Drink if you've ever been fully naked in front of a group. If not, you are now — strip or finish your drink.","nsfwLevel":"Extreme"},
+  {"id":512,"text":"Drink if you've ever masturbated thinking about someone in this room. Make eye contact with them or take 3 more.","nsfwLevel":"Extreme"},
+  {"id":513,"text":"Drink if you've ever been someone's 'first.' Name them or take 3 more drinks.","nsfwLevel":"Extreme"},
+  {"id":514,"text":"Drink if you've ever had sex with someone in this room. Confirm it or both of you finish your drinks.","nsfwLevel":"Extreme"},
+  {"id":515,"text":"Drink if you've ever faked an orgasm with someone in this room. Look at them while you drink.","nsfwLevel":"Extreme"},
+  {"id":516,"text":"Drink if you've ever paid for sex or sexual services. Admit it or remove an article of clothing.","nsfwLevel":"Extreme"},
+  {"id":517,"text":"Drink if you've ever made someone cry during sex (good or bad). Tell the story or take 4 drinks.","nsfwLevel":"Extreme"},
+  {"id":518,"text":"Drink if you've ever hooked up with a family member's friend.","nsfwLevel":"Extreme"},
+  {"id":519,"text":"Drink if you've ever hooked up with someone at a funeral or wedding.","nsfwLevel":"Extreme"},
+  {"id":520,"text":"Drink if you've ever had sex in a church, temple, or place of worship.","nsfwLevel":"Extreme"},
+  {"id":521,"text":"Drink if you've ever had sex with someone 15+ years older or younger than you.","nsfwLevel":"Extreme"},
+  {"id":522,"text":"Drink if you've ever hooked up with someone whose name you still don't know.","nsfwLevel":"Extreme"},
+  {"id":600,"text":"Two truths and a lie — but at least one of the truths has to be about your love life.","nsfwLevel":"Mild"},
+  {"id":601,"text":"Show the group the last song you played. If it's a breakup or a sex song, drink twice.","nsfwLevel":"Mild"},
+  {"id":602,"text":"What emoji do you send when you're flirting? Demonstrate it on {{randomOtherPlayer}}.","nsfwLevel":"Mild"},
+  {"id":603,"text":"Describe your 'type' in three words, then point to whoever in this room comes closest.","nsfwLevel":"Mild"},
+  {"id":604,"text":"What's the most attractive thing someone can do while fully clothed?","nsfwLevel":"Mild"},
+  {"id":605,"text":"Show your most-used GIF. If you have to explain it, drink.","nsfwLevel":"Mild"},
+  {"id":606,"text":"Rank the group's outfits tonight from most to least likely to get someone's number.","nsfwLevel":"Mild"},
+  {"id":607,"text":"Who's your celebrity 'free pass'? Drink if you'd actually go through with it.","nsfwLevel":"Mild"},
+  {"id":608,"text":"Do your best impression of how you flirt after two drinks.","nsfwLevel":"Mild"},
+  {"id":609,"text":"Whisper a compliment to {{randomOtherPlayer}} that you'd never say sober — or drink twice.","nsfwLevel":"Mild"},
+  {"id":610,"text":"What's the pettiest reason you've ever ghosted someone?","nsfwLevel":"Mild"},
+  {"id":611,"text":"Everyone guess {{randomOtherPlayer}}'s ideal first date. Closest guess gives out 3 drinks.","nsfwLevel":"Mild"},
+  {"id":612,"text":"What's a song that instantly makes you think of someone in this room?","nsfwLevel":"Mild"},
+  {"id":613,"text":"Never have I ever had a crush on a friend's sibling.","nsfwLevel":"Mild"},
+  {"id":614,"text":"Drink if your search history would embarrass you right now.","nsfwLevel":"Mild"},
+  {"id":615,"text":"Who in this room would you trust to pick your next date? Let them describe your dream match.","nsfwLevel":"Mild"},
+  {"id":616,"text":"What's the smoothest thing anyone has ever said to you?","nsfwLevel":"Mild"},
+  {"id":617,"text":"Give {{randomOtherPlayer}} your best 'come hither' look. If they laugh, they drink.","nsfwLevel":"Mild"},
+  {"id":618,"text":"What part of a first date makes you the most nervous?","nsfwLevel":"Mild"},
+  {"id":619,"text":"Never have I ever practiced kissing on my own hand or a pillow.","nsfwLevel":"Mild"},
+  {"id":620,"text":"Drink if you've ever rehearsed a text for longer than five minutes.","nsfwLevel":"Mild"},
+  {"id":621,"text":"Which fictional character was your first crush? Be honest.","nsfwLevel":"Mild"},
+  {"id":622,"text":"Give {{randomOtherPlayer}} a nickname you'd only call someone you were into.","nsfwLevel":"Mild"},
+  {"id":623,"text":"What's your most embarrassing dating-app profile mistake?","nsfwLevel":"Mild"},
+  {"id":624,"text":"Everyone point at the biggest flirt in the room on three. Most-pointed drinks.","nsfwLevel":"Mild"},
+  {"id":625,"text":"Never have I ever pretended to like a hobby just to impress a crush.","nsfwLevel":"Mild"},
+  {"id":626,"text":"What's the boldest way someone has ever slid into your DMs?","nsfwLevel":"Mild"},
+  {"id":627,"text":"Drink if you're wearing something tonight that you picked specifically to look hot.","nsfwLevel":"Mild"},
+  {"id":628,"text":"Compliment the person to your left like you're trying to take them home.","nsfwLevel":"Mild"},
+  {"id":629,"text":"What's your green flag — the thing that instantly makes someone more attractive to you?","nsfwLevel":"Mild"},
+  {"id":630,"text":"Do an impression of {{randomOtherPlayer}} attempting to flirt.","nsfwLevel":"Mild"},
+  {"id":631,"text":"Never have I ever stalked a crush's ex on social media.","nsfwLevel":"Mild"},
+  {"id":632,"text":"What's a completely non-sexual thing that you find weirdly hot?","nsfwLevel":"Mild"},
+  {"id":633,"text":"Drink if you've said 'I'm not looking for anything serious' and completely meant the opposite.","nsfwLevel":"Mild"},
+  {"id":634,"text":"Who here gives the best hugs? Prove it, or drink.","nsfwLevel":"Mild"},
+  {"id":635,"text":"Describe your ideal cuddle position, then find your best match in the room.","nsfwLevel":"Mild"},
+  {"id":636,"text":"Never have I ever caught feelings for someone I swore was 'just a hookup'.","nsfwLevel":"Mild"},
+  {"id":637,"text":"What's the movie scene that secretly gets you every single time?","nsfwLevel":"Mild"},
+  {"id":638,"text":"Drink if you'd let {{randomOtherPlayer}} scroll your camera roll for 30 seconds.","nsfwLevel":"Mild"},
+  {"id":639,"text":"What's your flirting go-to: eye contact, teasing, or compliments? Demonstrate it now.","nsfwLevel":"Mild"},
+  {"id":640,"text":"Everyone vote: who's most likely to fall in love on vacation? They drink.","nsfwLevel":"Mild"},
+  {"id":641,"text":"Never have I ever sent a risky text and immediately wished I could unsend it.","nsfwLevel":"Mild"},
+  {"id":642,"text":"What's the worst pet name a partner has ever called you?","nsfwLevel":"Mild"},
+  {"id":643,"text":"Slow-dance with {{randomOtherPlayer}} for 20 seconds — no music required.","nsfwLevel":"Mild"},
+  {"id":644,"text":"Drink if you've ever had a dream about someone in this room. Don't say who.","nsfwLevel":"Mild"},
+  {"id":645,"text":"What's the most attractive accent, and can you do it?","nsfwLevel":"Mild"},
+  {"id":646,"text":"Give the room your honest idea of the perfect Saturday night with someone you're into.","nsfwLevel":"Mild"},
+  {"id":647,"text":"Never have I ever kept a crush secret from the entire friend group.","nsfwLevel":"Mild"},
+  {"id":648,"text":"Who here would last longest on a dating show? They give out 3 drinks.","nsfwLevel":"Mild"},
+  {"id":649,"text":"What's a small gesture that instantly makes you catch feelings?","nsfwLevel":"Mild"},
+  {"id":650,"text":"Drink if you've reread an old conversation just to relive the flirting.","nsfwLevel":"Mild"},
+  {"id":651,"text":"Do your best slow-motion hair flip. The group rates it out of 10; under 5, drink.","nsfwLevel":"Mild"},
+  {"id":652,"text":"What's your most-used excuse to text someone you like?","nsfwLevel":"Mild"},
+  {"id":653,"text":"Never have I ever gone out of my way to 'accidentally' run into a crush.","nsfwLevel":"Mild"},
+  {"id":654,"text":"Trade phones with {{randomOtherPlayer}} and read their last sent text out loud.","nsfwLevel":"Mild"},
+  {"id":655,"text":"What's the flirtiest thing you can say using only the name of a food?","nsfwLevel":"Mild"},
+  {"id":656,"text":"Drink if you've ever changed your outfit because your crush might show up.","nsfwLevel":"Mild"},
+  {"id":657,"text":"Who here would you pick as a fake date to make an ex jealous? Explain your pick.","nsfwLevel":"Mild"},
+  {"id":658,"text":"Give {{randomOtherPlayer}} your most convincing bedroom eyes for 10 seconds without laughing.","nsfwLevel":"Mild"},
+  {"id":659,"text":"What's the closest you've come to shooting your shot and chickening out?","nsfwLevel":"Mild"},
+  {"id":700,"text":"What's the horniest text you've ever sent while completely sober?","nsfwLevel":"Medium"},
+  {"id":701,"text":"Never have I ever hooked up with someone and never learned their last name.","nsfwLevel":"Medium"},
+  {"id":702,"text":"Describe your type of 'trouble' — the person you know you should avoid but never do.","nsfwLevel":"Medium"},
+  {"id":703,"text":"Drink once for every dating app currently installed on your phone.","nsfwLevel":"Medium"},
+  {"id":704,"text":"What's the most reckless thing you've done just to see someone you were sleeping with?","nsfwLevel":"Medium"},
+  {"id":705,"text":"Whisper to {{randomOtherPlayer}} the dirtiest thing you're comfortable saying out loud.","nsfwLevel":"Medium"},
+  {"id":706,"text":"Never have I ever hooked up with someone at a wedding.","nsfwLevel":"Medium"},
+  {"id":707,"text":"What's your loudest 'oh no' hookup story? Tell it or take 4 drinks.","nsfwLevel":"Medium"},
+  {"id":708,"text":"Silently rank the players by who'd be best in bed — then say your number one out loud.","nsfwLevel":"Medium"},
+  {"id":709,"text":"Drink if you've ever left in the middle of the night to go hook up with someone.","nsfwLevel":"Medium"},
+  {"id":710,"text":"What's the biggest age gap you've been with? Everyone drinks the gap divided by five.","nsfwLevel":"Medium"},
+  {"id":711,"text":"Never have I ever had a 'we don't talk about it' hookup inside my friend group.","nsfwLevel":"Medium"},
+  {"id":712,"text":"Show {{randomOtherPlayer}} your signature move for turning a hug into something more.","nsfwLevel":"Medium"},
+  {"id":713,"text":"What's the wildest thing living in your bedside drawer right now?","nsfwLevel":"Medium"},
+  {"id":714,"text":"Drink if you've ever hooked up with someone purely to get over someone else.","nsfwLevel":"Medium"},
+  {"id":715,"text":"American Pie style: what's your most embarrassing 'caught in the act' moment?","nsfwLevel":"Medium"},
+  {"id":716,"text":"Never have I ever faked a phone call to escape a date that was about to go further.","nsfwLevel":"Medium"},
+  {"id":717,"text":"Whose number in this room would be the most dangerous for you to have? Explain.","nsfwLevel":"Medium"},
+  {"id":718,"text":"What's the fastest you've ever gone from 'hello' to hooking up?","nsfwLevel":"Medium"},
+  {"id":719,"text":"Drink if you've hooked up somewhere you absolutely should not have.","nsfwLevel":"Medium"},
+  {"id":720,"text":"Describe your ideal after-party with one person here — keep it clean for 15 seconds, then drink.","nsfwLevel":"Medium"},
+  {"id":721,"text":"Never have I ever been so loud I woke up someone in the next room.","nsfwLevel":"Medium"},
+  {"id":722,"text":"What's a body part people compliment you on that you secretly love?","nsfwLevel":"Medium"},
+  {"id":723,"text":"Give {{randomOtherPlayer}} a 15-second shoulder rub while describing what you'd do next.","nsfwLevel":"Medium"},
+  {"id":724,"text":"What's the most a hookup has ever cost you — dignity included?","nsfwLevel":"Medium"},
+  {"id":725,"text":"Drink if you've ever done a walk of shame in last night's clothes.","nsfwLevel":"Medium"},
+  {"id":726,"text":"Never have I ever sent a voice note I'd be mortified for my family to hear.","nsfwLevel":"Medium"},
+  {"id":727,"text":"Who here would you pick for a no-strings weekend away? Say it and give them 4 drinks.","nsfwLevel":"Medium"},
+  {"id":728,"text":"What's the boldest place you've flashed someone or been flashed?","nsfwLevel":"Medium"},
+  {"id":729,"text":"Do your best impression of your own 'sex face'. Group rates it; under 5, drink 3.","nsfwLevel":"Medium"},
+  {"id":730,"text":"Never have I ever had to check my phone to remember a hookup's name the next day.","nsfwLevel":"Medium"},
+  {"id":731,"text":"What's the dirtiest thing you've ever said in public with a totally straight face?","nsfwLevel":"Medium"},
+  {"id":732,"text":"Drink if you've had a hookup interrupted by a roommate, parent, or pet.","nsfwLevel":"Medium"},
+  {"id":733,"text":"Trade one number with {{randomOtherPlayer}} — body count or number of drinks — you pick which.","nsfwLevel":"Medium"},
+  {"id":734,"text":"What's the fantasy you replay the most but have never told anyone?","nsfwLevel":"Medium"},
+  {"id":735,"text":"Never have I ever dragged out a situationship way past its expiration date.","nsfwLevel":"Medium"},
+  {"id":736,"text":"Move next to {{randomOtherPlayer}} and describe your version of a perfect kiss.","nsfwLevel":"Medium"},
+  {"id":737,"text":"What's the pettiest thing you've done to an ex after a breakup?","nsfwLevel":"Medium"},
+  {"id":738,"text":"Drink if you've ever screenshotted a flirty conversation to show your friends.","nsfwLevel":"Medium"},
+  {"id":739,"text":"Which player has the most 'main character in a rom-com' energy? They give out 4 drinks.","nsfwLevel":"Medium"},
+  {"id":740,"text":"Never have I ever had a hookup story too wild to tell my closest friends.","nsfwLevel":"Medium"},
+  {"id":741,"text":"What's the most creative use you've found for something that isn't a sex toy?","nsfwLevel":"Medium"},
+  {"id":742,"text":"Describe your ideal one-night stand from start to finish in exactly ten words.","nsfwLevel":"Medium"},
+  {"id":743,"text":"Drink if you've ever hooked up with someone purely because of one photo.","nsfwLevel":"Medium"},
+  {"id":744,"text":"What's your red flag that scares people off but you refuse to change?","nsfwLevel":"Medium"},
+  {"id":745,"text":"Never have I ever had feelings for two people in this room at the same time.","nsfwLevel":"Medium"},
+  {"id":746,"text":"Let {{randomOtherPlayer}} ask you one question about your sex life you must answer or finish your drink.","nsfwLevel":"Medium"},
+  {"id":747,"text":"What's the most awkward thing that has ever happened mid-hookup?","nsfwLevel":"Medium"},
+  {"id":748,"text":"Drink if you've ever kept someone's hoodie far longer than the relationship lasted.","nsfwLevel":"Medium"},
+  {"id":749,"text":"Californication rule: describe the messiest love triangle you've ever been part of.","nsfwLevel":"Medium"},
+  {"id":750,"text":"What's your go-to move to signal you want someone to make the first move?","nsfwLevel":"Medium"},
+  {"id":751,"text":"Never have I ever hooked up with an ex's friend out of spite.","nsfwLevel":"Medium"},
+  {"id":752,"text":"Rate {{randomOtherPlayer}}'s outfit tonight on a 'take it off' scale of 1 to 10.","nsfwLevel":"Medium"},
+  {"id":753,"text":"What's the naughtiest thing you've ever done at a workplace?","nsfwLevel":"Medium"},
+  {"id":754,"text":"Drink if your body count is higher than the number of players in this room.","nsfwLevel":"Medium"},
+  {"id":755,"text":"Describe the kind of kiss that would make you fall for someone instantly, then demo it in the air.","nsfwLevel":"Medium"},
+  {"id":756,"text":"Never have I ever sent nearly the same flirty text to two different people in one night.","nsfwLevel":"Medium"},
+  {"id":757,"text":"What's the most convincing excuse you've used to skip the morning after?","nsfwLevel":"Medium"},
+  {"id":758,"text":"Give {{randomOtherPlayer}} a genuine compliment about their body, then you both drink.","nsfwLevel":"Medium"},
+  {"id":759,"text":"What's a sound, smell, or song that instantly turns you on?","nsfwLevel":"Medium"},
+  {"id":760,"text":"Drink if you've ever had a crush on someone completely off-limits.","nsfwLevel":"Medium"},
+  {"id":761,"text":"Never have I ever hidden a hookup because I was embarrassed about who it was.","nsfwLevel":"Medium"},
+  {"id":762,"text":"Who in this room would you sneak off with right now if there were zero consequences? Point silently.","nsfwLevel":"Medium"},
+  {"id":763,"text":"What's the most impulsive thing you've ever bought to impress someone in bed?","nsfwLevel":"Medium"},
+  {"id":764,"text":"Tell your worst 'the sex was bad but I stayed anyway' story.","nsfwLevel":"Medium"},
+  {"id":765,"text":"Drink if you've ever called a hookup 'the last time' more than three times.","nsfwLevel":"Medium"},
+  {"id":766,"text":"Never have I ever gotten a little too into a couples' costume.","nsfwLevel":"Medium"},
+  {"id":767,"text":"What's the flirtiest dare you'd actually accept right now? Say it — someone might hold you to it.","nsfwLevel":"Medium"},
+  {"id":768,"text":"Let the group vote: a truth about your wildest night, or a dare of their choosing.","nsfwLevel":"Medium"},
+  {"id":769,"text":"What's your best 'I can't believe that actually worked' pickup story?","nsfwLevel":"Medium"},
+  {"id":770,"text":"Drink if you've ever left a party early specifically to go hook up.","nsfwLevel":"Medium"},
+  {"id":771,"text":"Never have I ever made a dedicated hookup playlist.","nsfwLevel":"Medium"},
+  {"id":772,"text":"Demonstrate how you take off a jacket when you're trying to be sexy about it.","nsfwLevel":"Medium"},
+  {"id":773,"text":"What's the boldest thing you've whispered in someone's ear on a dance floor?","nsfwLevel":"Medium"},
+  {"id":774,"text":"Who here would you cast as the love interest in the movie of your life? They drink 3.","nsfwLevel":"Medium"},
+  {"id":775,"text":"What's the closest you've ever come to joining the mile-high club?","nsfwLevel":"Medium"},
+  {"id":776,"text":"Drink if you've kept flirting with someone long after you knew it was a bad idea.","nsfwLevel":"Medium"},
+  {"id":777,"text":"Never have I ever been the reason a couple got into a fight.","nsfwLevel":"Medium"},
+  {"id":778,"text":"Describe your ideal 'bad decision' — the person, the place, the vibe — in one sentence.","nsfwLevel":"Medium"},
+  {"id":779,"text":"Let {{randomOtherPlayer}} pick: answer their dirtiest question, or take 4 drinks and give them a compliment.","nsfwLevel":"Medium"},
+  {"id":800,"text":"Describe in detail exactly how you'd spend seven minutes alone with {{randomOtherPlayer}} — or take 5 drinks.","nsfwLevel":"Extreme"},
+  {"id":801,"text":"Let {{randomOtherPlayer}} write a dirty word on your body with their finger; the group guesses it.","nsfwLevel":"Extreme"},
+  {"id":802,"text":"Never have I ever finished before my partner and pretended I hadn't.","nsfwLevel":"Extreme"},
+  {"id":803,"text":"Reenact your loudest bedroom moment with sound only — group rates it, under 5 finish your drink.","nsfwLevel":"Extreme"},
+  {"id":804,"text":"Give {{randomOtherPlayer}} a lap dance for one full song — or strip one item and take 3 drinks.","nsfwLevel":"Extreme"},
+  {"id":805,"text":"Let {{randomOtherPlayer}} guide your hands to show exactly where they like to be touched — or take 4 drinks.","nsfwLevel":"Extreme"},
+  {"id":806,"text":"Confess the kinkiest thing you've done this month, or remove two items of clothing.","nsfwLevel":"Extreme"},
+  {"id":807,"text":"Take a body shot off {{randomOtherPlayer}} from a spot they choose below the collarbone.","nsfwLevel":"Extreme"},
+  {"id":808,"text":"Whisper to {{randomOtherPlayer}} the filthiest thing you'd want them to do to you — or finish your drink.","nsfwLevel":"Extreme"},
+  {"id":809,"text":"Drink if you've ever had sex somewhere everyone in this room has also been.","nsfwLevel":"Extreme"},
+  {"id":810,"text":"Let {{randomOtherPlayer}} bite you anywhere they choose above the waist — or take 3 drinks.","nsfwLevel":"Extreme"},
+  {"id":811,"text":"Simulate your favorite position with {{randomOtherPlayer}}, fully clothed, for 20 seconds — or take 4 drinks.","nsfwLevel":"Extreme"},
+  {"id":812,"text":"Describe your dirtiest fantasy involving someone in this room — no names, but we'll guess — or take 5 drinks.","nsfwLevel":"Extreme"},
+  {"id":813,"text":"Let {{randomOtherPlayer}} remove one item of your clothing using only their teeth — or take 4 drinks.","nsfwLevel":"Extreme"},
+  {"id":814,"text":"Never have I ever kept going after someone walked in.","nsfwLevel":"Extreme"},
+  {"id":815,"text":"Kiss {{randomOtherPlayer}} anywhere below the neck for 10 seconds — or finish your drink.","nsfwLevel":"Extreme"},
+  {"id":816,"text":"Let the group choose two players to spend 5 minutes alone in another room — or both finish their drinks.","nsfwLevel":"Extreme"},
+  {"id":817,"text":"Grind on {{randomOtherPlayer}}'s lap until the next prompt is drawn — or take 5 drinks.","nsfwLevel":"Extreme"},
+  {"id":818,"text":"Make the noise you make at your absolute loudest — everyone else votes if it's real or fake.","nsfwLevel":"Extreme"},
+  {"id":819,"text":"Let {{randomOtherPlayer}} trace an ice cube from your collarbone to wherever they dare — or take 4 drinks.","nsfwLevel":"Extreme"},
+  {"id":820,"text":"Confess the wildest thing you've ever agreed to in bed, or remove an item of clothing.","nsfwLevel":"Extreme"},
+  {"id":821,"text":"Straddle {{randomOtherPlayer}} and whisper what you'd do if the room were empty — or take 5 drinks.","nsfwLevel":"Extreme"},
+  {"id":822,"text":"Drink if you've ever hooked up with two people from the same friend group.","nsfwLevel":"Extreme"},
+  {"id":823,"text":"Let {{randomOtherPlayer}} spank you once for every year of your age divided by ten — or take 4 drinks.","nsfwLevel":"Extreme"},
+  {"id":824,"text":"Blindfold yourself and let {{randomOtherPlayer}} kiss you somewhere; guess where — wrong answer, finish your drink.","nsfwLevel":"Extreme"},
+  {"id":825,"text":"Describe your most-used toy and exactly how you use it — or take 5 drinks.","nsfwLevel":"Extreme"},
+  {"id":826,"text":"Let {{randomOtherPlayer}} unbutton or unzip one item of your clothing with their mouth — or take 4 drinks.","nsfwLevel":"Extreme"},
+  {"id":827,"text":"Never have I ever sent a full video, not just a photo.","nsfwLevel":"Extreme"},
+  {"id":828,"text":"Pick a player and act out the first 20 seconds of a hookup with them — or finish your drink.","nsfwLevel":"Extreme"},
+  {"id":829,"text":"Let {{randomOtherPlayer}} leave a mark somewhere only their next hookup would see — or take 4 drinks.","nsfwLevel":"Extreme"},
+  {"id":830,"text":"Confess the most people you've been with in a single week, or remove an item.","nsfwLevel":"Extreme"},
+  {"id":831,"text":"Take turns kissing up {{randomOtherPlayer}}'s arm; whoever pulls away first finishes their drink.","nsfwLevel":"Extreme"},
+  {"id":832,"text":"Narrate slowly exactly how you'd undress {{randomOtherPlayer}} — or take 5 drinks.","nsfwLevel":"Extreme"},
+  {"id":833,"text":"Drink if you've ever recorded audio of yourself during sex.","nsfwLevel":"Extreme"},
+  {"id":834,"text":"Let {{randomOtherPlayer}} pour a shot anywhere on your body above the waist and take it off you.","nsfwLevel":"Extreme"},
+  {"id":835,"text":"Simulate going down on {{randomOtherPlayer}} for 10 seconds, fully clothed — or take 4 drinks.","nsfwLevel":"Extreme"},
+  {"id":836,"text":"Confess your 'safe' number, then your real number — the group drinks the difference.","nsfwLevel":"Extreme"},
+  {"id":837,"text":"Let {{randomOtherPlayer}} run their hands anywhere over your clothes for 30 seconds — or take 4 drinks.","nsfwLevel":"Extreme"},
+  {"id":838,"text":"Never have I ever done something in bed I'd be too embarrassed to admit right now.","nsfwLevel":"Extreme"},
+  {"id":839,"text":"Kiss the person you find most attractive here for 15 seconds — or finish your drink and admit who it is.","nsfwLevel":"Extreme"},
+  {"id":840,"text":"Let {{randomOtherPlayer}} choose: strip one item, or sit on their lap for the rest of the game.","nsfwLevel":"Extreme"},
+  {"id":841,"text":"Describe the dirtiest dream you've had about someone at this party — or take 5 drinks.","nsfwLevel":"Extreme"},
+  {"id":842,"text":"Give {{randomOtherPlayer}} a hickey somewhere hidden — or take 4 drinks.","nsfwLevel":"Extreme"},
+  {"id":843,"text":"Drink if you've ever hooked up with two different people in the same day.","nsfwLevel":"Extreme"},
+  {"id":844,"text":"Let {{randomOtherPlayer}} tie your hands and feed you your drink — or take 3 drinks.","nsfwLevel":"Extreme"},
+  {"id":845,"text":"Use your signature move on {{randomOtherPlayer}} like you're trying to take them home tonight.","nsfwLevel":"Extreme"},
+  {"id":846,"text":"Confess the riskiest place you've ever finished, or remove an item of clothing.","nsfwLevel":"Extreme"},
+  {"id":847,"text":"Let {{randomOtherPlayer}} whisper one instruction in your ear and follow it, or finish your drink instead.","nsfwLevel":"Extreme"},
+  {"id":848,"text":"Never have I ever hooked up with someone while their roommate was in the same room.","nsfwLevel":"Extreme"},
+  {"id":849,"text":"Take a shot from {{randomOtherPlayer}}'s mouth — or take two shots on your own.","nsfwLevel":"Extreme"},
+  {"id":850,"text":"Describe your filthiest 'I've never told anyone' fantasy — or finish your drink.","nsfwLevel":"Extreme"},
+  {"id":851,"text":"Let {{randomOtherPlayer}} pick one item of your clothing to keep for the rest of the night — or take 4 drinks.","nsfwLevel":"Extreme"},
+  {"id":852,"text":"Kiss your way from {{randomOtherPlayer}}'s hand up to their shoulder, slowly — or take 3 drinks.","nsfwLevel":"Extreme"},
+  {"id":853,"text":"Drink if you've ever been the 'other person' and knew it the whole time.","nsfwLevel":"Extreme"},
+  {"id":854,"text":"Let the group dare you and {{randomOtherPlayer}} to do one thing together — majority rules — or both finish your drinks.","nsfwLevel":"Extreme"},
+  {"id":855,"text":"Confess the most times you've gone in one night — the group drinks that number.","nsfwLevel":"Extreme"},
+  {"id":856,"text":"Let {{randomOtherPlayer}} blindfold you and trace their lips anywhere above the waist for 20 seconds — or take 4 drinks.","nsfwLevel":"Extreme"},
+  {"id":857,"text":"Fake your loudest finish for 10 seconds while locking eyes with {{randomOtherPlayer}} — or take 4 drinks.","nsfwLevel":"Extreme"},
+  {"id":858,"text":"Never have I ever hooked up somewhere other people could see me.","nsfwLevel":"Extreme"},
+  {"id":859,"text":"Take {{randomOtherPlayer}} somewhere private for 3 minutes and come back — or both finish your drinks and confess why you didn't.","nsfwLevel":"Extreme"}
+];
+
+const LEVELS = ['Mild', 'Medium', 'Extreme'];
+const MIN_PLAYERS = 2;
+const MAX_PLAYERS = 10;
+
+/* Some prompts in the source deck share an id, so the deck is tracked by
+   position rather than by id — otherwise a duplicate id would retire both. */
+const DECK = PROMPTS.map((p, index) => ({ index: index, text: p.text, nsfwLevel: p.nsfwLevel }));
+
+const state = {
+  setupNames: ['', ''],
+  players: [],
+  nsfwLevel: 'Mild',
+  currentPlayerIndex: 0,
+  available: [],
+  used: new Set(),
+  currentPrompt: null,
+  promptText: '',
+  cardKey: 0,
+  gameEnded: false,
+};
+
+const $ = (id) => document.getElementById(id);
+
+/* ---------------- Toasts ---------------- */
+function toast(title, description, variant) {
+  const el = document.createElement('div');
+  el.className = 'toast' + (variant === 'destructive' ? ' destructive' : '');
+  const t = document.createElement('div');
+  t.className = 'toast-title';
+  t.textContent = title;
+  el.appendChild(t);
+  if (description) {
+    const d = document.createElement('div');
+    d.className = 'toast-desc';
+    d.textContent = description;
+    el.appendChild(d);
+  }
+  $('toasts').appendChild(el);
+  setTimeout(() => el.remove(), 4000);
+}
+
+/* ---------------- Segmented level pickers ---------------- */
+function renderLevelPicker(container, onSelect) {
+  container.textContent = '';
+  LEVELS.forEach((level) => {
+    const label = document.createElement('label');
+    label.className = 'seg';
+    label.setAttribute('role', 'radio');
+    label.setAttribute('aria-checked', String(state.nsfwLevel === level));
+    label.setAttribute('tabindex', '0');
+    const input = document.createElement('input');
+    input.type = 'radio';
+    input.name = container.id;
+    input.value = level;
+    input.checked = state.nsfwLevel === level;
+    label.appendChild(input);
+    label.appendChild(document.createTextNode(level));
+    const pick = () => onSelect(level);
+    label.addEventListener('click', pick);
+    label.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); pick(); }
+    });
+    container.appendChild(label);
+  });
+}
+
+/* ---------------- Setup screen ---------------- */
+function renderSetupPlayers() {
+  const wrap = $('setup-players');
+  wrap.textContent = '';
+  state.setupNames.forEach((name, index) => {
+    const row = document.createElement('div');
+    row.className = 'player-row';
+    row.style.marginBottom = '.5rem';
+
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.placeholder = 'Player ' + (index + 1);
+    input.value = name;
+    input.setAttribute('aria-label', 'Player ' + (index + 1) + ' name');
+    input.addEventListener('input', (e) => { state.setupNames[index] = e.target.value; });
+    input.addEventListener('keydown', (e) => { if (e.key === 'Enter') startGame(); });
+    row.appendChild(input);
+
+    if (state.setupNames.length > MIN_PLAYERS) {
+      const remove = document.createElement('button');
+      remove.className = 'btn btn-ghost btn-icon';
+      remove.setAttribute('aria-label', 'Remove player ' + (index + 1));
+      remove.innerHTML = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon-destructive"><circle cx="12" cy="12" r="10"/><path d="M8 12h8"/></svg>';
+      remove.addEventListener('click', () => removeSetupPlayer(index));
+      row.appendChild(remove);
+    }
+    wrap.appendChild(row);
+  });
+  $('add-player-btn').style.display = state.setupNames.length < MAX_PLAYERS ? '' : 'none';
+}
+
+function addSetupPlayer() {
+  if (state.setupNames.length < MAX_PLAYERS) {
+    state.setupNames.push('');
+    renderSetupPlayers();
+  } else {
+    toast('Max Players Reached', 'You can add up to ' + MAX_PLAYERS + ' players.', 'destructive');
+  }
+}
+
+function removeSetupPlayer(index) {
+  if (state.setupNames.length > MIN_PLAYERS) {
+    state.setupNames.splice(index, 1);
+    renderSetupPlayers();
+  } else {
+    toast('Minimum Players', 'You need at least ' + MIN_PLAYERS + ' players.', 'destructive');
+  }
+}
+
+function startGame() {
+  const valid = state.setupNames.map((n) => n.trim()).filter((n) => n !== '');
+  if (valid.length < MIN_PLAYERS) {
+    toast('Not Enough Players', 'Please enter names for at least ' + MIN_PLAYERS + ' players.', 'destructive');
+    return;
+  }
+  state.players = valid;
+  state.currentPlayerIndex = 0;
+  loadDeck();
+  selectNewPrompt();
+  showScreen('game');
+  renderGame();
+}
+
+/* ---------------- Deck handling ---------------- */
+function loadDeck() {
+  state.available = DECK.filter((p) => p.nsfwLevel === state.nsfwLevel);
+  state.used = new Set();
+  state.gameEnded = false;
+}
+
+function selectNewPrompt() {
+  state.cardKey += 1;
+  const remaining = state.available.filter((p) => !state.used.has(p.index));
+  if (remaining.length === 0) {
+    state.gameEnded = true;
+    state.currentPrompt = null;
+    state.promptText = '';
+    return;
+  }
+  state.currentPrompt = remaining[Math.floor(Math.random() * remaining.length)];
+  state.promptText = processPromptText();
+}
+
+const PREFIX_EXCEPTIONS = ['if', 'everyone', 'anybody', 'anyone', 'the ', 'girls', 'men', 'women', 'no one', 'shortest', 'dominant'];
+
+function processPromptText() {
+  if (state.gameEnded || !state.currentPrompt) return '';
+  let text = state.currentPrompt.text;
+  const currentPlayerName = state.players[state.currentPlayerIndex];
+
+  if (text.indexOf('{{randomOtherPlayer}}') !== -1) {
+    const others = state.players.filter((_, i) => i !== state.currentPlayerIndex);
+    const replacement = others.length > 0
+      ? others[Math.floor(Math.random() * others.length)]
+      : 'another player';
+    text = text.replace(/\{\{randomOtherPlayer\}\}/g, replacement);
+  }
+
+  const trimmedLower = text.trim().toLowerCase();
+  const needsPrefix = text.indexOf('?') === -1 &&
+    !PREFIX_EXCEPTIONS.some((word) => trimmedLower.startsWith(word));
+
+  if (text.length > 0) {
+    text = needsPrefix
+      ? currentPlayerName + ', ' + text.charAt(0).toLowerCase() + text.slice(1)
+      : text.charAt(0).toUpperCase() + text.slice(1);
+  }
+  return text;
+}
+
+function nextTurn() {
+  if (state.gameEnded || !state.currentPrompt) return;
+  state.used.add(state.currentPrompt.index);
+  // The player is randomised before the prompt is picked so that the prompt
+  // text is resolved against the player whose turn it actually is.
+  state.currentPlayerIndex = Math.floor(Math.random() * state.players.length);
+  selectNewPrompt();
+  renderGame();
+}
+
+function restartDeck() {
+  state.currentPlayerIndex = 0;
+  loadDeck();
+  selectNewPrompt();
+  closeDialog();
+  renderGame();
+}
+
+function changeLevel(level) {
+  state.nsfwLevel = level;
+  renderLevelPicker($('setup-level'), (l) => changeLevel(l));
+  renderLevelPicker($('sheet-level'), (l) => changeLevel(l));
+  if (state.players.length > 0) {
+    loadDeck();
+    selectNewPrompt();
+    renderGame();
+  }
+}
+
+/* ---------------- Game screen ---------------- */
+function renderGame() {
+  const card = $('game-card');
+  card.classList.remove('neon-border-violet', 'neon-border-pink', 'neon-border-red');
+  card.classList.add(
+    state.nsfwLevel === 'Mild' ? 'neon-border-violet'
+      : state.nsfwLevel === 'Medium' ? 'neon-border-pink'
+        : 'neon-border-red'
+  );
+
+  $('level-badge').textContent = state.nsfwLevel + ' Mode';
+  $('current-player').textContent = state.gameEnded ? '' : state.players[state.currentPlayerIndex];
+  $('player-count').textContent = state.players.length + (state.players.length === 1 ? ' Player' : ' Players');
+
+  const area = $('prompt-area');
+  // Re-use the existing node when the card hasn't changed, so editing the
+  // roster mid-prompt doesn't replay the card-enter animation.
+  if (!state.gameEnded && area.dataset.cardKey === String(state.cardKey)) {
+    area.firstChild.textContent = state.promptText;
+    renderRoster();
+    return;
+  }
+  area.dataset.cardKey = String(state.cardKey);
+  area.textContent = '';
+  if (state.gameEnded) {
+    const wrap = document.createElement('div');
+    wrap.className = 'game-over';
+    const h = document.createElement('h2');
+    h.className = 'neon-text-accent';
+    h.textContent = 'Last Call!';
+    const p = document.createElement('p');
+    p.textContent = 'The deck is empty. Pass the phone and restart.';
+    wrap.appendChild(h);
+    wrap.appendChild(p);
+    area.appendChild(wrap);
+  } else {
+    const p = document.createElement('p');
+    p.className = 'prompt-text';
+    p.textContent = state.promptText;
+    area.appendChild(p);
+  }
+
+  $('next-btn-label').textContent = state.gameEnded ? 'Restart Deck' : 'Next Player';
+  renderRoster();
+}
+
+/* ---------------- Manage group sheet ---------------- */
+function renderRoster() {
+  const roster = $('roster');
+  roster.textContent = '';
+  state.players.forEach((player, index) => {
+    const row = document.createElement('div');
+    row.className = 'roster-row';
+    const name = document.createElement('span');
+    name.textContent = player;
+    row.appendChild(name);
+
+    const del = document.createElement('button');
+    del.className = 'btn btn-ghost btn-icon';
+    del.setAttribute('aria-label', 'Remove ' + player);
+    del.disabled = state.players.length <= MIN_PLAYERS;
+    del.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon-destructive"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>';
+    del.addEventListener('click', () => removePlayer(index));
+    row.appendChild(del);
+    roster.appendChild(row);
+  });
+}
+
+function addPlayer() {
+  const input = $('new-player-input');
+  const name = input.value.trim();
+  if (!name) return toast('Player name cannot be empty.', '', 'destructive');
+  if (state.players.length >= MAX_PLAYERS) return toast('Limit: ' + MAX_PLAYERS + ' players.', '', 'destructive');
+  state.players.push(name);
+  input.value = '';
+  renderGame();
+}
+
+function removePlayer(indexToRemove) {
+  if (state.players.length <= MIN_PLAYERS) {
+    return toast('Minimum ' + MIN_PLAYERS + ' players required.', '', 'destructive');
+  }
+  const previousPlayer = state.players[state.currentPlayerIndex];
+  state.players.splice(indexToRemove, 1);
+  if (state.currentPlayerIndex >= state.players.length) {
+    state.currentPlayerIndex = state.players.length - 1;
+  }
+  if (!state.gameEnded && state.players[state.currentPlayerIndex] !== previousPlayer) {
+    state.promptText = processPromptText();
+  }
+  renderGame();
+}
+
+/* ---------------- Screens & overlays ---------------- */
+function showScreen(which) {
+  $('setup-screen').classList.toggle('active', which === 'setup');
+  $('game-screen').classList.toggle('active', which === 'game');
+}
+
+function openDialog() { $('newgame-overlay').classList.add('open'); }
+function closeDialog() { $('newgame-overlay').classList.remove('open'); }
+
+function openSheet() {
+  renderRoster();
+  $('sheet-overlay').classList.add('open');
+  $('manage-sheet').classList.add('open');
+}
+function closeSheet() {
+  $('sheet-overlay').classList.remove('open');
+  $('manage-sheet').classList.remove('open');
+}
+
+function backToSetup() {
+  closeDialog();
+  state.setupNames = state.players.length >= MIN_PLAYERS ? state.players.slice() : ['', ''];
+  state.players = [];
+  state.gameEnded = false;
+  state.currentPrompt = null;
+  renderSetupPlayers();
+  showScreen('setup');
+}
+
+/* ---------------- Wiring ---------------- */
+$('add-player-btn').addEventListener('click', addSetupPlayer);
+$('start-game-btn').addEventListener('click', startGame);
+$('next-btn').addEventListener('click', () => (state.gameEnded ? restartDeck() : nextTurn()));
+$('manage-btn').addEventListener('click', openSheet);
+$('end-game-btn').addEventListener('click', openDialog);
+$('dialog-cancel').addEventListener('click', closeDialog);
+$('dialog-newgame').addEventListener('click', backToSetup);
+$('dialog-restart').addEventListener('click', restartDeck);
+$('sheet-close').addEventListener('click', closeSheet);
+$('sheet-overlay').addEventListener('click', closeSheet);
+$('sheet-add-btn').addEventListener('click', addPlayer);
+$('new-player-input').addEventListener('keydown', (e) => { if (e.key === 'Enter') addPlayer(); });
+$('newgame-overlay').addEventListener('click', (e) => { if (e.target === $('newgame-overlay')) closeDialog(); });
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') { closeDialog(); closeSheet(); }
+});
+
+renderSetupPlayers();
+renderLevelPicker($('setup-level'), (l) => changeLevel(l));
+renderLevelPicker($('sheet-level'), (l) => changeLevel(l));
+</script>
+</body>
+</html>
