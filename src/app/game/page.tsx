@@ -1,11 +1,11 @@
 "use client";
 
-import { useEffect, useState, useCallback, Suspense } from 'react';
+import { useEffect, useState, useCallback, useRef, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { PROMPTS, Prompt, GameMode, isNhiePrompt, GAME_MODES } from '@/lib/prompts';
-import { ArrowRightCircle, RotateCcw, Trash2, UserPlus, Users } from 'lucide-react';
+import { ArrowRightCircle, RotateCcw, Trash2, Undo2, UserPlus, Users } from 'lucide-react';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -21,13 +21,47 @@ import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { cn } from '@/lib/utils';
+import { cn, playersToQuery, playersFromQuery } from '@/lib/utils';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
 import { Logo } from '@/components/shared/Logo';
 
 const MIN_PLAYERS = 2;
 const MAX_PLAYERS = 10;
+
+// Numeric durations only ("15 seconds", "2 minutes", "one-minute") — spelled-out
+// numbers are skipped on purpose, since those are usually hypothetical
+// ("if you had ten minutes alone...") rather than timed dares.
+const extractDurationSeconds = (text: string): number | null => {
+  const sec = text.match(/(\d+)\s*seconds?\b/i);
+  if (sec) return parseInt(sec[1], 10);
+  const min = text.match(/(\d+)\s*minutes?\b/i);
+  if (min) return parseInt(min[1], 10) * 60;
+  if (/\bone[- ]minute\b/i.test(text)) return 60;
+  return null;
+};
+
+const formatSeconds = (total: number): string =>
+  `${Math.floor(total / 60)}:${String(total % 60).padStart(2, '0')}`;
+
+// One shuffled "round" of player indices. Everyone goes once per round; the
+// avoidFirst guard stops the same player getting back-to-back turns across a
+// round boundary.
+const shuffledIndices = (count: number, avoidFirst?: number): number[] => {
+  const order = Array.from({ length: count }, (_, i) => i);
+  for (let i = order.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [order[i], order[j]] = [order[j], order[i]];
+  }
+  if (count > 1 && order[0] === avoidFirst) {
+    const swap = 1 + Math.floor(Math.random() * (count - 1));
+    [order[0], order[swap]] = [order[swap], order[0]];
+  }
+  return order;
+};
+
+type TurnSnapshot = { prompt: Prompt; playerIndex: number; text: string; upcoming: number[] };
+const HISTORY_LIMIT = 20;
 
 function GamePageContent() {
   const router = useRouter();
@@ -46,18 +80,76 @@ function GamePageContent() {
   const [isNewGameDialogOpen, setIsNewGameDialogOpen] = useState(false);
   const [isEditSheetOpen, setIsEditSheetOpen] = useState(false);
   const [newPlayerName, setNewPlayerName] = useState('');
+  const [timeLeft, setTimeLeft] = useState<number | null>(null);
+  const [timerRunning, setTimerRunning] = useState(false);
+  const [upcomingTurns, setUpcomingTurns] = useState<number[]>([]);
+  const [history, setHistory] = useState<TurnSnapshot[]>([]);
+  // Set just before an undo restores a card, so the processing effect shows the
+  // exact text that was on screen instead of re-randomizing {{randomOtherPlayer}}.
+  const restoredTextRef = useRef<string | null>(null);
+
+  const timerTotal = currentPrompt ? extractDurationSeconds(currentPrompt.text) : null;
+
+  // A fresh prompt resets the timer to its full duration, stopped.
+  useEffect(() => {
+    setTimerRunning(false);
+    setTimeLeft(currentPrompt ? extractDurationSeconds(currentPrompt.text) : null);
+  }, [currentPrompt]);
 
   useEffect(() => {
-    const playersQuery = searchParams.get('players');
+    if (!timerRunning) return;
+    const interval = setInterval(() => {
+      setTimeLeft(prev => {
+        if (prev === null || prev <= 1) {
+          setTimerRunning(false);
+          if (typeof navigator !== 'undefined' && 'vibrate' in navigator) navigator.vibrate([100, 50, 100]);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [timerRunning]);
+
+  const startTimer = () => {
+    setTimeLeft(timerTotal);
+    setTimerRunning(true);
+  };
+
+  useEffect(() => {
+    const names = playersFromQuery(searchParams);
     const nsfwLevelQuery = searchParams.get('nsfwLevel') as GameMode;
 
-    if (playersQuery) {
-      setPlayers(decodeURIComponent(playersQuery).split(','));
+    if (names.length > 0) {
+      setPlayers(names);
     }
-    if (nsfwLevelQuery) {
+    if (nsfwLevelQuery && GAME_MODES.some((m) => m.id === nsfwLevelQuery)) {
       setNsfwLevel(nsfwLevelQuery);
     }
   }, [searchParams]);
+
+  // Keep the screen awake during play — pass-the-phone games have long gaps
+  // between touches and the phone sleeping mid-card kills the momentum.
+  useEffect(() => {
+    if (!('wakeLock' in navigator)) return;
+    let sentinel: WakeLockSentinel | null = null;
+    const request = async () => {
+      try {
+        sentinel = await navigator.wakeLock.request('screen');
+      } catch {
+        sentinel = null;
+      }
+    };
+    request();
+    const onVisibility = () => {
+      if (document.visibilityState === 'visible') request();
+    };
+    document.addEventListener('visibilitychange', onVisibility);
+    return () => {
+      document.removeEventListener('visibilitychange', onVisibility);
+      sentinel?.release().catch(() => {});
+    };
+  }, []);
 
   const selectNewPrompt = useCallback((promptsToUse: Prompt[], currentUsedIds: Set<number>) => {
     const remainingPrompts = promptsToUse.filter(p => !currentUsedIds.has(p.id));
@@ -78,8 +170,10 @@ function GamePageContent() {
       ? PROMPTS.filter(isNhiePrompt)
       : PROMPTS.filter(p => p.nsfwLevel === nsfwLevel);
     setAvailablePrompts(filtered);
-    setUsedPromptIds(new Set()); 
-    setGameEnded(false); 
+    setUsedPromptIds(new Set());
+    setGameEnded(false);
+    setHistory([]);
+    setUpcomingTurns([]);
     return filtered;
   }, [nsfwLevel]);
 
@@ -99,15 +193,21 @@ function GamePageContent() {
     setNsfwLevel(newLevel);
   };
   
+  // The deck only (re)loads when the level changes, never on roster changes —
+  // adding or removing a player mid-game must not reset progress.
+  const deckLevelRef = useRef<GameMode | null>(null);
   useEffect(() => {
-    if (players.length > 0) {
-      const newPrompts = loadAndFilterPrompts();
-      selectNewPrompt(newPrompts, new Set());
-    }
+    if (players.length === 0 || deckLevelRef.current === nsfwLevel) return;
+    deckLevelRef.current = nsfwLevel;
+    const newPrompts = loadAndFilterPrompts();
+    selectNewPrompt(newPrompts, new Set());
   }, [nsfwLevel, players.length, loadAndFilterPrompts, selectNewPrompt]);
 
   useEffect(() => {
-    if (gameEnded) {
+    if (restoredTextRef.current !== null) {
+      setProcessedPromptText(restoredTextRef.current);
+      restoredTextRef.current = null;
+    } else if (gameEnded) {
       setProcessedPromptText("Game Over! You've gone through all the prompts for this level.");
     } else if (currentPrompt && players.length > 0) {
       let text = currentPrompt.text;
@@ -124,10 +224,15 @@ function GamePageContent() {
       }
        
       const trimmedLower = text.trim().toLowerCase();
-      const needsPrefix = !text.includes('?') && 
+      const needsPrefix = !text.includes('?') &&
+                         // A prompt that opens by addressing another player never
+                         // also takes the "Name, ..." prefix — that would
+                         // double-address it. Checked against the raw text since
+                         // the placeholder is already substituted by now.
+                         !currentPrompt.text.trimStart().startsWith('{{randomOtherPlayer}}') &&
                          // "Never have I ever" is called out to the whole room,
                          // so it never takes the "Name, ..." prefix.
-                         !["if", "everyone", "anybody", "anyone", "the ", "girls", "men", "women", "no one", "shortest", "dominant", "never have i ever"].some(word => trimmedLower.startsWith(word));
+                         !["if", "everyone", "anybody", "anyone", "any ", "the ", "girls", "men", "women", "no one", "shortest", "youngest", "dominant", "never have i ever"].some(word => trimmedLower.startsWith(word));
 
       if (needsPrefix && text.length > 0) {
         text = `${currentPlayerName}, ${text.charAt(0).toLowerCase() + text.slice(1)}`;
@@ -142,14 +247,38 @@ function GamePageContent() {
   const handleNextPlayer = () => {
     if (gameEnded || !currentPrompt) return;
 
+    setHistory(prev => [
+      ...prev.slice(-(HISTORY_LIMIT - 1)),
+      { prompt: currentPrompt, playerIndex: currentPlayerIndex, text: processedPromptText, upcoming: upcomingTurns },
+    ]);
+
     const newUsedPromptIds = new Set(usedPromptIds);
     newUsedPromptIds.add(currentPrompt.id);
     setUsedPromptIds(newUsedPromptIds);
 
-    const nextPlayerIndex = Math.floor(Math.random() * players.length);
-    setCurrentPlayerIndex(nextPlayerIndex);
+    let queue = upcomingTurns.filter(i => i < players.length);
+    if (queue.length === 0) queue = shuffledIndices(players.length, currentPlayerIndex);
+    setCurrentPlayerIndex(queue[0]);
+    setUpcomingTurns(queue.slice(1));
 
     selectNewPrompt(availablePrompts, newUsedPromptIds);
+  };
+
+  const handleUndo = () => {
+    const last = history[history.length - 1];
+    if (!last) return;
+    setHistory(prev => prev.slice(0, -1));
+    setUsedPromptIds(prev => {
+      const next = new Set(prev);
+      next.delete(last.prompt.id);
+      return next;
+    });
+    restoredTextRef.current = last.text;
+    setGameEnded(false);
+    setCurrentPrompt(last.prompt);
+    setCurrentPlayerIndex(Math.min(last.playerIndex, players.length - 1));
+    setUpcomingTurns(last.upcoming);
+    setCardKey(prev => prev + 1);
   };
 
   const handleAddPlayer = () => {
@@ -157,6 +286,11 @@ function GamePageContent() {
     if (!name) return toast({ title: 'Player name cannot be empty.', variant: 'destructive' });
     if (players.length >= MAX_PLAYERS) return toast({ title: `Limit: ${MAX_PLAYERS} players.`, variant: 'destructive' });
     
+    setUpcomingTurns(prev => {
+      const queue = [...prev];
+      queue.splice(Math.floor(Math.random() * (queue.length + 1)), 0, players.length);
+      return queue;
+    });
     setPlayers(prev => [...prev, name]);
     setNewPlayerName('');
   };
@@ -165,10 +299,14 @@ function GamePageContent() {
     if (players.length <= MIN_PLAYERS) {
       return toast({ title: `Minimum ${MIN_PLAYERS} players required.`, variant: 'destructive' });
     }
+    const newLength = players.length - 1;
     setPlayers(prev => prev.filter((_, index) => index !== indexToRemove));
-    if (currentPlayerIndex >= indexToRemove) {
-      setCurrentPlayerIndex(prev => (prev - 1 + players.length) % (players.length - 1));
-    }
+    setCurrentPlayerIndex(prev => {
+      if (indexToRemove < prev) return prev - 1; // same person keeps the turn
+      if (indexToRemove === prev) return prev % newLength; // turn passes to the next player
+      return prev;
+    });
+    setUpcomingTurns(prev => prev.filter(i => i !== indexToRemove).map(i => (i > indexToRemove ? i - 1 : i)));
   };
 
   if (players.length === 0) {
@@ -191,7 +329,10 @@ function GamePageContent() {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel className="bg-transparent border-white/10 hover:bg-white/5">Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={() => router.push('/')} className="bg-destructive text-white">New Game</AlertDialogAction>
+            <AlertDialogAction
+              onClick={() => router.push(`/?${playersToQuery(players, nsfwLevel)}`)}
+              className="bg-destructive text-white"
+            >New Game</AlertDialogAction>
             <AlertDialogAction onClick={restartGame} className="bg-primary text-white">Restart Deck</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -275,22 +416,45 @@ function GamePageContent() {
               </div>
             </CardHeader>
                         
-            <CardContent className="min-h-[25vh] md:min-h-[30vh] flex items-center justify-center p-6 md:p-10">
+            <CardContent aria-live="polite" className="min-h-[25vh] md:min-h-[30vh] flex items-center justify-center p-6 md:p-10">
               {gameEnded ? (
                 <div className="space-y-4 animate-fade-in text-center">
                   <p className="text-3xl font-bold text-secondary neon-text-accent">Last Call!</p>
                   <p className="text-muted-foreground text-lg italic">The deck is empty. Pass the phone and restart.</p>
                 </div>
               ) : (
-                <p key={cardKey} className="text-xl md:text-3xl font-medium leading-tight text-white text-center animate-card-enter drop-shadow-md">
-                  {processedPromptText}
-                </p>
+                <div className="flex flex-col items-center gap-6">
+                  <p key={cardKey} className="text-xl md:text-3xl font-medium leading-tight text-white text-center animate-card-enter drop-shadow-md">
+                    {processedPromptText}
+                  </p>
+                  {timerTotal !== null && (
+                    <div className="flex items-center gap-3">
+                      {timerRunning ? (
+                        <span className="text-3xl font-bold tabular-nums text-accent neon-text-accent" aria-live="off">
+                          ⏱ {formatSeconds(timeLeft ?? 0)}
+                        </span>
+                      ) : timeLeft === 0 ? (
+                        <span className="text-2xl font-bold text-secondary neon-text-accent animate-fade-in">⏰ Time&apos;s up!</span>
+                      ) : null}
+                      {!timerRunning && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={startTimer}
+                          className="rounded-full border-accent/40 text-accent hover:bg-accent/10 text-xs uppercase tracking-widest"
+                        >
+                          {timeLeft === 0 ? 'Restart Timer' : `Start ${formatSeconds(timerTotal)} Timer`}
+                        </Button>
+                      )}
+                    </div>
+                  )}
+                </div>
               )}
             </CardContent>
 
             <CardFooter className="bg-white/5 p-4 md:p-6 flex flex-col gap-4">
-              <Button 
-                onClick={gameEnded ? restartGame : handleNextPlayer} 
+              <Button
+                onClick={gameEnded ? restartGame : handleNextPlayer}
                 className="w-full sm:w-auto min-w-[200px] text-lg font-bold py-6 rounded-xl bg-primary text-white transition-all hover:scale-[1.02] active:scale-95 shadow-xl mx-auto"
               >
                 {gameEnded ? "Restart Deck" : "Next Player"}
@@ -298,6 +462,9 @@ function GamePageContent() {
               </Button>
               
               <div className="flex items-center justify-center gap-4 pt-2">
+                <Button variant="ghost" size="sm" onClick={handleUndo} disabled={history.length === 0} className="text-xs uppercase tracking-widest opacity-60 hover:opacity-100 hover:bg-white/5 disabled:opacity-25">
+                  <Undo2 className="mr-2 h-3 w-3" /> Undo
+                </Button>
                 <Button variant="ghost" size="sm" onClick={() => setIsEditSheetOpen(true)} className="text-xs uppercase tracking-widest opacity-60 hover:opacity-100 hover:bg-white/5">
                   <Users className="mr-2 h-3 w-3" /> Manage Group
                 </Button>
