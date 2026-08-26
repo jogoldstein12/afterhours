@@ -29,6 +29,21 @@ import { Logo } from '@/components/shared/Logo';
 const MIN_PLAYERS = 2;
 const MAX_PLAYERS = 10;
 
+// Numeric durations only ("15 seconds", "2 minutes", "one-minute") — spelled-out
+// numbers are skipped on purpose, since those are usually hypothetical
+// ("if you had ten minutes alone...") rather than timed dares.
+const extractDurationSeconds = (text: string): number | null => {
+  const sec = text.match(/(\d+)\s*seconds?\b/i);
+  if (sec) return parseInt(sec[1], 10);
+  const min = text.match(/(\d+)\s*minutes?\b/i);
+  if (min) return parseInt(min[1], 10) * 60;
+  if (/\bone[- ]minute\b/i.test(text)) return 60;
+  return null;
+};
+
+const formatSeconds = (total: number): string =>
+  `${Math.floor(total / 60)}:${String(total % 60).padStart(2, '0')}`;
+
 function GamePageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -46,6 +61,36 @@ function GamePageContent() {
   const [isNewGameDialogOpen, setIsNewGameDialogOpen] = useState(false);
   const [isEditSheetOpen, setIsEditSheetOpen] = useState(false);
   const [newPlayerName, setNewPlayerName] = useState('');
+  const [timeLeft, setTimeLeft] = useState<number | null>(null);
+  const [timerRunning, setTimerRunning] = useState(false);
+
+  const timerTotal = currentPrompt ? extractDurationSeconds(currentPrompt.text) : null;
+
+  // A fresh prompt resets the timer to its full duration, stopped.
+  useEffect(() => {
+    setTimerRunning(false);
+    setTimeLeft(currentPrompt ? extractDurationSeconds(currentPrompt.text) : null);
+  }, [currentPrompt]);
+
+  useEffect(() => {
+    if (!timerRunning) return;
+    const interval = setInterval(() => {
+      setTimeLeft(prev => {
+        if (prev === null || prev <= 1) {
+          setTimerRunning(false);
+          if (typeof navigator !== 'undefined' && 'vibrate' in navigator) navigator.vibrate([100, 50, 100]);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [timerRunning]);
+
+  const startTimer = () => {
+    setTimeLeft(timerTotal);
+    setTimerRunning(true);
+  };
 
   useEffect(() => {
     const names = playersFromQuery(searchParams);
@@ -305,9 +350,32 @@ function GamePageContent() {
                   <p className="text-muted-foreground text-lg italic">The deck is empty. Pass the phone and restart.</p>
                 </div>
               ) : (
-                <p key={cardKey} className="text-xl md:text-3xl font-medium leading-tight text-white text-center animate-card-enter drop-shadow-md">
-                  {processedPromptText}
-                </p>
+                <div className="flex flex-col items-center gap-6">
+                  <p key={cardKey} className="text-xl md:text-3xl font-medium leading-tight text-white text-center animate-card-enter drop-shadow-md">
+                    {processedPromptText}
+                  </p>
+                  {timerTotal !== null && (
+                    <div className="flex items-center gap-3">
+                      {timerRunning ? (
+                        <span className="text-3xl font-bold tabular-nums text-accent neon-text-accent" aria-live="off">
+                          ⏱ {formatSeconds(timeLeft ?? 0)}
+                        </span>
+                      ) : timeLeft === 0 ? (
+                        <span className="text-2xl font-bold text-secondary neon-text-accent animate-fade-in">⏰ Time&apos;s up!</span>
+                      ) : null}
+                      {!timerRunning && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={startTimer}
+                          className="rounded-full border-accent/40 text-accent hover:bg-accent/10 text-xs uppercase tracking-widest"
+                        >
+                          {timeLeft === 0 ? 'Restart Timer' : `Start ${formatSeconds(timerTotal)} Timer`}
+                        </Button>
+                      )}
+                    </div>
+                  )}
+                </div>
               )}
             </CardContent>
 

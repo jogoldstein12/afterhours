@@ -103,6 +103,12 @@ button:disabled{opacity:.4;cursor:not-allowed;}
 .btn-destructive{background:hsl(var(--destructive));color:#fff;}
 .btn-outline{border:1px solid hsl(var(--accent));color:hsl(var(--accent));width:100%;}
 .btn-outline:hover{background:hsl(var(--accent)/.1);}
+.timer-row{display:flex;align-items:center;justify-content:center;gap:.75rem;padding:0 1.5rem 1.5rem;}
+.timer-row[hidden]{display:none;}
+.timer-display{font-size:1.75rem;font-weight:700;font-variant-numeric:tabular-nums;color:hsl(var(--accent));text-shadow:0 0 8px hsl(var(--accent)/.7);}
+.timer-done{font-size:1.35rem;font-weight:700;color:hsl(var(--secondary));}
+.btn-timer{border:1px solid hsl(var(--accent)/.4);color:hsl(var(--accent));border-radius:999px;padding:.4rem 1rem;font-size:.75rem;text-transform:uppercase;letter-spacing:.1em;}
+.btn-timer:hover{background:hsl(var(--accent)/.1);}
 .btn-skip{border:1px solid rgba(255,255,255,.15);color:rgba(255,255,255,.7);padding:.9rem 1.4rem;border-radius:.75rem;width:100%;}
 .btn-skip:hover{background:rgba(255,255,255,.05);color:#fff;}
 .turn-actions{display:flex;flex-direction:column;gap:.75rem;width:100%;align-items:center;}
@@ -318,6 +324,11 @@ button:disabled{opacity:.4;cursor:not-allowed;}
       </div>
 
       <div class="prompt-area" id="prompt-area" aria-live="polite"></div>
+      <div class="timer-row" id="timer-row" hidden>
+        <span class="timer-display" id="timer-display" hidden></span>
+        <span class="timer-done" id="timer-done" hidden>⏰ Time's up!</span>
+        <button class="btn btn-timer" id="timer-btn">Start Timer</button>
+      </div>
 
       <div class="game-footer">
         <div class="turn-actions">
@@ -1434,6 +1445,60 @@ function loadDeck() {
   state.gameEnded = false;
 }
 
+/* ---------------- Timed prompts ---------------- */
+// Numeric durations only ("15 seconds", "2 minutes", "one-minute") — spelled-out
+// numbers are usually hypothetical rather than timed dares. Keep in sync with
+// extractDurationSeconds in src/app/game/page.tsx.
+function extractDurationSeconds(text) {
+  var sec = text.match(/(\d+)\s*seconds?\b/i);
+  if (sec) return parseInt(sec[1], 10);
+  var min = text.match(/(\d+)\s*minutes?\b/i);
+  if (min) return parseInt(min[1], 10) * 60;
+  if (/\bone[- ]minute\b/i.test(text)) return 60;
+  return null;
+}
+
+function formatSeconds(total) {
+  return Math.floor(total / 60) + ':' + String(total % 60).padStart(2, '0');
+}
+
+function resetTimer() {
+  if (state.timerInterval) { clearInterval(state.timerInterval); state.timerInterval = null; }
+  state.timerLeft = state.currentPrompt ? extractDurationSeconds(state.currentPrompt.text) : null;
+  state.timerDone = false;
+}
+
+function renderTimer() {
+  var total = state.currentPrompt && !state.gameEnded ? extractDurationSeconds(state.currentPrompt.text) : null;
+  $('timer-row').hidden = total === null;
+  if (total === null) return;
+  var running = !!state.timerInterval;
+  $('timer-display').hidden = !running;
+  if (running) $('timer-display').textContent = '⏱ ' + formatSeconds(state.timerLeft);
+  $('timer-done').hidden = running || !state.timerDone;
+  $('timer-btn').hidden = running;
+  $('timer-btn').textContent = state.timerDone ? 'Restart Timer' : 'Start ' + formatSeconds(total) + ' Timer';
+}
+
+function startTimer() {
+  var total = state.currentPrompt ? extractDurationSeconds(state.currentPrompt.text) : null;
+  if (total === null) return;
+  if (state.timerInterval) clearInterval(state.timerInterval);
+  state.timerLeft = total;
+  state.timerDone = false;
+  state.timerInterval = setInterval(function () {
+    state.timerLeft -= 1;
+    if (state.timerLeft <= 0) {
+      clearInterval(state.timerInterval);
+      state.timerInterval = null;
+      state.timerDone = true;
+      if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
+    }
+    renderTimer();
+  }, 1000);
+  renderTimer();
+}
+
 function selectNewPrompt() {
   state.cardKey += 1;
   const remaining = state.available.filter((p) => !state.used.has(p.index));
@@ -1441,10 +1506,12 @@ function selectNewPrompt() {
     state.gameEnded = true;
     state.currentPrompt = null;
     state.promptText = '';
+    resetTimer();
     return;
   }
   state.currentPrompt = remaining[Math.floor(Math.random() * remaining.length)];
   state.promptText = processPromptText();
+  resetTimer();
 }
 
 // Prompts opening with one of these address the room rather than the player
@@ -1556,6 +1623,7 @@ function renderGame() {
 
   $('next-btn-label').textContent = state.gameEnded ? 'Restart Deck' : 'Next Player';
   $('skip-btn').style.display = state.gameEnded ? 'none' : '';
+  renderTimer();
   renderRoster();
 }
 
@@ -1641,6 +1709,7 @@ $('start-game-btn').addEventListener('click', startGame);
 $('next-btn').addEventListener('click', () => (state.gameEnded ? restartDeck() : nextTurn()));
 // Skipping costs the current player 2 drinks (announced on the button) and moves the game on.
 $('skip-btn').addEventListener('click', () => nextTurn());
+$('timer-btn').addEventListener('click', startTimer);
 $('manage-btn').addEventListener('click', openSheet);
 $('end-game-btn').addEventListener('click', openDialog);
 $('dialog-cancel').addEventListener('click', closeDialog);
