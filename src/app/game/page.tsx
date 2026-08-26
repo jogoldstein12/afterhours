@@ -4,7 +4,7 @@ import { useEffect, useState, useCallback, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { PROMPTS, Prompt, NsfwLevel } from '@/lib/prompts';
+import { PROMPTS, Prompt, GameMode, isNhiePrompt, GAME_MODES } from '@/lib/prompts';
 import { ArrowRightCircle, RotateCcw, Trash2, UserPlus, Users } from 'lucide-react';
 import {
   AlertDialog,
@@ -35,7 +35,7 @@ function GamePageContent() {
   const { toast } = useToast();
 
   const [players, setPlayers] = useState<string[]>([]);
-  const [nsfwLevel, setNsfwLevel] = useState<NsfwLevel>('Mild');
+  const [nsfwLevel, setNsfwLevel] = useState<GameMode>('Mild');
   const [currentPlayerIndex, setCurrentPlayerIndex] = useState(0);
   const [currentPrompt, setCurrentPrompt] = useState<Prompt | null>(null);
   const [processedPromptText, setProcessedPromptText] = useState<string>('');
@@ -49,7 +49,7 @@ function GamePageContent() {
 
   useEffect(() => {
     const playersQuery = searchParams.get('players');
-    const nsfwLevelQuery = searchParams.get('nsfwLevel') as NsfwLevel;
+    const nsfwLevelQuery = searchParams.get('nsfwLevel') as GameMode;
 
     if (playersQuery) {
       setPlayers(decodeURIComponent(playersQuery).split(','));
@@ -74,7 +74,9 @@ function GamePageContent() {
   }, []);
   
   const loadAndFilterPrompts = useCallback(() => {
-    const filtered = PROMPTS.filter(p => p.nsfwLevel === nsfwLevel);
+    const filtered = nsfwLevel === 'NHIE'
+      ? PROMPTS.filter(isNhiePrompt)
+      : PROMPTS.filter(p => p.nsfwLevel === nsfwLevel);
     setAvailablePrompts(filtered);
     setUsedPromptIds(new Set()); 
     setGameEnded(false); 
@@ -93,7 +95,7 @@ function GamePageContent() {
     setIsNewGameDialogOpen(false);
   }, [loadAndFilterPrompts, selectNewPrompt]);
 
-  const handleNsfwLevelChange = (newLevel: NsfwLevel) => {
+  const handleNsfwLevelChange = (newLevel: GameMode) => {
     setNsfwLevel(newLevel);
   };
   
@@ -123,7 +125,9 @@ function GamePageContent() {
        
       const trimmedLower = text.trim().toLowerCase();
       const needsPrefix = !text.includes('?') && 
-                         !["if", "everyone", "anybody", "anyone", "the ", "girls", "men", "women", "no one", "shortest", "dominant"].some(word => trimmedLower.startsWith(word));
+                         // "Never have I ever" is called out to the whole room,
+                         // so it never takes the "Name, ..." prefix.
+                         !["if", "everyone", "anybody", "anyone", "the ", "girls", "men", "women", "no one", "shortest", "dominant", "never have i ever"].some(word => trimmedLower.startsWith(word));
 
       if (needsPrefix && text.length > 0) {
         text = `${currentPlayerName}, ${text.charAt(0).toLowerCase() + text.slice(1)}`;
@@ -219,11 +223,11 @@ function GamePageContent() {
             </div>
             <Separator className="bg-white/10" />
             <div className="space-y-4">
-              <Label className="text-accent neon-text-accent uppercase tracking-tighter text-xs">Intensity Level</Label>
-              <RadioGroup value={nsfwLevel} onValueChange={(v) => handleNsfwLevelChange(v as NsfwLevel)} className="grid grid-cols-3 gap-2 bg-white/5 p-1 rounded-xl">
-                {(['Mild', 'Medium', 'Extreme'] as NsfwLevel[]).map((level) => (
-                  <Label key={level} className={cn("flex items-center justify-center py-2 rounded-lg cursor-pointer transition-all text-sm", nsfwLevel === level ? 'bg-primary text-white shadow-[0_0_10px_rgba(190,82,242,0.5)]' : 'hover:bg-white/5')}>
-                    <RadioGroupItem value={level} className="sr-only" />{level}
+              <Label className="text-accent neon-text-accent uppercase tracking-tighter text-xs">Game Mode</Label>
+              <RadioGroup value={nsfwLevel} onValueChange={(v) => handleNsfwLevelChange(v as GameMode)} className="grid grid-cols-3 gap-2 bg-white/5 p-1 rounded-xl">
+                {GAME_MODES.map((mode) => (
+                  <Label key={mode.id} className={cn("flex items-center justify-center py-2 rounded-lg cursor-pointer transition-all text-sm", mode.wide && 'col-span-3', nsfwLevel === mode.id ? 'bg-primary text-white shadow-[0_0_10px_rgba(190,82,242,0.5)]' : 'hover:bg-white/5')}>
+                    <RadioGroupItem value={mode.id} className="sr-only" />{mode.label}
                   </Label>
                 ))}
               </RadioGroup>
@@ -239,14 +243,15 @@ function GamePageContent() {
             "w-full max-w-4xl transition-all duration-500 glass-card overflow-hidden border-[1px]",
             nsfwLevel === 'Mild' && "neon-border-violet",
             nsfwLevel === 'Medium' && "neon-border-pink",
-            nsfwLevel === 'Extreme' && "border-destructive shadow-[0_0_20px_rgba(255,0,0,0.4)]"
+            nsfwLevel === 'Extreme' && "border-destructive shadow-[0_0_20px_rgba(255,0,0,0.4)]",
+            nsfwLevel === 'NHIE' && "border-chart-3 shadow-[0_0_20px_hsl(var(--chart-3)/0.45)]"
           )}>
             <CardHeader className="border-b border-white/5 bg-white/5 p-4 md:p-6 relative min-h-[90px] flex items-center">
               <div className="flex justify-between items-start w-full relative z-10">
                 {/* Left Side: Mode Badge and Player Name centered under it */}
                 <div className="flex flex-col gap-1 items-center min-w-[100px]">
                   <Badge variant="outline" className="text-[9px] sm:text-[10px] px-2 py-0 uppercase tracking-widest border-white/20 text-white/50 shrink-0">
-                    {nsfwLevel} Mode
+                    {GAME_MODES.find((m) => m.id === nsfwLevel)?.badge ?? nsfwLevel}
                   </Badge>
                   <CardTitle className="text-xl sm:text-2xl md:text-3xl font-headline font-bold text-white tracking-tight leading-none h-[28px] sm:h-[32px] flex items-center">
                     {players[currentPlayerIndex]}

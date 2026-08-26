@@ -19,6 +19,7 @@
   --muted-foreground:0 0% 63.9%;
   --accent:328 86% 64%;
   --destructive:0 72% 51%;
+  --chart-3:200 86% 64%;
   --border:285 30% 25%;
   --input:285 40% 15%;
   --radius:0.5rem;
@@ -54,6 +55,7 @@ body{
 .neon-border-violet{border-color:hsl(var(--primary));box-shadow:0 0 5px hsl(var(--primary)),0 0 10px hsl(var(--primary)/.5),inset 0 0 10px hsl(var(--primary)/.3);}
 .neon-border-pink{border-color:hsl(var(--secondary));box-shadow:0 0 5px hsl(var(--secondary)),0 0 10px hsl(var(--secondary)/.5),inset 0 0 10px hsl(var(--secondary)/.3);}
 .neon-border-red{border-color:hsl(var(--destructive));box-shadow:0 0 20px rgba(255,0,0,.4),inset 0 0 10px rgba(255,0,0,.2);}
+.neon-border-blue{border-color:hsl(var(--chart-3));box-shadow:0 0 5px hsl(var(--chart-3)),0 0 10px hsl(var(--chart-3)/.5),inset 0 0 10px hsl(var(--chart-3)/.3);}
 .glass-card{background:rgba(10,4,15,.8);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border:1px solid rgba(255,255,255,.1);}
 
 /* ---------- Layout ---------- */
@@ -116,6 +118,7 @@ button:disabled{opacity:.4;cursor:not-allowed;}
   border-radius:calc(var(--radius) - 2px);transition:background-color .2s,box-shadow .2s;
 }
 .seg:hover{background:hsl(var(--primary)/.2);}
+.seg-wide{grid-column:1 / -1;}
 .seg[aria-checked=true]{background:hsl(var(--primary));color:#fff;box-shadow:0 0 5px hsl(var(--primary)),0 0 10px hsl(var(--primary)/.7);}
 .seg input{position:absolute;width:1px;height:1px;opacity:0;pointer-events:none;}
 
@@ -268,9 +271,9 @@ button:disabled{opacity:.4;cursor:not-allowed;}
         <div class="field">
           <span class="field-label neon-text-accent">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/><path d="M12 8v4"/><path d="M12 16h.01"/></svg>
-            NSFW Level
+            Game Mode
           </span>
-          <div class="segmented" id="setup-level" role="radiogroup" aria-label="NSFW Level"></div>
+          <div class="segmented" id="setup-level" role="radiogroup" aria-label="Game mode"></div>
         </div>
       </div>
       <div class="card-footer">
@@ -1214,13 +1217,26 @@ const PROMPTS = [
   {"id":1118,"text":"Rate how attracted you are to {{randomOtherPlayer}} out of 10 — anything under 7 and you drink 5.","nsfwLevel":"Medium"}
 ];
 
-const LEVELS = ['Mild', 'Medium', 'Extreme'];
+// The three intensity tiers, plus a Never Have I Ever mode that draws the
+// NHIE prompts from every tier rather than being a tier of its own.
+const MODES = [
+  { id: 'Mild', label: 'Mild', badge: 'Mild Mode' },
+  { id: 'Medium', label: 'Medium', badge: 'Medium Mode' },
+  { id: 'Extreme', label: 'Extreme', badge: 'Extreme Mode' },
+  { id: 'NHIE', label: 'Never Have I Ever', badge: 'Never Have I Ever', wide: true },
+];
+const NHIE_PATTERN = /^never have i ever\b/i;
 const MIN_PLAYERS = 2;
 const MAX_PLAYERS = 10;
 
 /* Some prompts in the source deck share an id, so the deck is tracked by
    position rather than by id — otherwise a duplicate id would retire both. */
-const DECK = PROMPTS.map((p, index) => ({ index: index, text: p.text, nsfwLevel: p.nsfwLevel }));
+const DECK = PROMPTS.map((p, index) => ({
+  index: index,
+  text: p.text,
+  nsfwLevel: p.nsfwLevel,
+  isNhie: NHIE_PATTERN.test(p.text.trim()),
+}));
 
 const state = {
   setupNames: ['', ''],
@@ -1258,20 +1274,20 @@ function toast(title, description, variant) {
 /* ---------------- Segmented level pickers ---------------- */
 function renderLevelPicker(container, onSelect) {
   container.textContent = '';
-  LEVELS.forEach((level) => {
+  MODES.forEach((mode) => {
     const label = document.createElement('label');
-    label.className = 'seg';
+    label.className = mode.wide ? 'seg seg-wide' : 'seg';
     label.setAttribute('role', 'radio');
-    label.setAttribute('aria-checked', String(state.nsfwLevel === level));
+    label.setAttribute('aria-checked', String(state.nsfwLevel === mode.id));
     label.setAttribute('tabindex', '0');
     const input = document.createElement('input');
     input.type = 'radio';
     input.name = container.id;
-    input.value = level;
-    input.checked = state.nsfwLevel === level;
+    input.value = mode.id;
+    input.checked = state.nsfwLevel === mode.id;
     label.appendChild(input);
-    label.appendChild(document.createTextNode(level));
-    const pick = () => onSelect(level);
+    label.appendChild(document.createTextNode(mode.label));
+    const pick = () => onSelect(mode.id);
     label.addEventListener('click', pick);
     label.addEventListener('keydown', (e) => {
       if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); pick(); }
@@ -1345,7 +1361,9 @@ function startGame() {
 
 /* ---------------- Deck handling ---------------- */
 function loadDeck() {
-  state.available = DECK.filter((p) => p.nsfwLevel === state.nsfwLevel);
+  state.available = state.nsfwLevel === 'NHIE'
+    ? DECK.filter((p) => p.isNhie)
+    : DECK.filter((p) => p.nsfwLevel === state.nsfwLevel);
   state.used = new Set();
   state.gameEnded = false;
 }
@@ -1363,7 +1381,10 @@ function selectNewPrompt() {
   state.promptText = processPromptText();
 }
 
-const PREFIX_EXCEPTIONS = ['if', 'everyone', 'anybody', 'anyone', 'the ', 'girls', 'men', 'women', 'no one', 'shortest', 'dominant'];
+// Prompts opening with one of these address the room rather than the player
+// whose turn it is, so they never get the "Name, ..." prefix. "Never have I
+// ever" is called out to the whole group by definition.
+const PREFIX_EXCEPTIONS = ['if', 'everyone', 'anybody', 'anyone', 'the ', 'girls', 'men', 'women', 'no one', 'shortest', 'dominant', 'never have i ever'];
 
 function processPromptText() {
   if (state.gameEnded || !state.currentPrompt) return '';
@@ -1422,14 +1443,16 @@ function changeLevel(level) {
 /* ---------------- Game screen ---------------- */
 function renderGame() {
   const card = $('game-card');
-  card.classList.remove('neon-border-violet', 'neon-border-pink', 'neon-border-red');
+  card.classList.remove('neon-border-violet', 'neon-border-pink', 'neon-border-red', 'neon-border-blue');
   card.classList.add(
     state.nsfwLevel === 'Mild' ? 'neon-border-violet'
       : state.nsfwLevel === 'Medium' ? 'neon-border-pink'
-        : 'neon-border-red'
+        : state.nsfwLevel === 'Extreme' ? 'neon-border-red'
+          : 'neon-border-blue'
   );
 
-  $('level-badge').textContent = state.nsfwLevel + ' Mode';
+  const mode = MODES.find((m) => m.id === state.nsfwLevel);
+  $('level-badge').textContent = mode ? mode.badge : state.nsfwLevel;
   $('current-player').textContent = state.gameEnded ? '' : state.players[state.currentPlayerIndex];
   $('player-count').textContent = state.players.length + (state.players.length === 1 ? ' Player' : ' Players');
 

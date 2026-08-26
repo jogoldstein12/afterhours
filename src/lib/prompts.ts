@@ -1,5 +1,24 @@
 export type NsfwLevel = 'Mild' | 'Medium' | 'Extreme';
 
+/**
+ * Game modes are the three intensity tiers plus 'NHIE', a Never Have I Ever
+ * mode that draws the NHIE prompts out of every tier rather than being a tier
+ * of its own. Prompts keep their nsfwLevel either way.
+ */
+export type GameMode = NsfwLevel | 'NHIE';
+
+export const NHIE_PATTERN = /^never have i ever\b/i;
+
+export const isNhiePrompt = (prompt: Prompt): boolean =>
+  NHIE_PATTERN.test(prompt.text.trim());
+
+export const GAME_MODES: { id: GameMode; label: string; badge: string; wide?: boolean }[] = [
+  { id: 'Mild', label: 'Mild', badge: 'Mild Mode' },
+  { id: 'Medium', label: 'Medium', badge: 'Medium Mode' },
+  { id: 'Extreme', label: 'Extreme', badge: 'Extreme Mode' },
+  { id: 'NHIE', label: 'Never Have I Ever', badge: 'Never Have I Ever', wide: true },
+];
+
 export type Prompt = {
   id: number;
   text: string;

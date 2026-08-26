@@ -9,7 +9,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Header } from '@/components/shared/Header';
 import { Users, MinusCircle, PlusCircle, ShieldAlert } from 'lucide-react';
-import type { NsfwLevel } from '@/lib/prompts';
+import { GAME_MODES, type GameMode } from '@/lib/prompts';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
@@ -27,7 +27,7 @@ export default function HomePage() {
     { name: '' },
     { name: '' }
   ]);
-  const [nsfwLevel, setNsfwLevel] = useState<NsfwLevel>('Mild');
+  const [nsfwLevel, setNsfwLevel] = useState<GameMode>('Mild');
   const router = useRouter();
   const { toast } = useToast();
 
@@ -117,28 +117,29 @@ export default function HomePage() {
             
             <div className="space-y-3">
               <Label className="text-lg font-medium text-accent neon-text-accent flex items-center">
-                <ShieldAlert className="mr-2 h-5 w-5" /> NSFW Level
+                <ShieldAlert className="mr-2 h-5 w-5" /> Game Mode
               </Label>
                <RadioGroup
                 value={nsfwLevel}
-                onValueChange={(value: string) => setNsfwLevel(value as NsfwLevel)}
+                onValueChange={(value: string) => setNsfwLevel(value as GameMode)}
                 className="grid grid-cols-3 gap-2 rounded-lg bg-input p-1"
               >
-                {(['Mild', 'Medium', 'Extreme'] as NsfwLevel[]).map((level) => (
+                {GAME_MODES.map((mode) => (
                     <Label 
-                      key={level} 
-                      htmlFor={`nsfw-${level.toLowerCase()}`} 
+                      key={mode.id} 
+                      htmlFor={`nsfw-${mode.id.toLowerCase()}`} 
                       className={cn(
                         "flex items-center justify-center space-x-2 rounded-md px-3 py-2 text-center text-sm font-medium cursor-pointer transition-colors",
-                        nsfwLevel === level ? 'bg-primary text-primary-foreground neon-border-primary shadow' : 'hover:bg-primary/20'
+                        mode.wide && 'col-span-3',
+                        nsfwLevel === mode.id ? 'bg-primary text-primary-foreground neon-border-primary shadow' : 'hover:bg-primary/20'
                       )}
                     >
                       <RadioGroupItem 
-                        value={level} 
-                        id={`nsfw-${level.toLowerCase()}`} 
+                        value={mode.id} 
+                        id={`nsfw-${mode.id.toLowerCase()}`} 
                         className="sr-only"
                       />
-                      {level}
+                      {mode.label}
                     </Label>
                 ))}
               </RadioGroup>
