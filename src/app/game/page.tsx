@@ -127,10 +127,15 @@ function GamePageContent() {
       }
        
       const trimmedLower = text.trim().toLowerCase();
-      const needsPrefix = !text.includes('?') && 
+      const needsPrefix = !text.includes('?') &&
+                         // A prompt that opens by addressing another player never
+                         // also takes the "Name, ..." prefix — that would
+                         // double-address it. Checked against the raw text since
+                         // the placeholder is already substituted by now.
+                         !currentPrompt.text.trimStart().startsWith('{{randomOtherPlayer}}') &&
                          // "Never have I ever" is called out to the whole room,
                          // so it never takes the "Name, ..." prefix.
-                         !["if", "everyone", "anybody", "anyone", "the ", "girls", "men", "women", "no one", "shortest", "dominant", "never have i ever"].some(word => trimmedLower.startsWith(word));
+                         !["if", "everyone", "anybody", "anyone", "any ", "the ", "girls", "men", "women", "no one", "shortest", "youngest", "dominant", "never have i ever"].some(word => trimmedLower.startsWith(word));
 
       if (needsPrefix && text.length > 0) {
         text = `${currentPlayerName}, ${text.charAt(0).toLowerCase() + text.slice(1)}`;
@@ -293,7 +298,7 @@ function GamePageContent() {
               </div>
             </CardHeader>
                         
-            <CardContent className="min-h-[25vh] md:min-h-[30vh] flex items-center justify-center p-6 md:p-10">
+            <CardContent aria-live="polite" className="min-h-[25vh] md:min-h-[30vh] flex items-center justify-center p-6 md:p-10">
               {gameEnded ? (
                 <div className="space-y-4 animate-fade-in text-center">
                   <p className="text-3xl font-bold text-secondary neon-text-accent">Last Call!</p>

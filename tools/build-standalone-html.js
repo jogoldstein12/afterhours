@@ -38,7 +38,17 @@ if (!template.includes('__PROMPTS_JSON__')) {
   throw new Error('Template is missing the __PROMPTS_JSON__ placeholder.');
 }
 
-fs.writeFileSync(outputPath, template.replace('__PROMPTS_JSON__', json));
+// Function-form replacement so `$`-patterns in prompt text are never expanded.
+fs.writeFileSync(outputPath, template.replace('__PROMPTS_JSON__', () => json));
+
+// Keep the spreadsheet of record in sync with the deck.
+const csvPath = path.join(root, 'docs', 'prompts.csv');
+const csvEscape = (value) => '"' + String(value).replace(/"/g, '""') + '"';
+const csv =
+  'id,nsfwLevel,text\n' +
+  prompts.map((p) => [p.id, p.nsfwLevel, csvEscape(p.text)].join(',')).join('\n') +
+  '\n';
+fs.writeFileSync(csvPath, csv);
 
 const byLevel = prompts.reduce((acc, p) => {
   acc[p.nsfwLevel] = (acc[p.nsfwLevel] || 0) + 1;

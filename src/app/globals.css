@@ -186,3 +186,11 @@ body {
     background: radial-gradient(circle at 50% 50%, #1a0b2e 0%, #0a040f 100%);
   }
 }
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-smoke,
+  .animate-card-enter,
+  .animate-fade-in {
+    animation: none;
+  }
+}
