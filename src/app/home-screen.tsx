@@ -20,6 +20,7 @@ type Player = {
 
 const MIN_PLAYERS = 2;
 const MAX_PLAYERS = 10;
+const LAST_SETUP_KEY = 'afterhours.lastSetup';
 
 export function HomeScreen() {
   const [players, setPlayers] = useState<Player[]>([
@@ -38,6 +39,19 @@ export function HomeScreen() {
     const nsfwLevelQuery = searchParams.get('nsfwLevel');
     if (names.length >= MIN_PLAYERS) {
       setPlayers(names.map(name => ({ name })));
+    } else {
+      // No roster handed over — offer the last group that played on this device.
+      try {
+        const saved = JSON.parse(localStorage.getItem(LAST_SETUP_KEY) ?? 'null');
+        if (saved && Array.isArray(saved.players) && saved.players.length >= MIN_PLAYERS) {
+          setPlayers(saved.players.slice(0, MAX_PLAYERS).map((name: unknown) => ({ name: String(name) })));
+          if (!nsfwLevelQuery && GAME_MODES.some((m) => m.id === saved.nsfwLevel)) {
+            setNsfwLevel(saved.nsfwLevel as GameMode);
+          }
+        }
+      } catch {
+        // Storage unavailable or corrupted — start from a blank setup.
+      }
     }
     if (nsfwLevelQuery && GAME_MODES.some((m) => m.id === nsfwLevelQuery)) {
       setNsfwLevel(nsfwLevelQuery as GameMode);
@@ -85,7 +99,13 @@ export function HomeScreen() {
       });
       return;
     }
-    router.push(`/game?${playersToQuery(validPlayers.map(p => p.name.trim()), nsfwLevel)}`);
+    const names = validPlayers.map(p => p.name.trim());
+    try {
+      localStorage.setItem(LAST_SETUP_KEY, JSON.stringify({ players: names, nsfwLevel }));
+    } catch {
+      // Best-effort convenience only.
+    }
+    router.push(`/game?${playersToQuery(names, nsfwLevel)}`);
   };
 
   return (

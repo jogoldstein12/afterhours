@@ -332,6 +332,10 @@ button:disabled{opacity:.4;cursor:not-allowed;}
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M8 12h8"/><path d="m12 16 4-4-4-4"/></svg>
         </button>
         <div class="footer-actions">
+          <button class="btn btn-ghost btn-mini" id="undo-btn" disabled>
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/></svg>
+            Undo
+          </button>
           <button class="btn btn-ghost btn-mini" id="manage-btn">
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
             Manage Group
@@ -1317,7 +1321,29 @@ const state = {
   promptText: '',
   cardKey: 0,
   gameEnded: false,
+  upcoming: [],
+  history: [],
 };
+
+const HISTORY_LIMIT = 20;
+const LAST_SETUP_KEY = 'afterhours.lastSetup';
+
+// One shuffled "round" of player indices. Everyone goes once per round; the
+// avoidFirst guard stops back-to-back turns across a round boundary. Keep in
+// sync with shuffledIndices in src/app/game/page.tsx.
+function shuffledIndices(count, avoidFirst) {
+  const order = [];
+  for (let i = 0; i < count; i++) order.push(i);
+  for (let i = order.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    const tmp = order[i]; order[i] = order[j]; order[j] = tmp;
+  }
+  if (count > 1 && order[0] === avoidFirst) {
+    const swap = 1 + Math.floor(Math.random() * (count - 1));
+    const tmp = order[0]; order[0] = order[swap]; order[swap] = tmp;
+  }
+  return order;
+}
 
 const $ = (id) => document.getElementById(id);
 
@@ -1421,13 +1447,37 @@ function startGame() {
     toast('Not Enough Players', 'Please enter names for at least ' + MIN_PLAYERS + ' players.', 'destructive');
     return;
   }
+  try {
+    localStorage.setItem(LAST_SETUP_KEY, JSON.stringify({ players: valid, nsfwLevel: state.nsfwLevel }));
+  } catch (e) { /* best-effort convenience only */ }
   state.players = valid;
   state.currentPlayerIndex = 0;
   loadDeck();
   selectNewPrompt();
+  requestWakeLock();
   showScreen('game');
   renderGame();
 }
+
+/* ---------------- Wake lock ---------------- */
+// Pass-the-phone play has long gaps between touches; keep the screen on
+// while a game is running.
+let wakeLockSentinel = null;
+function requestWakeLock() {
+  if (!('wakeLock' in navigator)) return;
+  navigator.wakeLock.request('screen')
+    .then(function (sentinel) { wakeLockSentinel = sentinel; })
+    .catch(function () { wakeLockSentinel = null; });
+}
+function releaseWakeLock() {
+  if (wakeLockSentinel) {
+    wakeLockSentinel.release().catch(function () {});
+    wakeLockSentinel = null;
+  }
+}
+document.addEventListener('visibilitychange', function () {
+  if (document.visibilityState === 'visible' && state.players.length > 0) requestWakeLock();
+});
 
 /* ---------------- Deck handling ---------------- */
 function loadDeck() {
@@ -1436,6 +1486,8 @@ function loadDeck() {
     : DECK.filter((p) => p.nsfwLevel === state.nsfwLevel);
   state.used = new Set();
   state.gameEnded = false;
+  state.upcoming = [];
+  state.history = [];
 }
 
 /* ---------------- Timed prompts ---------------- */
@@ -1542,11 +1594,35 @@ function processPromptText() {
 
 function nextTurn() {
   if (state.gameEnded || !state.currentPrompt) return;
+  state.history.push({
+    index: state.currentPrompt.index,
+    playerIndex: state.currentPlayerIndex,
+    text: state.promptText,
+    upcoming: state.upcoming.slice(),
+  });
+  if (state.history.length > HISTORY_LIMIT) state.history.shift();
   state.used.add(state.currentPrompt.index);
-  // The player is randomised before the prompt is picked so that the prompt
-  // text is resolved against the player whose turn it actually is.
-  state.currentPlayerIndex = Math.floor(Math.random() * state.players.length);
+  // The player advances before the prompt is picked so that the prompt text is
+  // resolved against the player whose turn it actually is.
+  let queue = state.upcoming.filter((i) => i < state.players.length);
+  if (queue.length === 0) queue = shuffledIndices(state.players.length, state.currentPlayerIndex);
+  state.currentPlayerIndex = queue[0];
+  state.upcoming = queue.slice(1);
   selectNewPrompt();
+  renderGame();
+}
+
+function undoTurn() {
+  const last = state.history.pop();
+  if (!last) return;
+  state.used.delete(last.index);
+  state.currentPrompt = state.available.find((p) => p.index === last.index) || null;
+  state.promptText = last.text; // the exact card that was shown, no re-randomizing
+  state.currentPlayerIndex = Math.min(last.playerIndex, state.players.length - 1);
+  state.upcoming = last.upcoming;
+  state.gameEnded = false;
+  state.cardKey += 1;
+  resetTimer();
   renderGame();
 }
 
@@ -1615,6 +1691,7 @@ function renderGame() {
   }
 
   $('next-btn-label').textContent = state.gameEnded ? 'Restart Deck' : 'Next Player';
+  $('undo-btn').disabled = state.history.length === 0;
   renderTimer();
   renderRoster();
 }
@@ -1646,6 +1723,7 @@ function addPlayer() {
   const name = input.value.trim();
   if (!name) return toast('Player name cannot be empty.', '', 'destructive');
   if (state.players.length >= MAX_PLAYERS) return toast('Limit: ' + MAX_PLAYERS + ' players.', '', 'destructive');
+  state.upcoming.splice(Math.floor(Math.random() * (state.upcoming.length + 1)), 0, state.players.length);
   state.players.push(name);
   input.value = '';
   renderGame();
@@ -1657,6 +1735,7 @@ function removePlayer(indexToRemove) {
   }
   const previousPlayer = state.players[state.currentPlayerIndex];
   state.players.splice(indexToRemove, 1);
+  state.upcoming = state.upcoming.filter((i) => i !== indexToRemove).map((i) => (i > indexToRemove ? i - 1 : i));
   if (state.currentPlayerIndex >= state.players.length) {
     state.currentPlayerIndex = state.players.length - 1;
   }
@@ -1687,6 +1766,7 @@ function closeSheet() {
 
 function backToSetup() {
   closeDialog();
+  releaseWakeLock();
   state.setupNames = state.players.length >= MIN_PLAYERS ? state.players.slice() : ['', ''];
   state.players = [];
   state.gameEnded = false;
@@ -1699,6 +1779,7 @@ function backToSetup() {
 $('add-player-btn').addEventListener('click', addSetupPlayer);
 $('start-game-btn').addEventListener('click', startGame);
 $('next-btn').addEventListener('click', () => (state.gameEnded ? restartDeck() : nextTurn()));
+$('undo-btn').addEventListener('click', undoTurn);
 $('timer-btn').addEventListener('click', startTimer);
 $('manage-btn').addEventListener('click', openSheet);
 $('end-game-btn').addEventListener('click', openDialog);
@@ -1713,6 +1794,15 @@ $('newgame-overlay').addEventListener('click', (e) => { if (e.target === $('newg
 document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape') { closeDialog(); closeSheet(); }
 });
+
+// Prefill the last group that played on this device (best-effort).
+try {
+  const saved = JSON.parse(localStorage.getItem(LAST_SETUP_KEY) || 'null');
+  if (saved && Array.isArray(saved.players) && saved.players.length >= MIN_PLAYERS) {
+    state.setupNames = saved.players.slice(0, MAX_PLAYERS).map(String);
+    if (MODES.some(function (m) { return m.id === saved.nsfwLevel; })) state.nsfwLevel = saved.nsfwLevel;
+  }
+} catch (e) { /* storage unavailable — start blank */ }
 
 renderSetupPlayers();
 renderLevelPicker($('setup-level'), (l) => changeLevel(l));

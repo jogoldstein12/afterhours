@@ -5,7 +5,7 @@ import { useSearchParams, useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { PROMPTS, Prompt, GameMode, isNhiePrompt, GAME_MODES } from '@/lib/prompts';
-import { ArrowRightCircle, RotateCcw, Trash2, UserPlus, Users } from 'lucide-react';
+import { ArrowRightCircle, RotateCcw, Trash2, Undo2, UserPlus, Users } from 'lucide-react';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -44,6 +44,25 @@ const extractDurationSeconds = (text: string): number | null => {
 const formatSeconds = (total: number): string =>
   `${Math.floor(total / 60)}:${String(total % 60).padStart(2, '0')}`;
 
+// One shuffled "round" of player indices. Everyone goes once per round; the
+// avoidFirst guard stops the same player getting back-to-back turns across a
+// round boundary.
+const shuffledIndices = (count: number, avoidFirst?: number): number[] => {
+  const order = Array.from({ length: count }, (_, i) => i);
+  for (let i = order.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [order[i], order[j]] = [order[j], order[i]];
+  }
+  if (count > 1 && order[0] === avoidFirst) {
+    const swap = 1 + Math.floor(Math.random() * (count - 1));
+    [order[0], order[swap]] = [order[swap], order[0]];
+  }
+  return order;
+};
+
+type TurnSnapshot = { prompt: Prompt; playerIndex: number; text: string; upcoming: number[] };
+const HISTORY_LIMIT = 20;
+
 function GamePageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -63,6 +82,11 @@ function GamePageContent() {
   const [newPlayerName, setNewPlayerName] = useState('');
   const [timeLeft, setTimeLeft] = useState<number | null>(null);
   const [timerRunning, setTimerRunning] = useState(false);
+  const [upcomingTurns, setUpcomingTurns] = useState<number[]>([]);
+  const [history, setHistory] = useState<TurnSnapshot[]>([]);
+  // Set just before an undo restores a card, so the processing effect shows the
+  // exact text that was on screen instead of re-randomizing {{randomOtherPlayer}}.
+  const restoredTextRef = useRef<string | null>(null);
 
   const timerTotal = currentPrompt ? extractDurationSeconds(currentPrompt.text) : null;
 
@@ -104,6 +128,29 @@ function GamePageContent() {
     }
   }, [searchParams]);
 
+  // Keep the screen awake during play — pass-the-phone games have long gaps
+  // between touches and the phone sleeping mid-card kills the momentum.
+  useEffect(() => {
+    if (!('wakeLock' in navigator)) return;
+    let sentinel: WakeLockSentinel | null = null;
+    const request = async () => {
+      try {
+        sentinel = await navigator.wakeLock.request('screen');
+      } catch {
+        sentinel = null;
+      }
+    };
+    request();
+    const onVisibility = () => {
+      if (document.visibilityState === 'visible') request();
+    };
+    document.addEventListener('visibilitychange', onVisibility);
+    return () => {
+      document.removeEventListener('visibilitychange', onVisibility);
+      sentinel?.release().catch(() => {});
+    };
+  }, []);
+
   const selectNewPrompt = useCallback((promptsToUse: Prompt[], currentUsedIds: Set<number>) => {
     const remainingPrompts = promptsToUse.filter(p => !currentUsedIds.has(p.id));
     if (remainingPrompts.length === 0) {
@@ -123,8 +170,10 @@ function GamePageContent() {
       ? PROMPTS.filter(isNhiePrompt)
       : PROMPTS.filter(p => p.nsfwLevel === nsfwLevel);
     setAvailablePrompts(filtered);
-    setUsedPromptIds(new Set()); 
-    setGameEnded(false); 
+    setUsedPromptIds(new Set());
+    setGameEnded(false);
+    setHistory([]);
+    setUpcomingTurns([]);
     return filtered;
   }, [nsfwLevel]);
 
@@ -155,7 +204,10 @@ function GamePageContent() {
   }, [nsfwLevel, players.length, loadAndFilterPrompts, selectNewPrompt]);
 
   useEffect(() => {
-    if (gameEnded) {
+    if (restoredTextRef.current !== null) {
+      setProcessedPromptText(restoredTextRef.current);
+      restoredTextRef.current = null;
+    } else if (gameEnded) {
       setProcessedPromptText("Game Over! You've gone through all the prompts for this level.");
     } else if (currentPrompt && players.length > 0) {
       let text = currentPrompt.text;
@@ -195,14 +247,38 @@ function GamePageContent() {
   const handleNextPlayer = () => {
     if (gameEnded || !currentPrompt) return;
 
+    setHistory(prev => [
+      ...prev.slice(-(HISTORY_LIMIT - 1)),
+      { prompt: currentPrompt, playerIndex: currentPlayerIndex, text: processedPromptText, upcoming: upcomingTurns },
+    ]);
+
     const newUsedPromptIds = new Set(usedPromptIds);
     newUsedPromptIds.add(currentPrompt.id);
     setUsedPromptIds(newUsedPromptIds);
 
-    const nextPlayerIndex = Math.floor(Math.random() * players.length);
-    setCurrentPlayerIndex(nextPlayerIndex);
+    let queue = upcomingTurns.filter(i => i < players.length);
+    if (queue.length === 0) queue = shuffledIndices(players.length, currentPlayerIndex);
+    setCurrentPlayerIndex(queue[0]);
+    setUpcomingTurns(queue.slice(1));
 
     selectNewPrompt(availablePrompts, newUsedPromptIds);
+  };
+
+  const handleUndo = () => {
+    const last = history[history.length - 1];
+    if (!last) return;
+    setHistory(prev => prev.slice(0, -1));
+    setUsedPromptIds(prev => {
+      const next = new Set(prev);
+      next.delete(last.prompt.id);
+      return next;
+    });
+    restoredTextRef.current = last.text;
+    setGameEnded(false);
+    setCurrentPrompt(last.prompt);
+    setCurrentPlayerIndex(Math.min(last.playerIndex, players.length - 1));
+    setUpcomingTurns(last.upcoming);
+    setCardKey(prev => prev + 1);
   };
 
   const handleAddPlayer = () => {
@@ -210,6 +286,11 @@ function GamePageContent() {
     if (!name) return toast({ title: 'Player name cannot be empty.', variant: 'destructive' });
     if (players.length >= MAX_PLAYERS) return toast({ title: `Limit: ${MAX_PLAYERS} players.`, variant: 'destructive' });
     
+    setUpcomingTurns(prev => {
+      const queue = [...prev];
+      queue.splice(Math.floor(Math.random() * (queue.length + 1)), 0, players.length);
+      return queue;
+    });
     setPlayers(prev => [...prev, name]);
     setNewPlayerName('');
   };
@@ -225,6 +306,7 @@ function GamePageContent() {
       if (indexToRemove === prev) return prev % newLength; // turn passes to the next player
       return prev;
     });
+    setUpcomingTurns(prev => prev.filter(i => i !== indexToRemove).map(i => (i > indexToRemove ? i - 1 : i)));
   };
 
   if (players.length === 0) {
@@ -380,6 +462,9 @@ function GamePageContent() {
               </Button>
               
               <div className="flex items-center justify-center gap-4 pt-2">
+                <Button variant="ghost" size="sm" onClick={handleUndo} disabled={history.length === 0} className="text-xs uppercase tracking-widest opacity-60 hover:opacity-100 hover:bg-white/5 disabled:opacity-25">
+                  <Undo2 className="mr-2 h-3 w-3" /> Undo
+                </Button>
                 <Button variant="ghost" size="sm" onClick={() => setIsEditSheetOpen(true)} className="text-xs uppercase tracking-widest opacity-60 hover:opacity-100 hover:bg-white/5">
                   <Users className="mr-2 h-3 w-3" /> Manage Group
                 </Button>
