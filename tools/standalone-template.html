@@ -455,7 +455,9 @@ function renderLevelPicker(container, onSelect) {
     label.appendChild(input);
     label.appendChild(document.createTextNode(mode.label));
     const pick = () => onSelect(mode.id);
-    label.addEventListener('click', pick);
+    // preventDefault stops the label from re-dispatching a synthetic click on
+    // the wrapped radio input, which would bubble back here and fire twice.
+    label.addEventListener('click', (e) => { e.preventDefault(); pick(); });
     label.addEventListener('keydown', (e) => {
       if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); pick(); }
     });
@@ -597,6 +599,7 @@ function restartDeck() {
 }
 
 function changeLevel(level) {
+  if (state.nsfwLevel === level) return; // re-tapping the current level must not reset the deck
   state.nsfwLevel = level;
   renderLevelPicker($('setup-level'), (l) => changeLevel(l));
   renderLevelPicker($('sheet-level'), (l) => changeLevel(l));

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback, Suspense } from 'react';
+import { useEffect, useState, useCallback, useRef, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -54,7 +54,7 @@ function GamePageContent() {
     if (playersQuery) {
       setPlayers(decodeURIComponent(playersQuery).split(','));
     }
-    if (nsfwLevelQuery) {
+    if (nsfwLevelQuery && GAME_MODES.some((m) => m.id === nsfwLevelQuery)) {
       setNsfwLevel(nsfwLevelQuery);
     }
   }, [searchParams]);
@@ -99,11 +99,14 @@ function GamePageContent() {
     setNsfwLevel(newLevel);
   };
   
+  // The deck only (re)loads when the level changes, never on roster changes —
+  // adding or removing a player mid-game must not reset progress.
+  const deckLevelRef = useRef<GameMode | null>(null);
   useEffect(() => {
-    if (players.length > 0) {
-      const newPrompts = loadAndFilterPrompts();
-      selectNewPrompt(newPrompts, new Set());
-    }
+    if (players.length === 0 || deckLevelRef.current === nsfwLevel) return;
+    deckLevelRef.current = nsfwLevel;
+    const newPrompts = loadAndFilterPrompts();
+    selectNewPrompt(newPrompts, new Set());
   }, [nsfwLevel, players.length, loadAndFilterPrompts, selectNewPrompt]);
 
   useEffect(() => {
@@ -165,10 +168,13 @@ function GamePageContent() {
     if (players.length <= MIN_PLAYERS) {
       return toast({ title: `Minimum ${MIN_PLAYERS} players required.`, variant: 'destructive' });
     }
+    const newLength = players.length - 1;
     setPlayers(prev => prev.filter((_, index) => index !== indexToRemove));
-    if (currentPlayerIndex >= indexToRemove) {
-      setCurrentPlayerIndex(prev => (prev - 1 + players.length) % (players.length - 1));
-    }
+    setCurrentPlayerIndex(prev => {
+      if (indexToRemove < prev) return prev - 1; // same person keeps the turn
+      if (indexToRemove === prev) return prev % newLength; // turn passes to the next player
+      return prev;
+    });
   };
 
   if (players.length === 0) {
@@ -191,7 +197,10 @@ function GamePageContent() {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel className="bg-transparent border-white/10 hover:bg-white/5">Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={() => router.push('/')} className="bg-destructive text-white">New Game</AlertDialogAction>
+            <AlertDialogAction
+              onClick={() => router.push(`/?players=${encodeURIComponent(players.join(','))}&nsfwLevel=${nsfwLevel}`)}
+              className="bg-destructive text-white"
+            >New Game</AlertDialogAction>
             <AlertDialogAction onClick={restartGame} className="bg-primary text-white">Restart Deck</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
