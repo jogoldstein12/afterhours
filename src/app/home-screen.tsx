@@ -10,7 +10,7 @@ import { Header } from '@/components/shared/Header';
 import { Users, MinusCircle, PlusCircle, ShieldAlert } from 'lucide-react';
 import { GAME_MODES, type GameMode } from '@/lib/prompts';
 import { useToast } from '@/hooks/use-toast';
-import { cn } from '@/lib/utils';
+import { cn, playersToQuery, playersFromQuery } from '@/lib/utils';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 
 
@@ -34,13 +34,10 @@ export function HomeScreen() {
   // "New Game" from the game screen hands the current roster and level back,
   // so a group can start a fresh deck without retyping every name.
   useEffect(() => {
-    const playersQuery = searchParams.get('players');
+    const names = playersFromQuery(searchParams);
     const nsfwLevelQuery = searchParams.get('nsfwLevel');
-    if (playersQuery) {
-      const names = decodeURIComponent(playersQuery).split(',').map(n => n.trim()).filter(Boolean);
-      if (names.length >= MIN_PLAYERS) {
-        setPlayers(names.map(name => ({ name })));
-      }
+    if (names.length >= MIN_PLAYERS) {
+      setPlayers(names.map(name => ({ name })));
     }
     if (nsfwLevelQuery && GAME_MODES.some((m) => m.id === nsfwLevelQuery)) {
       setNsfwLevel(nsfwLevelQuery as GameMode);
@@ -88,8 +85,7 @@ export function HomeScreen() {
       });
       return;
     }
-    const playerQuery = encodeURIComponent(validPlayers.map(p => p.name.trim()).join(','));
-    router.push(`/game?players=${playerQuery}&nsfwLevel=${nsfwLevel}`);
+    router.push(`/game?${playersToQuery(validPlayers.map(p => p.name.trim()), nsfwLevel)}`);
   };
 
   return (

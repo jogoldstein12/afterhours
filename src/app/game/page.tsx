@@ -21,7 +21,7 @@ import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { cn } from '@/lib/utils';
+import { cn, playersToQuery, playersFromQuery } from '@/lib/utils';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
 import { Logo } from '@/components/shared/Logo';
@@ -48,11 +48,11 @@ function GamePageContent() {
   const [newPlayerName, setNewPlayerName] = useState('');
 
   useEffect(() => {
-    const playersQuery = searchParams.get('players');
+    const names = playersFromQuery(searchParams);
     const nsfwLevelQuery = searchParams.get('nsfwLevel') as GameMode;
 
-    if (playersQuery) {
-      setPlayers(decodeURIComponent(playersQuery).split(','));
+    if (names.length > 0) {
+      setPlayers(names);
     }
     if (nsfwLevelQuery && GAME_MODES.some((m) => m.id === nsfwLevelQuery)) {
       setNsfwLevel(nsfwLevelQuery);
@@ -198,7 +198,7 @@ function GamePageContent() {
           <AlertDialogFooter>
             <AlertDialogCancel className="bg-transparent border-white/10 hover:bg-white/5">Cancel</AlertDialogCancel>
             <AlertDialogAction
-              onClick={() => router.push(`/?players=${encodeURIComponent(players.join(','))}&nsfwLevel=${nsfwLevel}`)}
+              onClick={() => router.push(`/?${playersToQuery(players, nsfwLevel)}`)}
               className="bg-destructive text-white"
             >New Game</AlertDialogAction>
             <AlertDialogAction onClick={restartGame} className="bg-primary text-white">Restart Deck</AlertDialogAction>
