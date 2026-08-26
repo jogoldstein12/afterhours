@@ -155,6 +155,15 @@ function GamePageContent() {
     selectNewPrompt(availablePrompts, newUsedPromptIds);
   };
 
+  const handleSkip = () => {
+    if (gameEnded || !currentPrompt) return;
+    toast({
+      title: 'Skipped! 🍺',
+      description: `${players[currentPlayerIndex]} drinks 2 as the penalty.`,
+    });
+    handleNextPlayer();
+  };
+
   const handleAddPlayer = () => {
     const name = newPlayerName.trim();
     if (!name) return toast({ title: 'Player name cannot be empty.', variant: 'destructive' });
@@ -298,13 +307,24 @@ function GamePageContent() {
             </CardContent>
 
             <CardFooter className="bg-white/5 p-4 md:p-6 flex flex-col gap-4">
-              <Button 
-                onClick={gameEnded ? restartGame : handleNextPlayer} 
-                className="w-full sm:w-auto min-w-[200px] text-lg font-bold py-6 rounded-xl bg-primary text-white transition-all hover:scale-[1.02] active:scale-95 shadow-xl mx-auto"
-              >
-                {gameEnded ? "Restart Deck" : "Next Player"}
-                <ArrowRightCircle className="ml-2 h-5 w-5" />
-              </Button>
+              <div className="flex flex-col sm:flex-row items-center justify-center gap-3 w-full">
+                {!gameEnded && (
+                  <Button
+                    variant="outline"
+                    onClick={handleSkip}
+                    className="w-full sm:w-auto min-w-[150px] py-6 rounded-xl border-white/15 bg-transparent text-white/70 hover:bg-white/5 hover:text-white"
+                  >
+                    Skip — Drink 2
+                  </Button>
+                )}
+                <Button
+                  onClick={gameEnded ? restartGame : handleNextPlayer}
+                  className="w-full sm:w-auto min-w-[200px] text-lg font-bold py-6 rounded-xl bg-primary text-white transition-all hover:scale-[1.02] active:scale-95 shadow-xl"
+                >
+                  {gameEnded ? "Restart Deck" : "Next Player"}
+                  <ArrowRightCircle className="ml-2 h-5 w-5" />
+                </Button>
+              </div>
               
               <div className="flex items-center justify-center gap-4 pt-2">
                 <Button variant="ghost" size="sm" onClick={() => setIsEditSheetOpen(true)} className="text-xs uppercase tracking-widest opacity-60 hover:opacity-100 hover:bg-white/5">

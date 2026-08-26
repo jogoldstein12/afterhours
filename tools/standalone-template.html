@@ -103,6 +103,10 @@ button:disabled{opacity:.4;cursor:not-allowed;}
 .btn-destructive{background:hsl(var(--destructive));color:#fff;}
 .btn-outline{border:1px solid hsl(var(--accent));color:hsl(var(--accent));width:100%;}
 .btn-outline:hover{background:hsl(var(--accent)/.1);}
+.btn-skip{border:1px solid rgba(255,255,255,.15);color:rgba(255,255,255,.7);padding:.9rem 1.4rem;border-radius:.75rem;width:100%;}
+.btn-skip:hover{background:rgba(255,255,255,.05);color:#fff;}
+.turn-actions{display:flex;flex-direction:column;gap:.75rem;width:100%;align-items:center;}
+@media(min-width:640px){.turn-actions{flex-direction:row;justify-content:center;}.btn-skip{width:auto;}}
 .btn-ghost{padding:.35rem .6rem;border-radius:calc(var(--radius) - 2px);}
 .btn-ghost:hover{background:rgba(255,255,255,.05);}
 .btn-icon{display:inline-flex;align-items:center;justify-content:center;padding:0;width:2.25rem;height:2.25rem;border-radius:calc(var(--radius) - 2px);flex-shrink:0;}
@@ -315,10 +319,13 @@ button:disabled{opacity:.4;cursor:not-allowed;}
       <div class="prompt-area" id="prompt-area"></div>
 
       <div class="game-footer">
+        <div class="turn-actions">
+        <button class="btn btn-skip" id="skip-btn">Skip — Drink 2</button>
         <button class="btn btn-primary btn-next" id="next-btn">
           <span id="next-btn-label">Next Player</span>
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M8 12h8"/><path d="m12 16 4-4-4-4"/></svg>
         </button>
+        </div>
         <div class="footer-actions">
           <button class="btn btn-ghost btn-mini" id="manage-btn">
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
@@ -655,6 +662,7 @@ function renderGame() {
   }
 
   $('next-btn-label').textContent = state.gameEnded ? 'Restart Deck' : 'Next Player';
+  $('skip-btn').style.display = state.gameEnded ? 'none' : '';
   renderRoster();
 }
 
@@ -738,6 +746,8 @@ function backToSetup() {
 $('add-player-btn').addEventListener('click', addSetupPlayer);
 $('start-game-btn').addEventListener('click', startGame);
 $('next-btn').addEventListener('click', () => (state.gameEnded ? restartDeck() : nextTurn()));
+// Skipping costs the current player 2 drinks (announced on the button) and moves the game on.
+$('skip-btn').addEventListener('click', () => nextTurn());
 $('manage-btn').addEventListener('click', openSheet);
 $('end-game-btn').addEventListener('click', openDialog);
 $('dialog-cancel').addEventListener('click', closeDialog);
