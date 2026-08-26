@@ -978,4 +978,75 @@ export const PROMPTS: Prompt[] = [
   { id: 1116, text: "Kiss {{randomOtherPlayer}} on the cheek, neck or hand — their choice — or take 3 drinks.", nsfwLevel: 'Medium' },
   { id: 1117, text: "Describe {{randomOtherPlayer}}'s best physical feature in detail.", nsfwLevel: 'Medium' },
   { id: 1118, text: "Rate how attracted you are to {{randomOtherPlayer}} out of 10 — anything under 7 and you drink 5.", nsfwLevel: 'Medium' },
+
+  // ============================================================================
+  // PORTED FROM PR #1 (IDs 1119+) - the prompts from that branch whose mechanics
+  // or subject matter this deck did not already cover, rewritten to house style.
+  // ============================================================================
+
+  // --- Extreme: Drink If (Acts) — ported from PR #1 ---
+  { id: 1119, text: "Drink if you've ever squirted, or made someone else.", nsfwLevel: 'Extreme' },
+  { id: 1120, text: "Drink if you've ever deep-throated — dare or otherwise.", nsfwLevel: 'Extreme' },
+  { id: 1121, text: "Drink if you've ever rimmed someone, or been rimmed.", nsfwLevel: 'Extreme' },
+  { id: 1122, text: "Drink if you've ever pegged someone, or been pegged.", nsfwLevel: 'Extreme' },
+  { id: 1123, text: "Drink if you've ever left nail marks down someone's back.", nsfwLevel: 'Extreme' },
+  { id: 1124, text: "Drink if you've ever finished more than once in a single session.", nsfwLevel: 'Extreme' },
+  { id: 1125, text: "Drink if you've ever come so hard you saw stars.", nsfwLevel: 'Extreme' },
+  { id: 1126, text: "Drink if you've ever tasted yourself.", nsfwLevel: 'Extreme' },
+  { id: 1127, text: "Drink if you've had sex in your childhood bedroom as a fully grown adult.", nsfwLevel: 'Extreme' },
+  { id: 1128, text: "Drink if you've ever made money from a photo of yourself.", nsfwLevel: 'Extreme' },
+  { id: 1129, text: "Drink if you've ever paid for someone else's spicy subscription.", nsfwLevel: 'Extreme' },
+  { id: 1130, text: "Drink if you've ever hooked up with someone you still wouldn't name out loud.", nsfwLevel: 'Extreme' },
+  { id: 1131, text: "Drink if you've ever kept a souvenir from a hookup.", nsfwLevel: 'Extreme' },
+  { id: 1132, text: "Drink if you've ever hooked up to a specific song on purpose.", nsfwLevel: 'Extreme' },
+  { id: 1133, text: "Drink if you've had a night you genuinely can't remember but heard the reviews about.", nsfwLevel: 'Extreme' },
+  { id: 1134, text: "Drink if you own a toy within reach of your bed right now.", nsfwLevel: 'Extreme' },
+  { id: 1135, text: "Drink if you've ever left marks on someone, or been left with them.", nsfwLevel: 'Extreme' },
+  { id: 1136, text: "Drink if you've ever used ice, wax, or something hotter or colder than expected.", nsfwLevel: 'Extreme' },
+  { id: 1137, text: "Drink if you've ever had a hookup last until sunrise.", nsfwLevel: 'Extreme' },
+  { id: 1138, text: "Drink if you've ever played a character in bed to spice things up.", nsfwLevel: 'Extreme' },
+
+  // --- Extreme: Dares with a Twist — ported from PR #1 ---
+  { id: 1139, text: "Confess the most scandalous thing on your phone right now — or hand it to {{randomOtherPlayer}} for 30 seconds.", nsfwLevel: 'Extreme' },
+  { id: 1140, text: "Let {{randomOtherPlayer}} slide a hand up your thigh; you say when to stop — or take 3 drinks.", nsfwLevel: 'Extreme' },
+  { id: 1141, text: "Let {{randomOtherPlayer}} rest a hand wherever they like for a full round. You may move it once — or take 4 drinks.", nsfwLevel: 'Extreme' },
+  { id: 1142, text: "Hover your lips over {{randomOtherPlayer}}'s without touching for 20 seconds — first to close the gap wins, the other takes 3 drinks.", nsfwLevel: 'Extreme' },
+  { id: 1143, text: "Let {{randomOtherPlayer}} ask you any three questions about your sex life. Lie once and you both take 3 drinks.", nsfwLevel: 'Extreme' },
+  { id: 1144, text: "Let {{randomOtherPlayer}} decide: lose two layers, or do their dare, no questions asked.", nsfwLevel: 'Extreme' },
+  { id: 1145, text: "Swap one item of clothing with {{randomOtherPlayer}} and wear it for the rest of the game — or take 4 drinks.", nsfwLevel: 'Extreme' },
+  { id: 1146, text: "Let {{randomOtherPlayer}} write a dare on your skin that you have to complete before your next turn — or take 4 drinks.", nsfwLevel: 'Extreme' },
+  { id: 1147, text: "Hand {{randomOtherPlayer}} full control of your next two turns — or finish your drink.", nsfwLevel: 'Extreme' },
+  { id: 1148, text: "Kneel in front of {{randomOtherPlayer}} and ask permission for your next move — or take 3 drinks.", nsfwLevel: 'Extreme' },
+  { id: 1149, text: "Let {{randomOtherPlayer}} blindfold you and trace one word on your skin — guess it or take 3 drinks.", nsfwLevel: 'Extreme' },
+  { id: 1150, text: "Show {{randomOtherPlayer}} the spiciest thing on your phone; they decide whether the group sees it — or take 4 drinks.", nsfwLevel: 'Extreme' },
+  { id: 1151, text: "Kiss the two people either side of you, then let them decide who did it better — or take 4 drinks.", nsfwLevel: 'Extreme' },
+  { id: 1152, text: "Let {{randomOtherPlayer}} feed you your next sip using only their fingers — or take 3 drinks.", nsfwLevel: 'Extreme' },
+  { id: 1153, text: "Whisper a countdown into {{randomOtherPlayer}}'s ear and kiss them on zero — or take 3 drinks.", nsfwLevel: 'Extreme' },
+  { id: 1154, text: "Trade one lingering kiss with {{randomOtherPlayer}}, eyes open the whole time — or take 3 drinks.", nsfwLevel: 'Extreme' },
+  { id: 1155, text: "Let {{randomOtherPlayer}} drip a little of their drink on your wrist and lick it off — or finish your drink.", nsfwLevel: 'Extreme' },
+  { id: 1156, text: "Take {{randomOtherPlayer}} out of the room and come back with one item of clothing swapped — or you both finish your drinks.", nsfwLevel: 'Extreme' },
+  { id: 1157, text: "Let {{randomOtherPlayer}} remove one accessory from you using only their teeth — or take 3 drinks.", nsfwLevel: 'Extreme' },
+  { id: 1158, text: "Demonstrate the pace you like using nothing but your hands on the table — or take 3 drinks.", nsfwLevel: 'Extreme' },
+  { id: 1159, text: "End the round however you want with {{randomOtherPlayer}}, as long as it's bolder than your last turn — or finish your drink.", nsfwLevel: 'Extreme' },
+  { id: 1160, text: "Everyone lock eyes with the person here you'd most want right now and hold it for ten seconds — anyone who looks away first takes 3 drinks.", nsfwLevel: 'Extreme' },
+
+  // --- Medium: Confess to Give Out Drinks — ported from PR #1 ---
+  { id: 1161, text: "Say your real number out loud to give out 3 drinks — or take 2 and keep it to yourself.", nsfwLevel: 'Medium' },
+  { id: 1162, text: "Describe your dirtiest fantasy to give out 3 drinks — or take 2.", nsfwLevel: 'Medium' },
+  { id: 1163, text: "Reveal the weirdest place you've ever had sex to give out 3 drinks.", nsfwLevel: 'Medium' },
+  { id: 1164, text: "Confess your loudest moment in bed to give out 3 drinks.", nsfwLevel: 'Medium' },
+  { id: 1165, text: "Admit which player here you'd hook up with to give out 3 drinks — or take 3 and say nothing.", nsfwLevel: 'Medium' },
+  { id: 1166, text: "Reveal the wildest thing in your search history to give out 3 drinks — or take 2.", nsfwLevel: 'Medium' },
+  { id: 1167, text: "Name your celebrity hall pass and exactly what you'd do, to give out 2 drinks.", nsfwLevel: 'Medium' },
+  { id: 1168, text: "Describe your ideal one-night stand, start to finish, to give out 3 drinks.", nsfwLevel: 'Medium' },
+
+  // --- Medium: Group Votes — ported from PR #1 ---
+  { id: 1169, text: "Everyone vote: who's the best kisser in the room? They give out 3 drinks.", nsfwLevel: 'Medium' },
+  { id: 1170, text: "Who's the biggest tease in this room? They give out 3 drinks.", nsfwLevel: 'Medium' },
+  { id: 1171, text: "Who gives the most \"dangerous to be alone with\" energy? They take 2 drinks.", nsfwLevel: 'Medium' },
+  { id: 1172, text: "Who's most likely to send a 2am \"you up?\" text? They take 2 drinks.", nsfwLevel: 'Medium' },
+  { id: 1173, text: "Everyone vote for the horniest person here — they finish their drink.", nsfwLevel: 'Medium' },
+  { id: 1174, text: "Who here would you most want a lap dance from? They give out 3 drinks.", nsfwLevel: 'Medium' },
+  { id: 1175, text: "Everyone vote: who's most likely to make the first move tonight? They take 2 drinks.", nsfwLevel: 'Medium' },
+  { id: 1176, text: "Who's most likely to have a spicy account nobody knows about? They take 3 drinks, or prove everyone wrong.", nsfwLevel: 'Medium' },
 ];
