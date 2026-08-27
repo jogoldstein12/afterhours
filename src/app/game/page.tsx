@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback, useRef, Suspense } from 'react';
+import { useEffect, useState, useCallback, useRef, Suspense, type PointerEvent as ReactPointerEvent, type CSSProperties } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -25,6 +25,10 @@ import {
   MessageCircle,
   Zap,
   Timer,
+  Repeat,
+  TrendingUp,
+  Trophy,
+  Sparkles,
   type LucideIcon,
 } from 'lucide-react';
 import {
@@ -42,11 +46,13 @@ import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { cn, playersToQuery, playersFromQuery } from '@/lib/utils';
+import { cn, playersToQuery, playersFromQuery, playerColor } from '@/lib/utils';
 import { Separator } from '@/components/ui/separator';
 
 const MIN_PLAYERS = 2;
 const MAX_PLAYERS = 10;
+// Horizontal travel (px) past which a swipe deals the next card.
+const SWIPE_THRESHOLD = 90;
 
 // Each mode carries its color the whole way through the screen: the card's neon
 // border, the status-strip chip, the progress filament, and the selected pill.
@@ -73,6 +79,14 @@ const MODE_SELECTED: Record<GameMode, string> = {
   Medium: 'bg-secondary text-white shadow-[0_0_12px_hsl(var(--secondary)/0.6)]',
   Extreme: 'bg-destructive text-white shadow-[0_0_12px_hsl(var(--destructive)/0.6)]',
   NHIE: 'bg-[hsl(var(--chart-3))] text-black shadow-[0_0_12px_hsl(var(--chart-3)/0.6)]',
+};
+
+// "Turn It Up" on the finale steps the group one tier hotter; Extreme is already
+// the top, so it offers no hotter path.
+const HOTTER_MODE: Partial<Record<GameMode, GameMode>> = {
+  Mild: 'Medium',
+  Medium: 'Extreme',
+  NHIE: 'Extreme',
 };
 
 // Card-kind badge shown on each prompt so a dare, a drink rule, a question, and
@@ -153,9 +167,20 @@ function GamePageContent() {
   const [timerRunning, setTimerRunning] = useState(false);
   const [upcomingTurns, setUpcomingTurns] = useState<number[]>([]);
   const [history, setHistory] = useState<TurnSnapshot[]>([]);
+  // Running tally of how many cards each player has answered, keyed by name so
+  // it survives roster edits. Feeds the "most drawn" stat on the finale.
+  const [turnsByName, setTurnsByName] = useState<Record<string, number>>({});
   // Set just before an undo restores a card, so the processing effect shows the
   // exact text that was on screen instead of re-randomizing {{randomOtherPlayer}}.
   const restoredTextRef = useRef<string | null>(null);
+
+  // Swipe-to-advance: the card tracks the finger, and past the threshold it
+  // flies off and deals the next one. Button parity is kept in the dock.
+  const [dragX, setDragX] = useState(0);
+  const [leaving, setLeaving] = useState(false);
+  const dragOrigin = useRef<{ x: number; y: number } | null>(null);
+  const dragActive = useRef(false);
+  const flyTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const timerTotal = currentPrompt ? extractDurationSeconds(currentPrompt.text) : null;
 
@@ -196,6 +221,15 @@ function GamePageContent() {
       setNsfwLevel(nsfwLevelQuery);
     }
   }, [searchParams]);
+
+  // Tint the nightclub atmosphere (R6) to the mode in play. Cleared on unmount
+  // so the setup lobby falls back to the default violet/pink night.
+  useEffect(() => {
+    document.documentElement.dataset.mode = nsfwLevel;
+    return () => { delete document.documentElement.dataset.mode; };
+  }, [nsfwLevel]);
+
+  useEffect(() => () => { if (flyTimeout.current) clearTimeout(flyTimeout.current); }, []);
 
   // Keep the screen awake during play — pass-the-phone games have long gaps
   // between touches and the phone sleeping mid-card kills the momentum.
@@ -243,6 +277,7 @@ function GamePageContent() {
     setGameEnded(false);
     setHistory([]);
     setUpcomingTurns([]);
+    setTurnsByName({});
     return filtered;
   }, [nsfwLevel]);
 
@@ -313,9 +348,12 @@ function GamePageContent() {
     }
   }, [currentPrompt, players, currentPlayerIndex, gameEnded]);
 
-  const handleNextPlayer = () => {
+  const handleNextPlayer = useCallback(() => {
     if (gameEnded || !currentPrompt) return;
     vibrate(12);
+
+    const outgoing = players[currentPlayerIndex];
+    if (outgoing) setTurnsByName(prev => ({ ...prev, [outgoing]: (prev[outgoing] ?? 0) + 1 }));
 
     setHistory(prev => [
       ...prev.slice(-(HISTORY_LIMIT - 1)),
@@ -332,11 +370,19 @@ function GamePageContent() {
     setUpcomingTurns(queue.slice(1));
 
     selectNewPrompt(availablePrompts, newUsedPromptIds);
-  };
+  }, [gameEnded, currentPrompt, players, currentPlayerIndex, processedPromptText, upcomingTurns, usedPromptIds, availablePrompts, selectNewPrompt]);
 
   const handleUndo = () => {
     const last = history[history.length - 1];
     if (!last) return;
+    const restoredName = players[Math.min(last.playerIndex, players.length - 1)];
+    if (restoredName) {
+      setTurnsByName(prev => {
+        const next = { ...prev };
+        if (next[restoredName]) next[restoredName] -= 1;
+        return next;
+      });
+    }
     setHistory(prev => prev.slice(0, -1));
     setUsedPromptIds(prev => {
       const next = new Set(prev);
@@ -349,6 +395,56 @@ function GamePageContent() {
     setCurrentPlayerIndex(Math.min(last.playerIndex, players.length - 1));
     setUpcomingTurns(last.upcoming);
     setCardKey(prev => prev + 1);
+  };
+
+  // --- Swipe handlers -------------------------------------------------------
+  const onCardPointerDown = (e: ReactPointerEvent) => {
+    if (gameEnded || !currentPrompt || leaving) return;
+    dragOrigin.current = { x: e.clientX, y: e.clientY };
+    dragActive.current = false;
+  };
+  const onCardPointerMove = (e: ReactPointerEvent) => {
+    if (!dragOrigin.current) return;
+    const dx = e.clientX - dragOrigin.current.x;
+    const dy = e.clientY - dragOrigin.current.y;
+    if (!dragActive.current) {
+      // Decide intent once: horizontal → swipe; vertical → let the card scroll.
+      if (Math.abs(dx) > 10 && Math.abs(dx) > Math.abs(dy)) {
+        dragActive.current = true;
+        try { (e.target as HTMLElement).setPointerCapture?.(e.pointerId); } catch {}
+      } else if (Math.abs(dy) > 10) {
+        dragOrigin.current = null;
+        return;
+      } else {
+        return;
+      }
+    }
+    setDragX(dx);
+  };
+  const endDrag = () => {
+    if (!dragOrigin.current || !dragActive.current) {
+      dragOrigin.current = null;
+      dragActive.current = false;
+      setDragX(0);
+      return;
+    }
+    const dx = dragX;
+    dragOrigin.current = null;
+    dragActive.current = false;
+    if (Math.abs(dx) > SWIPE_THRESHOLD) {
+      const dir = dx > 0 ? 1 : -1;
+      setLeaving(true);
+      setDragX(dir * (typeof window !== 'undefined' ? window.innerWidth : 500));
+      flyTimeout.current = setTimeout(() => {
+        handleNextPlayer();
+        setDragX(0);
+        setLeaving(false);
+      }, 180);
+    } else {
+      setLeaving(true);
+      setDragX(0);
+      flyTimeout.current = setTimeout(() => setLeaving(false), 200);
+    }
   };
 
   const handleAddPlayer = () => {
@@ -400,6 +496,24 @@ function GamePageContent() {
   const category = currentPrompt ? getPromptCategory(currentPrompt) : null;
   const categoryMeta = category ? CATEGORY_META[category] : null;
 
+  // R4 — "Last Call" finale: the night gets a real ending, not a stalled turn.
+  if (gameEnded) {
+    return (
+      <GameOverView
+        players={players}
+        nsfwLevel={nsfwLevel}
+        cardsPlayed={cardsPlayed}
+        turnsByName={turnsByName}
+        onRunItBack={restartGame}
+        onTurnItUp={() => { const hotter = HOTTER_MODE[nsfwLevel]; if (hotter) setNsfwLevel(hotter); }}
+        onNewCrew={() => router.push(`/?${playersToQuery(players, nsfwLevel)}`)}
+      />
+    );
+  }
+
+  const timerPct = timerTotal && timeLeft !== null ? Math.max(0, Math.min(100, (timeLeft / timerTotal) * 100)) : 0;
+  const swipeProgress = Math.min(1, Math.abs(dragX) / SWIPE_THRESHOLD);
+
   return (
     <>
       <AlertDialog open={isNewGameDialogOpen} onOpenChange={setIsNewGameDialogOpen}>
@@ -447,7 +561,10 @@ function GamePageContent() {
                 <div className="space-y-2 max-h-[34vh] overflow-y-auto overscroll-contain pr-1">
                   {players.map((player, index) => (
                     <div key={`${player}-${index}`} className="flex items-center justify-between p-3 rounded-xl bg-white/5 border border-white/10">
-                      <span className="font-medium truncate pr-2">{player}</span>
+                      <span className="flex min-w-0 items-center gap-2.5">
+                        <span className={cn("h-2.5 w-2.5 shrink-0 rounded-full", playerColor(index).dot)} />
+                        <span className="font-medium truncate pr-2">{player}</span>
+                      </span>
                       <Button
                         variant="ghost"
                         size="icon"
@@ -513,16 +630,17 @@ function GamePageContent() {
               <span className={cn("inline-flex w-fit items-center rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-widest", MODE_CHIP[nsfwLevel])}>
                 {GAME_MODES.find((m) => m.id === nsfwLevel)?.badge ?? nsfwLevel}
               </span>
-              <h1 className="truncate font-headline text-lg sm:text-xl font-bold tracking-tight text-white">
-                {gameEnded ? 'Session complete' : players[currentPlayerIndex]}
+              <h1 className="flex min-w-0 items-center gap-2 font-headline text-lg sm:text-xl font-bold tracking-tight text-white">
+                <span className={cn("h-2.5 w-2.5 shrink-0 rounded-full", playerColor(currentPlayerIndex).dot, playerColor(currentPlayerIndex).glow)} />
+                <span className="truncate">{players[currentPlayerIndex]}</span>
               </h1>
             </div>
             <div className="shrink-0 text-right">
               <div className="font-headline text-sm font-bold tabular-nums text-white/90">
-                {gameEnded ? deckTotal : cardNumber}<span className="text-white/40"> / {deckTotal}</span>
+                {cardNumber}<span className="text-white/40"> / {deckTotal}</span>
               </div>
               <div className="text-[10px] uppercase tracking-widest text-white/55">
-                {gameEnded ? 'cards played' : `Round ${roundNumber} · ${players.length}p`}
+                Round {roundNumber} · {players.length}p
               </div>
             </div>
           </div>
@@ -530,25 +648,45 @@ function GamePageContent() {
 
         {/* The card fills the middle and never pushes the controls off-screen. */}
         <main className="flex-1 min-h-0 flex items-center justify-center px-4 py-3">
-          <Card
-            className={cn(
-              "relative flex h-full w-full max-w-2xl flex-col overflow-hidden border glass-card transition-shadow duration-500",
-              MODE_BORDER[nsfwLevel]
-            )}
-          >
+          <div className="relative flex h-full w-full max-w-2xl items-stretch">
+            {/* Next-card peek: rises from behind as the live card is swiped away. */}
             <div
-              aria-live="polite"
-              className="flex flex-1 min-h-0 flex-col items-center justify-center gap-6 overflow-y-auto overscroll-contain p-6 text-center sm:p-10"
+              aria-hidden
+              className={cn(
+                "absolute inset-0 flex items-center justify-center rounded-2xl border glass-card",
+                MODE_BORDER[nsfwLevel]
+              )}
+              style={{
+                transform: `scale(${0.93 + 0.07 * swipeProgress})`,
+                opacity: dragActive.current || leaving ? 0.25 + 0.55 * swipeProgress : 0,
+              }}
             >
-              {gameEnded ? (
-                <div className="flex flex-col items-center gap-4 animate-fade-in">
-                  <p className="font-headline text-4xl sm:text-5xl font-bold text-secondary neon-text-accent">Last Call!</p>
-                  <p className="text-base sm:text-lg text-muted-foreground max-w-sm">
-                    You played through {cardsPlayed} {cardsPlayed === 1 ? 'card' : 'cards'} this round. Pass the phone and go again.
-                  </p>
-                </div>
-              ) : (
-                <>
+              <MartiniMark className="h-10 w-10 opacity-40" />
+            </div>
+
+            {/* Live card. */}
+            <div
+              className="relative h-full w-full"
+              onPointerDown={onCardPointerDown}
+              onPointerMove={onCardPointerMove}
+              onPointerUp={endDrag}
+              onPointerCancel={endDrag}
+              style={{
+                transform: `translateX(${dragX}px) rotate(${dragX * 0.02}deg)`,
+                transition: leaving ? 'transform 0.18s ease-out' : dragActive.current ? 'none' : 'transform 0.2s ease-out',
+                touchAction: 'pan-y',
+              }}
+            >
+              <Card
+                className={cn(
+                  "relative flex h-full w-full flex-col overflow-hidden rounded-2xl border glass-card transition-shadow duration-500",
+                  MODE_BORDER[nsfwLevel]
+                )}
+              >
+                <div
+                  aria-live="polite"
+                  className="flex flex-1 min-h-0 flex-col items-center justify-center gap-6 overflow-y-auto overscroll-contain p-6 text-center sm:p-10"
+                >
                   {categoryMeta && (
                     <span className={cn("inline-flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-[0.18em]", categoryMeta.className)}>
                       <categoryMeta.Icon className="h-3.5 w-3.5" />
@@ -586,19 +724,31 @@ function GamePageContent() {
                       )}
                     </div>
                   )}
-                </>
+                </div>
+              </Card>
+
+              {/* R5 — draining conic ring while the countdown runs; a flash at 0. */}
+              {timerRunning && (
+                <div
+                  className="timer-ring rounded-2xl"
+                  data-critical={(timeLeft ?? 0) <= 5}
+                  style={{ '--timer-pct': String(timerPct) } as CSSProperties}
+                />
+              )}
+              {timerTotal !== null && !timerRunning && timeLeft === 0 && (
+                <div key={`flash-${cardKey}`} className="timer-flash rounded-2xl" />
               )}
             </div>
-          </Card>
+          </div>
         </main>
 
         {/* Thumb dock — full-width primary action, then three fitted controls. */}
         <footer className="shrink-0 border-t border-white/5 px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
           <Button
-            onClick={gameEnded ? restartGame : handleNextPlayer}
+            onClick={handleNextPlayer}
             className="w-full h-14 rounded-2xl text-lg font-bold bg-primary text-white shadow-xl transition-transform active:scale-[0.98] touch-manipulation"
           >
-            {gameEnded ? "Restart Deck" : "Next Player"}
+            Next Player
             <ArrowRightCircle className="ml-1 h-5 w-5" />
           </Button>
 
@@ -623,6 +773,118 @@ function DockButton({ icon: Icon, label, onClick, disabled }: { icon: LucideIcon
       <Icon className="h-5 w-5" />
       <span className="text-[10px] font-semibold uppercase tracking-widest">{label}</span>
     </button>
+  );
+}
+
+// R4 — the end of the deck as a destination: a celebratory recap of the night
+// and three clear ways to keep it going.
+function GameOverView({
+  players,
+  nsfwLevel,
+  cardsPlayed,
+  turnsByName,
+  onRunItBack,
+  onTurnItUp,
+  onNewCrew,
+}: {
+  players: string[];
+  nsfwLevel: GameMode;
+  cardsPlayed: number;
+  turnsByName: Record<string, number>;
+  onRunItBack: () => void;
+  onTurnItUp: () => void;
+  onNewCrew: () => void;
+}) {
+  const rounds = players.length > 0 ? Math.max(1, Math.ceil(cardsPlayed / players.length)) : 1;
+  const modeLabel = GAME_MODES.find((m) => m.id === nsfwLevel)?.badge ?? nsfwLevel;
+  const hotter = HOTTER_MODE[nsfwLevel];
+  const hotterLabel = hotter ? GAME_MODES.find((m) => m.id === hotter)?.label : null;
+
+  // Most-drawn player, if anyone pulled ahead (all-ties reads as no standout).
+  const entries = Object.entries(turnsByName).filter(([, n]) => n > 0);
+  let mvpName: string | null = null;
+  let mvpCount = 0;
+  for (const [name, n] of entries) {
+    if (n > mvpCount) { mvpName = name; mvpCount = n; }
+  }
+  const allEqual = entries.length > 0 && entries.every(([, n]) => n === entries[0][1]);
+  const mvpIndex = mvpName ? players.indexOf(mvpName) : -1;
+  const mvpColor = playerColor(mvpIndex >= 0 ? mvpIndex : 0);
+
+  useEffect(() => { vibrate([16, 40, 16, 40, 60]); }, []);
+
+  const stats: { label: string; value: string; sub?: string }[] = [
+    { label: 'Cards played', value: String(cardsPlayed) },
+    { label: 'Rounds', value: String(rounds) },
+    { label: 'Intensity', value: modeLabel },
+    { label: 'Crew', value: String(players.length), sub: 'players' },
+  ];
+
+  return (
+    <div className="flex min-h-[100dvh] flex-col items-center justify-center px-5 py-8 text-center pt-[max(2rem,env(safe-area-inset-top))] pb-[max(1.5rem,env(safe-area-inset-bottom))]">
+      <div className="flex w-full max-w-md flex-col items-center">
+        <div className="animate-finale-rise flex flex-col items-center" style={{ animationDelay: '0ms' }}>
+          <span className="inline-flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.3em] text-secondary">
+            <Sparkles className="h-4 w-4" /> That&apos;s a wrap
+          </span>
+          <h1 className="mt-3 font-headline text-5xl font-bold text-secondary neon-text-accent">Last Call</h1>
+          <p className="mt-2 text-sm text-muted-foreground">You ran the whole {modeLabel} deck. Not bad.</p>
+        </div>
+
+        {mvpName && !allEqual && (
+          <div
+            className="animate-finale-rise mt-6 flex w-full items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3.5"
+            style={{ animationDelay: '80ms' }}
+          >
+            <span className={cn("flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-white/5", mvpColor.glow)}>
+              <Trophy className={cn("h-5 w-5", mvpColor.text)} />
+            </span>
+            <div className="min-w-0 text-left">
+              <div className="text-[10px] font-semibold uppercase tracking-widest text-white/55">Most in the hot seat</div>
+              <div className="flex items-center gap-2">
+                <span className={cn("h-2.5 w-2.5 shrink-0 rounded-full", mvpColor.dot)} />
+                <span className="truncate font-headline text-lg font-bold text-white">{mvpName}</span>
+                <span className="shrink-0 text-sm text-white/55">· {mvpCount} cards</span>
+              </div>
+            </div>
+          </div>
+        )}
+
+        <div className="animate-finale-rise mt-4 grid w-full grid-cols-2 gap-2.5" style={{ animationDelay: '140ms' }}>
+          {stats.map((s) => (
+            <div key={s.label} className="rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-4">
+              <div className="font-headline text-3xl font-bold tabular-nums text-white">{s.value}</div>
+              <div className="mt-1 text-[10px] font-semibold uppercase tracking-widest text-white/55">{s.label}</div>
+            </div>
+          ))}
+        </div>
+
+        <div className="animate-finale-rise mt-7 flex w-full flex-col gap-2.5" style={{ animationDelay: '220ms' }}>
+          <Button
+            onClick={onRunItBack}
+            className="h-14 w-full rounded-2xl bg-primary text-lg font-bold text-white shadow-xl transition-transform active:scale-[0.98] touch-manipulation"
+          >
+            <Repeat className="mr-2 h-5 w-5" /> Run It Back
+          </Button>
+          {hotter && (
+            <Button
+              onClick={onTurnItUp}
+              variant="outline"
+              className="h-[52px] w-full rounded-2xl border-destructive/50 bg-destructive/10 text-base font-semibold text-white hover:bg-destructive/20 touch-manipulation"
+            >
+              <TrendingUp className="mr-2 h-5 w-5 text-destructive" /> Turn It Up{hotterLabel ? ` · ${hotterLabel}` : ''}
+            </Button>
+          )}
+          <Button
+            onClick={onNewCrew}
+            variant="ghost"
+            className="h-12 w-full rounded-2xl text-base font-medium text-white/70 hover:bg-white/5 hover:text-white touch-manipulation"
+          >
+            <Users className="mr-2 h-5 w-5" /> New Crew
+          </Button>
+        </div>
+      </div>
+    </div>
   );
 }
 
