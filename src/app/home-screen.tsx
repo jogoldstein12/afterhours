@@ -87,6 +87,14 @@ export function HomeScreen() {
     setPlayers((prev) => prev.filter((_, i) => i !== index));
   };
 
+  // Wipe the whole roster in one tap to start a fresh game, and forget the
+  // remembered group so a reload doesn't bring it back.
+  const clearAll = () => {
+    setPlayers([]);
+    setDraft('');
+    try { localStorage.removeItem(LAST_SETUP_KEY); } catch { /* storage unavailable */ }
+  };
+
   const canStart = players.length >= MIN_PLAYERS;
   const needed = Math.max(0, MIN_PLAYERS - players.length);
 
@@ -114,12 +122,25 @@ export function HomeScreen() {
           </CardHeader>
           <CardContent className="space-y-6">
             <div className="space-y-3">
-              <Label htmlFor="add-player" className="text-base font-semibold text-accent flex items-center">
-                <Users className="mr-2 h-5 w-5" /> Who&apos;s playing?
-                <span className="ml-auto text-xs font-medium text-muted-foreground tabular-nums">
-                  {players.length} in
-                </span>
-              </Label>
+              <div className="flex items-center justify-between">
+                <Label htmlFor="add-player" className="text-base font-semibold text-accent flex items-center">
+                  <Users className="mr-2 h-5 w-5" /> Who&apos;s playing?
+                </Label>
+                <div className="flex items-center gap-3">
+                  <span className="text-xs font-medium text-muted-foreground tabular-nums">
+                    {players.length} in
+                  </span>
+                  {players.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={clearAll}
+                      className="rounded-md px-1.5 py-0.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground transition-colors hover:text-destructive focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring touch-manipulation"
+                    >
+                      Clear
+                    </button>
+                  )}
+                </div>
+              </div>
 
               <div className="flex gap-2">
                 <Input

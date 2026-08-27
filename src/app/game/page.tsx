@@ -51,8 +51,11 @@ import { Separator } from '@/components/ui/separator';
 
 const MIN_PLAYERS = 2;
 const MAX_PLAYERS = 10;
-// Horizontal travel (px) past which a swipe deals the next card.
-const SWIPE_THRESHOLD = 90;
+// Swipe left deals the next card, swipe right steps back (undo). A gesture
+// commits if it either travels past SWIPE_THRESHOLD or is a quick flick past
+// FLICK_VELOCITY — so a short, fast flick works as well as a long drag.
+const SWIPE_THRESHOLD = 56;
+const FLICK_VELOCITY = 0.35; // px per ms
 
 // Each mode carries its color the whole way through the screen: the card's neon
 // border, the status-strip chip, the progress filament, and the selected pill.
@@ -174,12 +177,13 @@ function GamePageContent() {
   // exact text that was on screen instead of re-randomizing {{randomOtherPlayer}}.
   const restoredTextRef = useRef<string | null>(null);
 
-  // Swipe-to-advance: the card tracks the finger, and past the threshold it
-  // flies off and deals the next one. Button parity is kept in the dock.
-  const [dragX, setDragX] = useState(0);
-  const [leaving, setLeaving] = useState(false);
-  const dragOrigin = useRef<{ x: number; y: number } | null>(null);
-  const dragActive = useRef(false);
+  // Swipe: the card tracks the finger and, past the threshold or on a flick,
+  // flies off — left to deal the next card, right to step back. The transform
+  // is written straight to the DOM during the drag (no React re-render per
+  // move) so it stays smooth on a phone. Button parity is kept in the dock.
+  const cardElRef = useRef<HTMLDivElement>(null);
+  const peekElRef = useRef<HTMLDivElement>(null);
+  const swipe = useRef({ x: 0, y: 0, t: 0, active: false, tracking: false, busy: false });
   const flyTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const timerTotal = currentPrompt ? extractDurationSeconds(currentPrompt.text) : null;
@@ -397,53 +401,81 @@ function GamePageContent() {
     setCardKey(prev => prev + 1);
   };
 
-  // --- Swipe handlers -------------------------------------------------------
+  // --- Swipe handlers (imperative, for a smooth 60fps drag) -----------------
+  const paintDrag = (dx: number) => {
+    const card = cardElRef.current;
+    if (card) card.style.transform = `translateX(${dx}px) rotate(${dx * 0.02}deg)`;
+    const peek = peekElRef.current;
+    if (peek) {
+      const p = Math.min(1, Math.abs(dx) / SWIPE_THRESHOLD);
+      peek.style.opacity = String(0.2 + 0.55 * p);
+      peek.style.transform = `scale(${0.93 + 0.07 * p})`;
+    }
+  };
+  const settleCard = (animate: boolean) => {
+    const card = cardElRef.current;
+    if (card) {
+      card.style.transition = animate ? 'transform 0.2s ease-out' : 'none';
+      card.style.transform = 'translateX(0px) rotate(0deg)';
+    }
+    const peek = peekElRef.current;
+    if (peek) {
+      peek.style.transition = animate ? 'opacity 0.2s ease-out, transform 0.2s ease-out' : 'none';
+      peek.style.opacity = '0';
+      peek.style.transform = 'scale(0.93)';
+    }
+  };
+
   const onCardPointerDown = (e: ReactPointerEvent) => {
-    if (gameEnded || !currentPrompt || leaving) return;
-    dragOrigin.current = { x: e.clientX, y: e.clientY };
-    dragActive.current = false;
+    if (gameEnded || !currentPrompt || swipe.current.busy) return;
+    swipe.current = { x: e.clientX, y: e.clientY, t: e.timeStamp, active: true, tracking: false, busy: false };
+    const card = cardElRef.current;
+    if (card) card.style.transition = 'none';
   };
   const onCardPointerMove = (e: ReactPointerEvent) => {
-    if (!dragOrigin.current) return;
-    const dx = e.clientX - dragOrigin.current.x;
-    const dy = e.clientY - dragOrigin.current.y;
-    if (!dragActive.current) {
+    const s = swipe.current;
+    if (!s.active || s.busy) return;
+    const dx = e.clientX - s.x;
+    const dy = e.clientY - s.y;
+    if (!s.tracking) {
       // Decide intent once: horizontal → swipe; vertical → let the card scroll.
-      if (Math.abs(dx) > 10 && Math.abs(dx) > Math.abs(dy)) {
-        dragActive.current = true;
+      if (Math.abs(dx) > 6 && Math.abs(dx) > Math.abs(dy)) {
+        s.tracking = true;
         try { (e.target as HTMLElement).setPointerCapture?.(e.pointerId); } catch {}
-      } else if (Math.abs(dy) > 10) {
-        dragOrigin.current = null;
+      } else if (Math.abs(dy) > 8) {
+        s.active = false;
         return;
       } else {
         return;
       }
     }
-    setDragX(dx);
+    paintDrag(dx);
   };
-  const endDrag = () => {
-    if (!dragOrigin.current || !dragActive.current) {
-      dragOrigin.current = null;
-      dragActive.current = false;
-      setDragX(0);
-      return;
-    }
-    const dx = dragX;
-    dragOrigin.current = null;
-    dragActive.current = false;
-    if (Math.abs(dx) > SWIPE_THRESHOLD) {
-      const dir = dx > 0 ? 1 : -1;
-      setLeaving(true);
-      setDragX(dir * (typeof window !== 'undefined' ? window.innerWidth : 500));
-      flyTimeout.current = setTimeout(() => {
-        handleNextPlayer();
-        setDragX(0);
-        setLeaving(false);
-      }, 180);
+  const endDrag = (e: ReactPointerEvent) => {
+    const s = swipe.current;
+    if (!s.active) return;
+    if (!s.tracking) { s.active = false; return; }
+    const dx = e.clientX - s.x;
+    const dt = Math.max(1, e.timeStamp - s.t);
+    const v = dx / dt; // signed px/ms
+    s.active = false;
+
+    const goNext = dx < -SWIPE_THRESHOLD || v < -FLICK_VELOCITY;
+    const goBack = dx > SWIPE_THRESHOLD || v > FLICK_VELOCITY;
+    const canBack = history.length > 0;
+
+    if (goNext && !goBack) {
+      s.busy = true;
+      const card = cardElRef.current;
+      if (card) { card.style.transition = 'transform 0.16s ease-out'; card.style.transform = 'translateX(-115%) rotate(-6deg)'; }
+      flyTimeout.current = setTimeout(() => { handleNextPlayer(); settleCard(false); s.busy = false; }, 150);
+    } else if (goBack && canBack) {
+      s.busy = true;
+      const card = cardElRef.current;
+      if (card) { card.style.transition = 'transform 0.16s ease-out'; card.style.transform = 'translateX(115%) rotate(6deg)'; }
+      flyTimeout.current = setTimeout(() => { handleUndo(); settleCard(false); s.busy = false; }, 150);
     } else {
-      setLeaving(true);
-      setDragX(0);
-      flyTimeout.current = setTimeout(() => setLeaving(false), 200);
+      settleCard(true);
     }
   };
 
@@ -512,7 +544,6 @@ function GamePageContent() {
   }
 
   const timerPct = timerTotal && timeLeft !== null ? Math.max(0, Math.min(100, (timeLeft / timerTotal) * 100)) : 0;
-  const swipeProgress = Math.min(1, Math.abs(dragX) / SWIPE_THRESHOLD);
 
   return (
     <>
@@ -649,33 +680,28 @@ function GamePageContent() {
         {/* The card fills the middle and never pushes the controls off-screen. */}
         <main className="flex-1 min-h-0 flex items-center justify-center px-4 py-3">
           <div className="relative flex h-full w-full max-w-2xl items-stretch">
-            {/* Next-card peek: rises from behind as the live card is swiped away. */}
+            {/* Card peek: rises from behind as the live card is swiped away. */}
             <div
+              ref={peekElRef}
               aria-hidden
               className={cn(
                 "absolute inset-0 flex items-center justify-center rounded-2xl border glass-card",
                 MODE_BORDER[nsfwLevel]
               )}
-              style={{
-                transform: `scale(${0.93 + 0.07 * swipeProgress})`,
-                opacity: dragActive.current || leaving ? 0.25 + 0.55 * swipeProgress : 0,
-              }}
+              style={{ transform: 'scale(0.93)', opacity: 0 }}
             >
               <MartiniMark className="h-10 w-10 opacity-40" />
             </div>
 
             {/* Live card. */}
             <div
+              ref={cardElRef}
               className="relative h-full w-full"
               onPointerDown={onCardPointerDown}
               onPointerMove={onCardPointerMove}
               onPointerUp={endDrag}
               onPointerCancel={endDrag}
-              style={{
-                transform: `translateX(${dragX}px) rotate(${dragX * 0.02}deg)`,
-                transition: leaving ? 'transform 0.18s ease-out' : dragActive.current ? 'none' : 'transform 0.2s ease-out',
-                touchAction: 'pan-y',
-              }}
+              style={{ touchAction: 'pan-y' }}
             >
               <Card
                 className={cn(
