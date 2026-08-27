@@ -7,16 +7,11 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Header } from '@/components/shared/Header';
-import { Users, MinusCircle, PlusCircle, ShieldAlert, Flame } from 'lucide-react';
+import { Users, ShieldAlert, Flame, Plus, X } from 'lucide-react';
 import { GAME_MODES, type GameMode } from '@/lib/prompts';
 import { useToast } from '@/hooks/use-toast';
-import { cn, playersToQuery, playersFromQuery } from '@/lib/utils';
+import { cn, playersToQuery, playersFromQuery, playerColor } from '@/lib/utils';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-
-
-type Player = {
-  name: string;
-};
 
 const MIN_PLAYERS = 2;
 const MAX_PLAYERS = 10;
@@ -38,10 +33,10 @@ const MODE_ACCENT_TEXT: Record<GameMode, string> = {
 };
 
 export function HomeScreen() {
-  const [players, setPlayers] = useState<Player[]>([
-    { name: '' },
-    { name: '' }
-  ]);
+  // The roster is a list of committed names (chips), not a column of blank
+  // inputs — anticipation should read like a guest list, not a form.
+  const [players, setPlayers] = useState<string[]>([]);
+  const [draft, setDraft] = useState('');
   const [nsfwLevel, setNsfwLevel] = useState<GameMode>('Mild');
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -53,13 +48,13 @@ export function HomeScreen() {
     const names = playersFromQuery(searchParams);
     const nsfwLevelQuery = searchParams.get('nsfwLevel');
     if (names.length >= MIN_PLAYERS) {
-      setPlayers(names.map(name => ({ name })));
+      setPlayers(names.slice(0, MAX_PLAYERS));
     } else {
       // No roster handed over — offer the last group that played on this device.
       try {
         const saved = JSON.parse(localStorage.getItem(LAST_SETUP_KEY) ?? 'null');
         if (saved && Array.isArray(saved.players) && saved.players.length >= MIN_PLAYERS) {
-          setPlayers(saved.players.slice(0, MAX_PLAYERS).map((name: unknown) => ({ name: String(name) })));
+          setPlayers(saved.players.slice(0, MAX_PLAYERS).map((name: unknown) => String(name)));
           if (!nsfwLevelQuery && GAME_MODES.some((m) => m.id === saved.nsfwLevel)) {
             setNsfwLevel(saved.nsfwLevel as GameMode);
           }
@@ -73,41 +68,36 @@ export function HomeScreen() {
     }
   }, [searchParams]);
 
-  const handlePlayerNameChange = (index: number, name: string) => {
-    setPlayers(prev => prev.map((p, i) => (i === index ? { ...p, name } : p)));
-  };
-
   const addPlayer = () => {
-    if (players.length < MAX_PLAYERS) {
-      setPlayers([...players, { name: '' }]);
-    } else {
+    const name = draft.trim();
+    if (!name) return;
+    if (players.length >= MAX_PLAYERS) {
       toast({
-        title: "Max players reached",
+        title: 'Max players reached',
         description: `You can add up to ${MAX_PLAYERS} players.`,
-        variant: "destructive",
+        variant: 'destructive',
       });
+      return;
     }
+    setPlayers((prev) => [...prev, name]);
+    setDraft('');
   };
 
   const removePlayer = (index: number) => {
-    if (players.length > MIN_PLAYERS) {
-      setPlayers(prev => prev.filter((_, i) => i !== index));
-    }
+    setPlayers((prev) => prev.filter((_, i) => i !== index));
   };
 
-  const validCount = players.filter(p => p.name.trim() !== '').length;
-  const canStart = validCount >= MIN_PLAYERS;
+  const canStart = players.length >= MIN_PLAYERS;
+  const needed = Math.max(0, MIN_PLAYERS - players.length);
 
   const startGame = () => {
-    const validPlayers = players.filter(p => p.name.trim() !== '');
-    if (validPlayers.length < MIN_PLAYERS) return;
-    const names = validPlayers.map(p => p.name.trim());
+    if (players.length < MIN_PLAYERS) return;
     try {
-      localStorage.setItem(LAST_SETUP_KEY, JSON.stringify({ players: names, nsfwLevel }));
+      localStorage.setItem(LAST_SETUP_KEY, JSON.stringify({ players, nsfwLevel }));
     } catch {
       // Best-effort convenience only.
     }
-    router.push(`/game?${playersToQuery(names, nsfwLevel)}`);
+    router.push(`/game?${playersToQuery(players, nsfwLevel)}`);
   };
 
   const activeMode = GAME_MODES.find((m) => m.id === nsfwLevel);
@@ -124,39 +114,65 @@ export function HomeScreen() {
           </CardHeader>
           <CardContent className="space-y-6">
             <div className="space-y-3">
-              <Label className="text-base font-semibold text-accent flex items-center">
-                <Users className="mr-2 h-5 w-5" /> Players
+              <Label htmlFor="add-player" className="text-base font-semibold text-accent flex items-center">
+                <Users className="mr-2 h-5 w-5" /> Who&apos;s playing?
                 <span className="ml-auto text-xs font-medium text-muted-foreground tabular-nums">
-                  {validCount} ready
+                  {players.length} in
                 </span>
               </Label>
-              {players.map((player, index) => (
-                <div key={index} className="flex items-center gap-2">
-                  <Input
-                    type="text"
-                    placeholder={`Player ${index + 1}`}
-                    value={player.name}
-                    onChange={(e) => handlePlayerNameChange(index, e.target.value)}
-                    className="h-11 bg-input border-border focus:neon-border-accent text-foreground placeholder:text-muted-foreground"
-                    aria-label={`Player ${index + 1} name`}
-                  />
-                   {players.length > MIN_PLAYERS && (
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => removePlayer(index)}
-                      aria-label={`Remove player ${index + 1}`}
-                      className="h-11 w-11 shrink-0 touch-manipulation"
-                    >
-                      <MinusCircle className="h-5 w-5 text-destructive" />
-                    </Button>
-                  )}
-                </div>
-              ))}
-              {players.length < MAX_PLAYERS && (
-                <Button variant="outline" onClick={addPlayer} className="w-full h-11 border-accent/60 text-accent hover:bg-accent/10 touch-manipulation">
-                  <PlusCircle className="mr-2 h-5 w-5" /> Add Player
+
+              <div className="flex gap-2">
+                <Input
+                  id="add-player"
+                  type="text"
+                  placeholder={players.length >= MAX_PLAYERS ? 'Roster full' : 'Add a name, hit +'}
+                  value={draft}
+                  onChange={(e) => setDraft(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addPlayer(); } }}
+                  disabled={players.length >= MAX_PLAYERS}
+                  className="h-11 bg-input border-border focus:neon-border-accent text-foreground placeholder:text-muted-foreground disabled:opacity-60"
+                  aria-label="Add a player"
+                  autoComplete="off"
+                  enterKeyHint="done"
+                />
+                <Button
+                  onClick={addPlayer}
+                  size="icon"
+                  disabled={!draft.trim() || players.length >= MAX_PLAYERS}
+                  aria-label="Add player"
+                  className="h-11 w-11 shrink-0 bg-accent text-accent-foreground hover:bg-accent/80 disabled:opacity-40 touch-manipulation"
+                >
+                  <Plus className="h-5 w-5" />
                 </Button>
+              </div>
+
+              {players.length > 0 ? (
+                <ul className="flex flex-wrap gap-2 pt-1">
+                  {players.map((name, index) => {
+                    const color = playerColor(index);
+                    return (
+                      <li
+                        key={`${name}-${index}`}
+                        className="flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.05] py-1.5 pl-3 pr-1.5 text-sm"
+                      >
+                        <span className={cn('h-2.5 w-2.5 shrink-0 rounded-full', color.dot, color.glow)} />
+                        <span className="max-w-[9rem] truncate font-medium text-white">{name}</span>
+                        <button
+                          type="button"
+                          onClick={() => removePlayer(index)}
+                          aria-label={`Remove ${name}`}
+                          className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-white/50 transition-colors hover:bg-white/10 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring touch-manipulation"
+                        >
+                          <X className="h-4 w-4" />
+                        </button>
+                      </li>
+                    );
+                  })}
+                </ul>
+              ) : (
+                <p className="pt-1 text-sm text-muted-foreground">
+                  Add everyone at the table — first names or nicknames both work.
+                </p>
               )}
             </div>
 
@@ -215,7 +231,9 @@ export function HomeScreen() {
             disabled={!canStart}
             className="w-full h-14 rounded-2xl bg-primary hover:bg-primary/90 text-primary-foreground text-lg font-bold neon-border-primary transition-transform active:scale-[0.98] disabled:opacity-50 disabled:neon-border-primary disabled:active:scale-100 touch-manipulation"
           >
-            {canStart ? `Start with ${validCount} ${validCount === 1 ? 'player' : 'players'}` : `Add at least ${MIN_PLAYERS} players`}
+            {canStart
+              ? `Start with ${players.length} ${players.length === 1 ? 'player' : 'players'}`
+              : `Add ${needed} more ${needed === 1 ? 'player' : 'players'}`}
           </Button>
         </div>
       </div>

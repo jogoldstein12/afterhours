@@ -91,6 +91,20 @@ body {
   }
 }
 
+/* R6 — Atmosphere tint. The drifting nightclub layer takes its hue from the
+   mode currently in play, set as data-mode on <html> by the game screen. The
+   setup lobby leaves it unset and gets the default violet/pink night. Values
+   are bare HSL triples so they compose into hsl(var(--atmo-1) / <alpha>). */
+:root {
+  --atmo-core: 283 60% 15%;
+  --atmo-1: var(--primary);
+  --atmo-2: var(--secondary);
+}
+:root[data-mode='Mild']    { --atmo-core: 283 60% 15%; --atmo-1: var(--primary);     --atmo-2: var(--secondary); }
+:root[data-mode='Medium']  { --atmo-core: 322 55% 15%; --atmo-1: var(--secondary);   --atmo-2: var(--primary); }
+:root[data-mode='Extreme'] { --atmo-core: 0 55% 13%;   --atmo-1: var(--destructive); --atmo-2: var(--secondary); }
+:root[data-mode='NHIE']    { --atmo-core: 200 55% 14%; --atmo-1: var(--chart-3);     --atmo-2: var(--primary); }
+
 /* Custom glow effects for neon styling */
 .neon-text-primary {
   text-shadow:
@@ -196,14 +210,80 @@ body {
   }
 
   .bg-nightclub {
-    background: radial-gradient(circle at 50% 50%, #1a0b2e 0%, #0a040f 100%);
+    background: radial-gradient(circle at 50% 32%, hsl(var(--atmo-core)) 0%, #0a040f 70%);
+    transition: background 1.2s ease;
   }
+
+  /* R5 — Timer as spectacle. A conic ring hugs the card border and drains as
+     the countdown runs; the standard mask recipe cuts the interior so only the
+     rim shows. --timer-pct (0-100) and --timer-color are set inline per tick. */
+  .timer-ring {
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    padding: 3px;
+    background: conic-gradient(
+      from -90deg,
+      hsl(var(--timer-color, var(--accent))) calc(var(--timer-pct, 0) * 1%),
+      transparent 0
+    );
+    -webkit-mask:
+      linear-gradient(#000 0 0) content-box,
+      linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+            mask-composite: exclude;
+    pointer-events: none;
+    filter: drop-shadow(0 0 4px hsl(var(--timer-color, var(--accent)) / 0.7));
+  }
+  .timer-ring[data-critical='true'] {
+    --timer-color: var(--destructive);
+    animation: timerPulse 1s ease-in-out infinite;
+  }
+
+  /* A full-card flash the instant the timer expires, then it fades out once. */
+  .timer-flash {
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    pointer-events: none;
+    background: radial-gradient(circle at 50% 45%, hsl(var(--secondary) / 0.45), transparent 68%);
+    animation: timerFlash 0.7s ease-out forwards;
+  }
+}
+
+@keyframes timerPulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+@keyframes timerFlash {
+  0% { opacity: 0; }
+  16% { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+/* R4 — the finale's celebratory rise for stat tiles and headline. */
+@keyframes finaleRise {
+  from { opacity: 0; transform: translateY(16px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.animate-finale-rise {
+  animation: finaleRise 0.5s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
 @media (prefers-reduced-motion: reduce) {
   .animate-smoke,
   .animate-card-enter,
-  .animate-fade-in {
+  .animate-fade-in,
+  .animate-finale-rise,
+  .timer-ring[data-critical='true'],
+  .timer-flash {
     animation: none;
+  }
+  .animate-finale-rise {
+    opacity: 1;
+  }
+  .bg-nightclub {
+    transition: none;
   }
 }
