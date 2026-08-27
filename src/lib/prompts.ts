@@ -77,7 +77,6 @@ export const PROMPTS: Prompt[] = [
   { id: 128, text: "Take a sip every time you've sexted in the past week.", nsfwLevel: 'Medium' },
   { id: 129, text: "Drink if you've ever skinny-dipped.", nsfwLevel: 'Medium' },
   { id: 130, text: "Drink if you've ever sent a nude to the wrong person.", nsfwLevel: 'Medium' },
-  { id: 131, text: "Drink if you've ever hooked up with a coworker.", nsfwLevel: 'Medium' },
   { id: 132, text: "Drink if you've ever faked an orgasm.", nsfwLevel: 'Medium' },
   { id: 133, text: "Finish your drink if you've ever faked an orgasm and the other person called you out on it.", nsfwLevel: 'Medium' },
   { id: 134, text: "Drink if you've ever texted 'you up?' past midnight.", nsfwLevel: 'Medium' },
@@ -92,7 +91,6 @@ export const PROMPTS: Prompt[] = [
   { id: 143, text: "Anyone that has been skinny dipping drink 3 times.", nsfwLevel: 'Medium' },
   { id: 144, text: "If you've ever sucked your partner's toes drink 3 times.", nsfwLevel: 'Medium' },
   { id: 145, text: "If you've had sex 3 or more times in one night drink 3 times.", nsfwLevel: 'Medium' },
-  { id: 146, text: "If you've ever faked an orgasm drink 3 times.", nsfwLevel: 'Medium' },
   { id: 147, text: "Drink 3 times if you've seen another one of the players naked.", nsfwLevel: 'Medium' },
   { id: 148, text: "If you've ever had sex in a car drink 3 times.", nsfwLevel: 'Medium' },
   { id: 149, text: "If you've ever used handcuffs or rope in bed give out 3 drinks.", nsfwLevel: 'Medium' },
@@ -256,7 +254,6 @@ export const PROMPTS: Prompt[] = [
   { id: 300, text: "What's the kinkiest thing you've ever considered trying?", nsfwLevel: 'Extreme' },
   { id: 301, text: "Describe your most scandalous public display of affection.", nsfwLevel: 'Extreme' },
   { id: 302, text: "Who in this room would you most likely have a one-night stand with, and why?", nsfwLevel: 'Extreme' },
-  { id: 303, text: "What's the riskiest place you've ever had sex?", nsfwLevel: 'Extreme' },
   { id: 304, text: "Share your raunchiest, most NSFW fantasy in detail.", nsfwLevel: 'Extreme' },
   { id: 305, text: "Truth: Have you ever sent a nude to the wrong person? Dare: Send a flirty text to your latest contact.", nsfwLevel: 'Extreme' },
   { id: 306, text: "What's the most embarrassing thing on your phone right now?", nsfwLevel: 'Extreme' },
@@ -265,7 +262,6 @@ export const PROMPTS: Prompt[] = [
   { id: 309, text: "Tell the group how many people you've slept with.", nsfwLevel: 'Extreme' },
   { id: 310, text: "Tell the group your biggest sexual secret or take 3 drinks.", nsfwLevel: 'Extreme' },
   { id: 311, text: "Describe the kinkiest thing you've done, or take 3 drinks.", nsfwLevel: 'Extreme' },
-  { id: 312, text: "Reveal your wildest sexual fantasy — or take 3 drinks.", nsfwLevel: 'Extreme' },
   { id: 313, text: "Describe exactly what you'd do to {{randomOtherPlayer}} if you were alone — or take 3 drinks.", nsfwLevel: 'Extreme' },
   { id: 314, text: "Tell the group your body count — anyone who guesses within 3 gets to give you a dare.", nsfwLevel: 'Extreme' },
   { id: 315, text: "If you've ever slept with anyone in this room, name them or take 3 drinks.", nsfwLevel: 'Extreme' },
@@ -317,7 +313,6 @@ export const PROMPTS: Prompt[] = [
   // --- Extreme: Hickeys & Marking ---
   { id: 354, text: "Give {{randomOtherPlayer}} a hickey for 15 seconds.", nsfwLevel: 'Extreme' },
   { id: 355, text: "Leave a visible hickey on {{randomOtherPlayer}} — or take 3 drinks.", nsfwLevel: 'Extreme' },
-  { id: 356, text: "Let {{randomOtherPlayer}} leave a mark anywhere on your body — or take 3 drinks.", nsfwLevel: 'Extreme' },
   { id: 357, text: "Let {{randomOtherPlayer}} lightly mark you with a bite or hickey or drink 3 times.", nsfwLevel: 'Extreme' },
   { id: 358, text: "Let {{randomOtherPlayer}} leave a lipstick mark (or kiss mark) anywhere visible on your body — or take 3 drinks.", nsfwLevel: 'Extreme' },
 
@@ -334,7 +329,6 @@ export const PROMPTS: Prompt[] = [
   { id: 368, text: "Let {{randomOtherPlayer}} demonstrate on you how they like to be touched — or take 3 drinks.", nsfwLevel: 'Extreme' },
 
   // --- Extreme: Body Shots & Food Play ---
-  { id: 369, text: "Take a body shot off {{randomOtherPlayer}}.", nsfwLevel: 'Extreme' },
   { id: 370, text: "Take a body shot off {{randomOtherPlayer}} — or take 2 shots yourself.", nsfwLevel: 'Extreme' },
   { id: 371, text: "Pour a shot into {{randomOtherPlayer}}'s belly button and drink it.", nsfwLevel: 'Extreme' },
   { id: 372, text: "Take a shot off {{randomOtherPlayer}}'s body — you pick the spot.", nsfwLevel: 'Extreme' },
@@ -361,7 +355,7 @@ export const PROMPTS: Prompt[] = [
   { id: 389, text: "Let {{randomOtherPlayer}} grind on you for 30 seconds or take 3 drinks.", nsfwLevel: 'Extreme' },
   { id: 390, text: "Grind on {{randomOtherPlayer}}'s lap for one full song — or finish your drink.", nsfwLevel: 'Extreme' },
   { id: 391, text: "Straddle {{randomOtherPlayer}} for 30 seconds — or take 3 drinks.", nsfwLevel: 'Extreme' },
-  { id: 392, text: "Sit on {{randomOtherPlayer}}'s lap for the next 5 rounds.", nsfwLevel: 'Extreme' },
+  { id: 392, text: "Sit on {{randomOtherPlayer}}'s lap naked for the next 2 rounds.", nsfwLevel: 'Extreme' },
   { id: 393, text: "Sit on {{randomOtherPlayer}}'s lap facing them for 1 minute or drink 3 times.", nsfwLevel: 'Extreme' },
 
   // --- Extreme: Stripping & Clothing Removal ---
@@ -421,7 +415,6 @@ export const PROMPTS: Prompt[] = [
   { id: 437, text: "Get blindfolded and allow {{randomOtherPlayer}} to touch you wherever they want for 15 seconds.", nsfwLevel: 'Extreme' },
   { id: 438, text: "Blindfold yourself and let {{randomOtherPlayer}} control you — or take 2 drinks.", nsfwLevel: 'Extreme' },
   { id: 439, text: "Be blindfolded while {{randomOtherPlayer}} explores your body for 60 seconds or take 3 drinks.", nsfwLevel: 'Extreme' },
-  { id: 440, text: "Get blindfolded. {{randomOtherPlayer}} does whatever they want to you for 30 seconds — or both take 3 drinks.", nsfwLevel: 'Extreme' },
 
   // --- Extreme: Bondage & Restraints ---
   { id: 441, text: "Get handcuffed to a chair for the next 5 rounds.", nsfwLevel: 'Extreme' },
@@ -429,7 +422,6 @@ export const PROMPTS: Prompt[] = [
   { id: 443, text: "Tie {{randomOtherPlayer}} up completely — or take 3 drinks.", nsfwLevel: 'Extreme' },
   { id: 444, text: "Get tied up by {{randomOtherPlayer}} — or take 3 drinks.", nsfwLevel: 'Extreme' },
   { id: 445, text: "Tie {{randomOtherPlayer}} up and tease them for 2 minutes — or take 3 drinks.", nsfwLevel: 'Extreme' },
-  { id: 446, text: "Get tied up by {{randomOtherPlayer}} and teased for 2 minutes — or take 3 drinks.", nsfwLevel: 'Extreme' },
   { id: 447, text: "Let {{randomOtherPlayer}} pin you to a wall or the floor or drink 3 times.", nsfwLevel: 'Extreme' },
 
   // --- Extreme: Control & Power Dynamics ---
@@ -684,7 +676,6 @@ export const PROMPTS: Prompt[] = [
   { id: 801, text: "Let {{randomOtherPlayer}} write a dirty word on your body with their finger; the group guesses it.", nsfwLevel: 'Extreme' },
   { id: 802, text: "Never have I ever finished before my partner and pretended I hadn't.", nsfwLevel: 'Extreme' },
   { id: 803, text: "Reenact your loudest bedroom moment with sound only — group rates it, under 5 finish your drink.", nsfwLevel: 'Extreme' },
-  { id: 804, text: "Give {{randomOtherPlayer}} a lap dance for one full song — or strip one item and take 3 drinks.", nsfwLevel: 'Extreme' },
   { id: 805, text: "Let {{randomOtherPlayer}} guide your hands to show exactly where they like to be touched — or take 3 drinks.", nsfwLevel: 'Extreme' },
   { id: 806, text: "Confess the kinkiest thing you've done this month, or remove two items of clothing.", nsfwLevel: 'Extreme' },
   { id: 807, text: "Take a body shot off {{randomOtherPlayer}} from a spot they choose below the collarbone.", nsfwLevel: 'Extreme' },
@@ -702,7 +693,6 @@ export const PROMPTS: Prompt[] = [
   { id: 819, text: "Let {{randomOtherPlayer}} trace an ice cube from your collarbone to wherever they dare — or take 3 drinks.", nsfwLevel: 'Extreme' },
   { id: 820, text: "Confess the wildest thing you've ever agreed to in bed, or remove an item of clothing.", nsfwLevel: 'Extreme' },
   { id: 821, text: "Straddle {{randomOtherPlayer}} and whisper what you'd do if the room were empty — or take 3 drinks.", nsfwLevel: 'Extreme' },
-  { id: 822, text: "Drink if you've ever hooked up with two people from the same friend group.", nsfwLevel: 'Extreme' },
   { id: 823, text: "Let {{randomOtherPlayer}} spank you once for every year of your age divided by ten — or take 3 drinks.", nsfwLevel: 'Extreme' },
   { id: 824, text: "Blindfold yourself and let {{randomOtherPlayer}} kiss you somewhere; guess where — wrong answer, finish your drink.", nsfwLevel: 'Extreme' },
   { id: 825, text: "Describe your most-used toy and exactly how you use it — or take 3 drinks.", nsfwLevel: 'Extreme' },
@@ -845,7 +835,6 @@ export const PROMPTS: Prompt[] = [
   { id: 991, text: "Which of your exes was the worst, and what exactly went wrong?", nsfwLevel: 'Extreme' },
   { id: 992, text: "What are you wearing underneath that? Describe it in detail — or take 3 drinks.", nsfwLevel: 'Extreme' },
   { id: 993, text: "What's one thing you'd let {{randomOtherPlayer}} do to you right now, no questions asked? Say it out loud — or take 3 drinks.", nsfwLevel: 'Extreme' },
-  { id: 994, text: "If you had ten minutes alone with {{randomOtherPlayer}}, describe exactly how you'd spend them — or take 3 drinks.", nsfwLevel: 'Extreme' },
   { id: 995, text: "Rank this room by who you'd most want in bed. Say the name at the top — or take 3 drinks.", nsfwLevel: 'Extreme' },
   { id: 996, text: "What's the biggest age gap you've ever had? Say both numbers — or take 3 drinks.", nsfwLevel: 'Extreme' },
   { id: 997, text: "Where do you want to be touched that nobody ever thinks to? Show us the spot — or take 3 drinks.", nsfwLevel: 'Extreme' },
@@ -868,7 +857,6 @@ export const PROMPTS: Prompt[] = [
 
   // --- Extreme: Touch, Grinding & Hands ---
   { id: 1014, text: "Put your hand on {{randomOtherPlayer}}'s thigh and slide it as high as they'll allow — or take 3 drinks.", nsfwLevel: 'Extreme' },
-  { id: 1015, text: "Let {{randomOtherPlayer}} run their hands anywhere above your waist for 30 seconds — or take 3 drinks.", nsfwLevel: 'Extreme' },
   { id: 1016, text: "Straddle {{randomOtherPlayer}} and grind for 20 seconds — or take 3 drinks.", nsfwLevel: 'Extreme' },
   { id: 1017, text: "Sit on {{randomOtherPlayer}}'s lap, facing them, until your next turn — or take 3 drinks.", nsfwLevel: 'Extreme' },
   { id: 1018, text: "Take {{randomOtherPlayer}}'s hand and show them exactly how you touch yourself, over clothes — or take 3 drinks.", nsfwLevel: 'Extreme' },
@@ -878,7 +866,6 @@ export const PROMPTS: Prompt[] = [
   { id: 1022, text: "Bite {{randomOtherPlayer}} anywhere they offer — or take 3 drinks.", nsfwLevel: 'Extreme' },
   { id: 1023, text: "Trace one finger from {{randomOtherPlayer}}'s throat down to their waistband — or take 3 drinks.", nsfwLevel: 'Extreme' },
   { id: 1024, text: "Take a body shot off {{randomOtherPlayer}} — they pick the spot — or take 3 drinks.", nsfwLevel: 'Extreme' },
-  { id: 1025, text: "Grind on {{randomOtherPlayer}} for one full song — or finish your drink.", nsfwLevel: 'Extreme' },
   { id: 1026, text: "Let {{randomOtherPlayer}} pin your wrists and get as close as they want without touching you — or take 3 drinks.", nsfwLevel: 'Extreme' },
   { id: 1027, text: "Moan into {{randomOtherPlayer}}'s ear like you mean it — or take 3 drinks.", nsfwLevel: 'Extreme' },
   { id: 1028, text: "Remove one layer from {{randomOtherPlayer}} using only your teeth — or take 3 drinks.", nsfwLevel: 'Extreme' },
@@ -994,7 +981,6 @@ export const PROMPTS: Prompt[] = [
   { id: 1127, text: "Drink if you've had sex in your childhood bedroom as a fully grown adult.", nsfwLevel: 'Extreme' },
   { id: 1128, text: "Drink if you've ever made money from a photo of yourself.", nsfwLevel: 'Extreme' },
   { id: 1129, text: "Drink if you've ever paid for someone else's spicy subscription.", nsfwLevel: 'Extreme' },
-  { id: 1130, text: "Drink if you've ever hooked up with someone you still wouldn't name out loud.", nsfwLevel: 'Extreme' },
   { id: 1131, text: "Drink if you've ever kept a souvenir from a hookup.", nsfwLevel: 'Extreme' },
   { id: 1132, text: "Drink if you've ever hooked up to a specific song on purpose.", nsfwLevel: 'Extreme' },
   { id: 1133, text: "Drink if you've had a night you genuinely can't remember but heard the reviews about.", nsfwLevel: 'Extreme' },
