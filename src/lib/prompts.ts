@@ -251,12 +251,12 @@ export const PROMPTS: Prompt[] = [
   // ============================================================================
 
   // --- Extreme: Confessions & Questions ---
-  { id: 300, text: "What's the kinkiest thing you've ever considered trying?", nsfwLevel: 'Extreme' },
-  { id: 301, text: "Describe your most scandalous public display of affection.", nsfwLevel: 'Extreme' },
-  { id: 302, text: "Who in this room would you most likely have a one-night stand with, and why?", nsfwLevel: 'Extreme' },
+  { id: 300, text: "What's the kinkiest thing you've ever considered trying?", nsfwLevel: 'Medium' },
+  { id: 301, text: "Describe your most scandalous public display of affection.", nsfwLevel: 'Medium' },
+  { id: 302, text: "Who in this room would you most likely have a one-night stand with, and why?", nsfwLevel: 'Medium' },
   { id: 304, text: "Share your raunchiest, most NSFW fantasy in detail.", nsfwLevel: 'Extreme' },
   { id: 305, text: "Truth: Have you ever sent a nude to the wrong person? Dare: Send a flirty text to your latest contact.", nsfwLevel: 'Extreme' },
-  { id: 306, text: "What's the most embarrassing thing on your phone right now?", nsfwLevel: 'Extreme' },
+  { id: 306, text: "What's the most embarrassing thing on your phone right now?", nsfwLevel: 'Medium' },
   { id: 307, text: "Reveal your dirtiest sexual fantasy or take 3 drinks.", nsfwLevel: 'Extreme' },
   { id: 308, text: "Share your most recent sex dream or take 3 drinks.", nsfwLevel: 'Extreme' },
   { id: 309, text: "Tell the group how many people you've slept with.", nsfwLevel: 'Extreme' },
@@ -839,8 +839,8 @@ export const PROMPTS: Prompt[] = [
   { id: 996, text: "What's the biggest age gap you've ever had? Say both numbers — or take 3 drinks.", nsfwLevel: 'Extreme' },
   { id: 997, text: "Where do you want to be touched that nobody ever thinks to? Show us the spot — or take 3 drinks.", nsfwLevel: 'Extreme' },
   { id: 998, text: "What's the closest you've ever come to being caught? Tell it in full — or take 3 drinks.", nsfwLevel: 'Extreme' },
-  { id: 999, text: "Describe the last time you were turned on in public and had to hide it.", nsfwLevel: 'Extreme' },
-  { id: 1000, text: "What's your hard no — the one thing you'd never do, and why?", nsfwLevel: 'Extreme' },
+  { id: 999, text: "Describe the last time you were turned on in public and had to hide it.", nsfwLevel: 'Medium' },
+  { id: 1000, text: "What's your hard no — the one thing you'd never do, and why?", nsfwLevel: 'Medium' },
   { id: 1001, text: "What did you try exactly once and never again? Details — or take 3 drinks.", nsfwLevel: 'Extreme' },
   { id: 1002, text: "Who was your first, and how bad was it, honestly?", nsfwLevel: 'Extreme' },
   { id: 1003, text: "What's the most people you've been with in one week? Drink that number (max 3).", nsfwLevel: 'Extreme' },
@@ -850,9 +850,9 @@ export const PROMPTS: Prompt[] = [
   { id: 1007, text: "What would you want {{randomOtherPlayer}} to do to you first? Tell them directly — or take 3 drinks.", nsfwLevel: 'Extreme' },
   { id: 1008, text: "What's one thing you've done in bed you've never told a single person? Tell it now — or finish your drink.", nsfwLevel: 'Extreme' },
   { id: 1009, text: "How many people in this room have you pictured naked? Drink that many (max 3).", nsfwLevel: 'Extreme' },
-  { id: 1010, text: "What's the longest you've gone without, and what broke the streak?", nsfwLevel: 'Extreme' },
+  { id: 1010, text: "What's the longest you've gone without, and what broke the streak?", nsfwLevel: 'Medium' },
   { id: 1011, text: "Describe the sound you make when you finish — or take 3 drinks.", nsfwLevel: 'Extreme' },
-  { id: 1012, text: "What's the one thing a partner can do that ends it for you instantly?", nsfwLevel: 'Extreme' },
+  { id: 1012, text: "What's the one thing a partner can do that ends it for you instantly?", nsfwLevel: 'Medium' },
   { id: 1013, text: "Talk {{randomOtherPlayer}} through exactly how you'd want them to touch you — or take 3 drinks.", nsfwLevel: 'Extreme' },
 
   // --- Extreme: Touch, Grinding & Hands ---
