@@ -3,9 +3,30 @@
 import { useEffect, useState, useCallback, useRef, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { PROMPTS, Prompt, GameMode, isNhiePrompt, GAME_MODES } from '@/lib/prompts';
-import { ArrowRightCircle, RotateCcw, Trash2, Undo2, UserPlus, Users } from 'lucide-react';
+import { Card } from '@/components/ui/card';
+import {
+  PROMPTS,
+  Prompt,
+  GameMode,
+  isNhiePrompt,
+  GAME_MODES,
+  getPromptCategory,
+  type PromptCategory,
+} from '@/lib/prompts';
+import {
+  ArrowRightCircle,
+  RotateCcw,
+  Trash2,
+  Undo2,
+  UserPlus,
+  Users,
+  Flame,
+  Wine,
+  MessageCircle,
+  Zap,
+  Timer,
+  type LucideIcon,
+} from 'lucide-react';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -23,11 +44,46 @@ import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { cn, playersToQuery, playersFromQuery } from '@/lib/utils';
 import { Separator } from '@/components/ui/separator';
-import { Badge } from '@/components/ui/badge';
-import { Logo } from '@/components/shared/Logo';
 
 const MIN_PLAYERS = 2;
 const MAX_PLAYERS = 10;
+
+// Each mode carries its color the whole way through the screen: the card's neon
+// border, the status-strip chip, the progress filament, and the selected pill.
+const MODE_BORDER: Record<GameMode, string> = {
+  Mild: 'neon-border-violet',
+  Medium: 'neon-border-pink',
+  Extreme: 'neon-border-red',
+  NHIE: 'neon-border-blue',
+};
+const MODE_CHIP: Record<GameMode, string> = {
+  Mild: 'text-primary border-primary/50 bg-primary/10',
+  Medium: 'text-secondary border-secondary/50 bg-secondary/10',
+  Extreme: 'text-destructive border-destructive/50 bg-destructive/10',
+  NHIE: 'text-[hsl(var(--chart-3))] border-[hsl(var(--chart-3)/0.5)] bg-[hsl(var(--chart-3)/0.12)]',
+};
+const MODE_FILL: Record<GameMode, string> = {
+  Mild: 'bg-primary',
+  Medium: 'bg-secondary',
+  Extreme: 'bg-destructive',
+  NHIE: 'bg-[hsl(var(--chart-3))]',
+};
+const MODE_SELECTED: Record<GameMode, string> = {
+  Mild: 'bg-primary text-white shadow-[0_0_12px_hsl(var(--primary)/0.6)]',
+  Medium: 'bg-secondary text-white shadow-[0_0_12px_hsl(var(--secondary)/0.6)]',
+  Extreme: 'bg-destructive text-white shadow-[0_0_12px_hsl(var(--destructive)/0.6)]',
+  NHIE: 'bg-[hsl(var(--chart-3))] text-black shadow-[0_0_12px_hsl(var(--chart-3)/0.6)]',
+};
+
+// Card-kind badge shown on each prompt so a dare, a drink rule, a question, and
+// a Never-Have-I-Ever each read as their own thing before it is read aloud.
+const CATEGORY_META: Record<PromptCategory, { label: string; Icon: LucideIcon; className: string }> = {
+  nhie: { label: 'Never Have I Ever', Icon: Zap, className: 'text-[hsl(var(--chart-3))]' },
+  timed: { label: 'Timed Dare', Icon: Timer, className: 'text-secondary' },
+  drink: { label: 'Drink', Icon: Wine, className: 'text-primary' },
+  question: { label: 'Question', Icon: MessageCircle, className: 'text-primary' },
+  dare: { label: 'Dare', Icon: Flame, className: 'text-secondary' },
+};
 
 // Numeric durations only ("15 seconds", "2 minutes", "one-minute") — spelled-out
 // numbers are skipped on purpose, since those are usually hypothetical
@@ -44,6 +100,15 @@ const extractDurationSeconds = (text: string): number | null => {
 const formatSeconds = (total: number): string =>
   `${Math.floor(total / 60)}:${String(total % 60).padStart(2, '0')}`;
 
+// Scale the prompt to its length so a short dare fills the card and a long
+// scenario still fits — this text is read at arm's length in a dark room.
+const promptSizeClass = (len: number): string => {
+  if (len <= 55) return 'text-3xl sm:text-4xl md:text-5xl';
+  if (len <= 110) return 'text-2xl sm:text-3xl md:text-4xl';
+  if (len <= 180) return 'text-xl sm:text-2xl md:text-3xl';
+  return 'text-lg sm:text-xl md:text-2xl';
+};
+
 // One shuffled "round" of player indices. Everyone goes once per round; the
 // avoidFirst guard stops the same player getting back-to-back turns across a
 // round boundary.
@@ -58,6 +123,10 @@ const shuffledIndices = (count: number, avoidFirst?: number): number[] => {
     [order[0], order[swap]] = [order[swap], order[0]];
   }
   return order;
+};
+
+const vibrate = (pattern: number | number[]) => {
+  if (typeof navigator !== 'undefined' && 'vibrate' in navigator) navigator.vibrate(pattern);
 };
 
 type TurnSnapshot = { prompt: Prompt; playerIndex: number; text: string; upcoming: number[] };
@@ -76,7 +145,7 @@ function GamePageContent() {
   const [availablePrompts, setAvailablePrompts] = useState<Prompt[]>([]);
   const [usedPromptIds, setUsedPromptIds] = useState<Set<number>>(new Set());
   const [gameEnded, setGameEnded] = useState(false);
-  const [cardKey, setCardKey] = useState(0); 
+  const [cardKey, setCardKey] = useState(0);
   const [isNewGameDialogOpen, setIsNewGameDialogOpen] = useState(false);
   const [isEditSheetOpen, setIsEditSheetOpen] = useState(false);
   const [newPlayerName, setNewPlayerName] = useState('');
@@ -102,7 +171,7 @@ function GamePageContent() {
       setTimeLeft(prev => {
         if (prev === null || prev <= 1) {
           setTimerRunning(false);
-          if (typeof navigator !== 'undefined' && 'vibrate' in navigator) navigator.vibrate([100, 50, 100]);
+          vibrate([100, 50, 100]);
           return 0;
         }
         return prev - 1;
@@ -161,10 +230,10 @@ function GamePageContent() {
     const randomIndex = Math.floor(Math.random() * remainingPrompts.length);
     const newPrompt = remainingPrompts[randomIndex];
     setCurrentPrompt(newPrompt);
-    setCardKey(prevKey => prevKey + 1); 
+    setCardKey(prevKey => prevKey + 1);
     return newPrompt;
   }, []);
-  
+
   const loadAndFilterPrompts = useCallback(() => {
     const filtered = nsfwLevel === 'NHIE'
       ? PROMPTS.filter(isNhiePrompt)
@@ -192,7 +261,7 @@ function GamePageContent() {
   const handleNsfwLevelChange = (newLevel: GameMode) => {
     setNsfwLevel(newLevel);
   };
-  
+
   // The deck only (re)loads when the level changes, never on roster changes —
   // adding or removing a player mid-game must not reset progress.
   const deckLevelRef = useRef<GameMode | null>(null);
@@ -222,7 +291,7 @@ function GamePageContent() {
           text = text.replace(/\{\{randomOtherPlayer\}\}/g, 'another player');
         }
       }
-       
+
       const trimmedLower = text.trim().toLowerCase();
       const needsPrefix = !text.includes('?') &&
                          // A prompt that opens by addressing another player never
@@ -246,6 +315,7 @@ function GamePageContent() {
 
   const handleNextPlayer = () => {
     if (gameEnded || !currentPrompt) return;
+    vibrate(12);
 
     setHistory(prev => [
       ...prev.slice(-(HISTORY_LIMIT - 1)),
@@ -285,7 +355,7 @@ function GamePageContent() {
     const name = newPlayerName.trim();
     if (!name) return toast({ title: 'Player name cannot be empty.', variant: 'destructive' });
     if (players.length >= MAX_PLAYERS) return toast({ title: `Limit: ${MAX_PLAYERS} players.`, variant: 'destructive' });
-    
+
     setUpcomingTurns(prev => {
       const queue = [...prev];
       queue.splice(Math.floor(Math.random() * (queue.length + 1)), 0, players.length);
@@ -311,178 +381,283 @@ function GamePageContent() {
 
   if (players.length === 0) {
     return (
-      <div className="flex flex-col min-h-screen items-center justify-center bg-background">
-        <Card className="w-full max-w-md text-center glass-card">
-          <CardHeader><CardTitle className="text-primary neon-text-primary">Initializing Deck...</CardTitle></CardHeader>
-        </Card>
+      <div className="flex min-h-[100dvh] items-center justify-center p-6">
+        <div className="flex flex-col items-center gap-4 animate-fade-in">
+          <MartiniMark className="h-14 w-14 animate-pulse" />
+          <p className="font-headline text-xl font-bold text-primary neon-text-primary tracking-tight">
+            Charging Neon...
+          </p>
+        </div>
       </div>
     );
   }
 
+  const cardsPlayed = usedPromptIds.size;
+  const deckTotal = availablePrompts.length;
+  const cardNumber = Math.min(cardsPlayed + 1, Math.max(deckTotal, 1));
+  const roundNumber = players.length > 0 ? Math.floor(cardsPlayed / players.length) + 1 : 1;
+  const progressPct = deckTotal > 0 ? Math.min((cardsPlayed / deckTotal) * 100, 100) : 0;
+  const category = currentPrompt ? getPromptCategory(currentPrompt) : null;
+  const categoryMeta = category ? CATEGORY_META[category] : null;
+
   return (
     <>
       <AlertDialog open={isNewGameDialogOpen} onOpenChange={setIsNewGameDialogOpen}>
-        <AlertDialogContent className="glass-card border-border">
+        <AlertDialogContent className="glass-card border-white/10 rounded-2xl">
           <AlertDialogHeader>
-            <AlertDialogTitle>Start a New Session?</AlertDialogTitle>
-            <AlertDialogDescription>Restart the current deck or head back to setup.</AlertDialogDescription>
+            <AlertDialogTitle className="font-headline text-2xl">End this game?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Restart the same deck, head back to setup with this crew, or keep playing.
+            </AlertDialogDescription>
           </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel className="bg-transparent border-white/10 hover:bg-white/5">Cancel</AlertDialogCancel>
+          <AlertDialogFooter className="flex-col gap-2 sm:flex-col sm:space-x-0">
+            <AlertDialogAction
+              onClick={restartGame}
+              className="w-full bg-primary text-white touch-manipulation"
+            >
+              Restart Deck
+            </AlertDialogAction>
             <AlertDialogAction
               onClick={() => router.push(`/?${playersToQuery(players, nsfwLevel)}`)}
-              className="bg-destructive text-white"
-            >New Game</AlertDialogAction>
-            <AlertDialogAction onClick={restartGame} className="bg-primary text-white">Restart Deck</AlertDialogAction>
+              className="w-full bg-white/5 border border-white/15 text-white hover:bg-white/10 touch-manipulation"
+            >
+              Back to Setup
+            </AlertDialogAction>
+            <AlertDialogCancel className="mt-0 w-full bg-transparent border-white/10 hover:bg-white/5 touch-manipulation">
+              Keep Playing
+            </AlertDialogCancel>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
 
       <Sheet open={isEditSheetOpen} onOpenChange={setIsEditSheetOpen}>
-        <SheetContent className="glass-card border-l-white/10">
-          <SheetHeader>
-            <SheetTitle>Game Settings</SheetTitle>
-            <SheetDescription>Modify players and intensity on the fly.</SheetDescription>
-          </SheetHeader>
-          <div className="py-6 space-y-8">
-            <div className="space-y-4">
-              <Label className="text-accent neon-text-accent uppercase tracking-tighter text-xs">Manage Players</Label>
-              <div className="space-y-2 max-h-[40vh] overflow-y-auto pr-2">
-                {players.map((player, index) => (
-                  <div key={index} className="flex items-center justify-between p-3 rounded-lg bg-white/5 border border-white/5">
-                    <span className="font-medium">{player}</span>
-                    <Button variant="ghost" size="icon" onClick={() => handleRemovePlayer(index)} disabled={players.length <= MIN_PLAYERS}>
-                      <Trash2 className="h-4 w-4 text-destructive" />
-                    </Button>
-                  </div>
-                ))}
+        <SheetContent
+          side="bottom"
+          className="glass-card border-t-white/10 rounded-t-2xl max-h-[88dvh] overflow-y-auto overscroll-contain pb-[max(1.5rem,env(safe-area-inset-bottom))]"
+        >
+          <div className="mx-auto mb-3 h-1.5 w-12 shrink-0 rounded-full bg-white/15" />
+          <div className="mx-auto w-full max-w-md">
+            <SheetHeader className="text-center sm:text-center">
+              <SheetTitle className="font-headline text-2xl">Game Settings</SheetTitle>
+              <SheetDescription>Add or drop players and change intensity mid-game.</SheetDescription>
+            </SheetHeader>
+            <div className="py-6 space-y-6">
+              <div className="space-y-3">
+                <Label className="text-accent uppercase tracking-wider text-xs font-semibold">Players</Label>
+                <div className="space-y-2 max-h-[34vh] overflow-y-auto overscroll-contain pr-1">
+                  {players.map((player, index) => (
+                    <div key={`${player}-${index}`} className="flex items-center justify-between p-3 rounded-xl bg-white/5 border border-white/10">
+                      <span className="font-medium truncate pr-2">{player}</span>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => handleRemovePlayer(index)}
+                        disabled={players.length <= MIN_PLAYERS}
+                        aria-label={`Remove ${player}`}
+                        className="h-11 w-11 shrink-0 touch-manipulation"
+                      >
+                        <Trash2 className="h-4 w-4 text-destructive" />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+                <div className="flex gap-2">
+                  <Input
+                    value={newPlayerName}
+                    onChange={(e) => setNewPlayerName(e.target.value)}
+                    placeholder="Add a player"
+                    onKeyDown={(e) => e.key === 'Enter' && handleAddPlayer()}
+                    className="bg-white/5 h-11"
+                    aria-label="New player name"
+                  />
+                  <Button onClick={handleAddPlayer} size="icon" aria-label="Add player" className="h-11 w-11 shrink-0 bg-accent hover:bg-accent/80 touch-manipulation">
+                    <UserPlus className="h-4 w-4" />
+                  </Button>
+                </div>
               </div>
-              <div className="flex gap-2 pt-2">
-                <Input value={newPlayerName} onChange={(e) => setNewPlayerName(e.target.value)} placeholder="Player Name" onKeyDown={(e) => e.key === 'Enter' && handleAddPlayer()} className="bg-white/5" />
-                <Button onClick={handleAddPlayer} size="icon" className="bg-accent hover:bg-accent/80"><UserPlus className="h-4 w-4" /></Button>
+              <Separator className="bg-white/10" />
+              <div className="space-y-3">
+                <Label className="text-accent uppercase tracking-wider text-xs font-semibold">Game Mode</Label>
+                <RadioGroup value={nsfwLevel} onValueChange={(v) => handleNsfwLevelChange(v as GameMode)} className="grid grid-cols-3 gap-2 bg-white/5 p-1.5 rounded-xl">
+                  {GAME_MODES.map((mode) => (
+                    <Label
+                      key={mode.id}
+                      className={cn(
+                        "flex items-center justify-center min-h-[44px] px-2 rounded-lg cursor-pointer transition-all text-sm font-medium touch-manipulation has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-ring has-[:focus-visible]:ring-offset-2 has-[:focus-visible]:ring-offset-background",
+                        mode.wide && 'col-span-3',
+                        nsfwLevel === mode.id ? MODE_SELECTED[mode.id] : 'text-white/70 hover:bg-white/5 hover:text-white'
+                      )}
+                    >
+                      <RadioGroupItem value={mode.id} className="sr-only" />{mode.label}
+                    </Label>
+                  ))}
+                </RadioGroup>
+                <p className="text-xs text-muted-foreground/90">Switching intensity deals a fresh deck.</p>
               </div>
             </div>
-            <Separator className="bg-white/10" />
-            <div className="space-y-4">
-              <Label className="text-accent neon-text-accent uppercase tracking-tighter text-xs">Game Mode</Label>
-              <RadioGroup value={nsfwLevel} onValueChange={(v) => handleNsfwLevelChange(v as GameMode)} className="grid grid-cols-3 gap-2 bg-white/5 p-1 rounded-xl">
-                {GAME_MODES.map((mode) => (
-                  <Label key={mode.id} className={cn("flex items-center justify-center py-2 rounded-lg cursor-pointer transition-all text-sm", mode.wide && 'col-span-3', nsfwLevel === mode.id ? 'bg-primary text-white shadow-[0_0_10px_rgba(190,82,242,0.5)]' : 'hover:bg-white/5')}>
-                    <RadioGroupItem value={mode.id} className="sr-only" />{mode.label}
-                  </Label>
-                ))}
-              </RadioGroup>
-            </div>
+            <SheetFooter>
+              <Button onClick={() => setIsEditSheetOpen(false)} className="w-full h-12 touch-manipulation">Done</Button>
+            </SheetFooter>
           </div>
-          <SheetFooter><Button onClick={() => setIsEditSheetOpen(false)} className="w-full">Save Changes</Button></SheetFooter>
         </SheetContent>
       </Sheet>
 
-      <div className="flex flex-col min-h-screen bg-background text-foreground">
-        <main className="flex-grow flex items-center justify-center p-4">
-          <Card className={cn(
-            "w-full max-w-4xl transition-all duration-500 glass-card overflow-hidden border-[1px]",
-            nsfwLevel === 'Mild' && "neon-border-violet",
-            nsfwLevel === 'Medium' && "neon-border-pink",
-            nsfwLevel === 'Extreme' && "border-destructive shadow-[0_0_20px_rgba(255,0,0,0.4)]",
-            nsfwLevel === 'NHIE' && "border-chart-3 shadow-[0_0_20px_hsl(var(--chart-3)/0.45)]"
-          )}>
-            <CardHeader className="border-b border-white/5 bg-white/5 p-4 md:p-6 relative min-h-[90px] flex items-center">
-              <div className="flex justify-between items-start w-full relative z-10">
-                {/* Left Side: Mode Badge and Player Name centered under it */}
-                <div className="flex flex-col gap-1 items-center min-w-[100px]">
-                  <Badge variant="outline" className="text-[9px] sm:text-[10px] px-2 py-0 uppercase tracking-widest border-white/20 text-white/50 shrink-0">
-                    {GAME_MODES.find((m) => m.id === nsfwLevel)?.badge ?? nsfwLevel}
-                  </Badge>
-                  <CardTitle className="text-xl sm:text-2xl md:text-3xl font-headline font-bold text-white tracking-tight leading-none h-[28px] sm:h-[32px] flex items-center">
-                    {players[currentPlayerIndex]}
-                  </CardTitle>
-                </div>
-                
-                {/* Middle: Centered Logo - Absolutely positioned for perfect alignment */}
-                <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 scale-[0.6] sm:scale-[0.75] z-0">
-                  <Logo />
-                </div>
-
-                {/* Right Side: Group Label and Player Count below it */}
-                <div className="flex flex-col gap-1 items-center min-w-[100px]">
-                  <Badge variant="outline" className="text-[9px] sm:text-[10px] px-2 py-0 uppercase tracking-widest border-white/20 text-white/50 shrink-0">
-                    # Of Players
-                  </Badge>
-                  <div className="flex items-center gap-1.5 opacity-50 h-[28px] sm:h-[32px]">
-                    <span className="text-[9px] sm:text-[10px] uppercase font-bold tracking-tighter">{players.length} Players</span>
-                  </div>
-                </div>
+      <div className="flex flex-col h-[100dvh] text-foreground select-none touch-manipulation overflow-hidden">
+        {/* Status strip — replaces the old colliding three-column header. */}
+        <header className="shrink-0 pt-[env(safe-area-inset-top)]">
+          <div className="h-[3px] w-full bg-white/5">
+            <div className={cn("h-full rounded-r-full transition-[width] duration-500 ease-out", MODE_FILL[nsfwLevel])} style={{ width: `${progressPct}%` }} />
+          </div>
+          <div className="flex items-center justify-between gap-3 px-4 py-3 border-b border-white/5">
+            <div className="flex flex-col gap-1 min-w-0">
+              <span className={cn("inline-flex w-fit items-center rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-widest", MODE_CHIP[nsfwLevel])}>
+                {GAME_MODES.find((m) => m.id === nsfwLevel)?.badge ?? nsfwLevel}
+              </span>
+              <h1 className="truncate font-headline text-lg sm:text-xl font-bold tracking-tight text-white">
+                {gameEnded ? 'Session complete' : players[currentPlayerIndex]}
+              </h1>
+            </div>
+            <div className="shrink-0 text-right">
+              <div className="font-headline text-sm font-bold tabular-nums text-white/90">
+                {gameEnded ? deckTotal : cardNumber}<span className="text-white/40"> / {deckTotal}</span>
               </div>
-            </CardHeader>
-                        
-            <CardContent aria-live="polite" className="min-h-[25vh] md:min-h-[30vh] flex items-center justify-center p-6 md:p-10">
+              <div className="text-[10px] uppercase tracking-widest text-white/55">
+                {gameEnded ? 'cards played' : `Round ${roundNumber} · ${players.length}p`}
+              </div>
+            </div>
+          </div>
+        </header>
+
+        {/* The card fills the middle and never pushes the controls off-screen. */}
+        <main className="flex-1 min-h-0 flex items-center justify-center px-4 py-3">
+          <Card
+            className={cn(
+              "relative flex h-full w-full max-w-2xl flex-col overflow-hidden border glass-card transition-shadow duration-500",
+              MODE_BORDER[nsfwLevel]
+            )}
+          >
+            <div
+              aria-live="polite"
+              className="flex flex-1 min-h-0 flex-col items-center justify-center gap-6 overflow-y-auto overscroll-contain p-6 text-center sm:p-10"
+            >
               {gameEnded ? (
-                <div className="space-y-4 animate-fade-in text-center">
-                  <p className="text-3xl font-bold text-secondary neon-text-accent">Last Call!</p>
-                  <p className="text-muted-foreground text-lg italic">The deck is empty. Pass the phone and restart.</p>
+                <div className="flex flex-col items-center gap-4 animate-fade-in">
+                  <p className="font-headline text-4xl sm:text-5xl font-bold text-secondary neon-text-accent">Last Call!</p>
+                  <p className="text-base sm:text-lg text-muted-foreground max-w-sm">
+                    You played through {cardsPlayed} {cardsPlayed === 1 ? 'card' : 'cards'} this round. Pass the phone and go again.
+                  </p>
                 </div>
               ) : (
-                <div className="flex flex-col items-center gap-6">
-                  <p key={cardKey} className="text-xl md:text-3xl font-medium leading-tight text-white text-center animate-card-enter drop-shadow-md">
+                <>
+                  {categoryMeta && (
+                    <span className={cn("inline-flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-[0.18em]", categoryMeta.className)}>
+                      <categoryMeta.Icon className="h-3.5 w-3.5" />
+                      {categoryMeta.label}
+                    </span>
+                  )}
+                  <p
+                    key={cardKey}
+                    className={cn(
+                      "font-medium leading-tight text-white text-balance animate-card-enter drop-shadow-md",
+                      promptSizeClass(processedPromptText.length)
+                    )}
+                  >
                     {processedPromptText}
                   </p>
                   {timerTotal !== null && (
                     <div className="flex items-center gap-3">
                       {timerRunning ? (
-                        <span className="text-3xl font-bold tabular-nums text-accent neon-text-accent" aria-live="off">
-                          ⏱ {formatSeconds(timeLeft ?? 0)}
+                        <span className="text-4xl font-bold tabular-nums text-accent neon-text-accent" aria-live="off">
+                          {formatSeconds(timeLeft ?? 0)}
                         </span>
                       ) : timeLeft === 0 ? (
-                        <span className="text-2xl font-bold text-secondary neon-text-accent animate-fade-in">⏰ Time&apos;s up!</span>
+                        <span className="text-2xl font-bold text-secondary neon-text-accent animate-fade-in">Time is up!</span>
                       ) : null}
                       {!timerRunning && (
                         <Button
                           variant="outline"
                           size="sm"
                           onClick={startTimer}
-                          className="rounded-full border-accent/40 text-accent hover:bg-accent/10 text-xs uppercase tracking-widest"
+                          className="h-11 rounded-full border-accent/40 text-accent hover:bg-accent/10 text-xs uppercase tracking-widest touch-manipulation"
                         >
-                          {timeLeft === 0 ? 'Restart Timer' : `Start ${formatSeconds(timerTotal)} Timer`}
+                          <Timer className="mr-1.5 h-4 w-4" />
+                          {timeLeft === 0 ? 'Restart timer' : `Start ${formatSeconds(timerTotal)}`}
                         </Button>
                       )}
                     </div>
                   )}
-                </div>
+                </>
               )}
-            </CardContent>
-
-            <CardFooter className="bg-white/5 p-4 md:p-6 flex flex-col gap-4">
-              <Button
-                onClick={gameEnded ? restartGame : handleNextPlayer}
-                className="w-full sm:w-auto min-w-[200px] text-lg font-bold py-6 rounded-xl bg-primary text-white transition-all hover:scale-[1.02] active:scale-95 shadow-xl mx-auto"
-              >
-                {gameEnded ? "Restart Deck" : "Next Player"}
-                <ArrowRightCircle className="ml-2 h-5 w-5" />
-              </Button>
-              
-              <div className="flex items-center justify-center gap-4 pt-2">
-                <Button variant="ghost" size="sm" onClick={handleUndo} disabled={history.length === 0} className="text-xs uppercase tracking-widest opacity-60 hover:opacity-100 hover:bg-white/5 disabled:opacity-25">
-                  <Undo2 className="mr-2 h-3 w-3" /> Undo
-                </Button>
-                <Button variant="ghost" size="sm" onClick={() => setIsEditSheetOpen(true)} className="text-xs uppercase tracking-widest opacity-60 hover:opacity-100 hover:bg-white/5">
-                  <Users className="mr-2 h-3 w-3" /> Manage Group
-                </Button>
-                <Button variant="ghost" size="sm" onClick={() => setIsNewGameDialogOpen(true)} className="text-xs uppercase tracking-widest opacity-60 hover:opacity-100 hover:bg-white/5">
-                  <RotateCcw className="mr-2 h-3 w-3" /> End Game
-                </Button>
-              </div>
-            </CardFooter>
+            </div>
           </Card>
         </main>
+
+        {/* Thumb dock — full-width primary action, then three fitted controls. */}
+        <footer className="shrink-0 border-t border-white/5 px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+          <Button
+            onClick={gameEnded ? restartGame : handleNextPlayer}
+            className="w-full h-14 rounded-2xl text-lg font-bold bg-primary text-white shadow-xl transition-transform active:scale-[0.98] touch-manipulation"
+          >
+            {gameEnded ? "Restart Deck" : "Next Player"}
+            <ArrowRightCircle className="ml-1 h-5 w-5" />
+          </Button>
+
+          <div className="mt-2 grid grid-cols-3 gap-2">
+            <DockButton icon={Undo2} label="Undo" onClick={handleUndo} disabled={history.length === 0} />
+            <DockButton icon={Users} label="Group" onClick={() => setIsEditSheetOpen(true)} />
+            <DockButton icon={RotateCcw} label="End" onClick={() => setIsNewGameDialogOpen(true)} />
+          </div>
+        </footer>
       </div>
     </>
   );
 }
 
+function DockButton({ icon: Icon, label, onClick, disabled }: { icon: LucideIcon; label: string; onClick: () => void; disabled?: boolean }) {
+  return (
+    <button
+      onClick={onClick}
+      disabled={disabled}
+      className="flex min-h-[52px] flex-col items-center justify-center gap-1 rounded-xl py-1.5 text-white/75 transition-colors hover:bg-white/5 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:opacity-30 disabled:pointer-events-none touch-manipulation"
+    >
+      <Icon className="h-5 w-5" />
+      <span className="text-[10px] font-semibold uppercase tracking-widest">{label}</span>
+    </button>
+  );
+}
+
+// The logo's martini glass, on its own, used as the loading mark.
+function MartiniMark({ className }: { className?: string }) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={cn("text-secondary drop-shadow-[0_0_10px_rgba(242,82,169,0.9)]", className)}
+    >
+      <path d="M6 3h12l-6 9Z" />
+      <path d="M12 12v9" />
+      <path d="M7 21h10" />
+      <path d="m15 3 1 4" />
+    </svg>
+  );
+}
+
 export default function GamePage() {
   return (
-    <Suspense fallback={<div className="flex justify-center items-center h-screen text-primary text-2xl font-headline animate-pulse">Charging Neon...</div>}>
+    <Suspense
+      fallback={
+        <div className="flex min-h-[100dvh] items-center justify-center p-6">
+          <div className="flex flex-col items-center gap-4">
+            <MartiniMark className="h-14 w-14 animate-pulse" />
+            <p className="font-headline text-xl font-bold text-primary neon-text-primary animate-pulse">Charging Neon...</p>
+          </div>
+        </div>
+      }
+    >
       <GamePageContent />
     </Suspense>
   );

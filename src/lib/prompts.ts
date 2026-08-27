@@ -12,12 +12,49 @@ export const NHIE_PATTERN = /^never have i ever\b/i;
 export const isNhiePrompt = (prompt: Prompt): boolean =>
   NHIE_PATTERN.test(prompt.text.trim());
 
-export const GAME_MODES: { id: GameMode; label: string; badge: string; wide?: boolean }[] = [
-  { id: 'Mild', label: 'Mild', badge: 'Mild Mode' },
-  { id: 'Medium', label: 'Medium', badge: 'Medium Mode' },
-  { id: 'Extreme', label: 'Extreme', badge: 'Extreme Mode' },
-  { id: 'NHIE', label: 'Never Have I Ever', badge: 'Never Have I Ever', wide: true },
+export const GAME_MODES: {
+  id: GameMode;
+  label: string;
+  badge: string;
+  /** One-line description shown under the selector so the choice isn't blind. */
+  description: string;
+  /** 1-4 chili rating for the spice meter on the setup screen. */
+  spice: number;
+  wide?: boolean;
+}[] = [
+  { id: 'Mild', label: 'Mild', badge: 'Mild Mode', description: 'Icebreakers and embarrassing stories.', spice: 1 },
+  { id: 'Medium', label: 'Medium', badge: 'Medium Mode', description: 'Flirty confessions and light dares.', spice: 2 },
+  { id: 'Extreme', label: 'Extreme', badge: 'Extreme Mode', description: 'No limits. You have been warned.', spice: 4 },
+  {
+    id: 'NHIE',
+    label: 'Never Have I Ever',
+    badge: 'Never Have I Ever',
+    description: 'Every intensity, phrased as Never Have I Ever — includes Extreme.',
+    spice: 3,
+    wide: true,
+  },
 ];
+
+/**
+ * A coarse "kind" for each card, derived from its text. Purely presentational:
+ * it drives the little type badge on the game card so a dare, a drink rule, a
+ * question, and a Never-Have-I-Ever each read as their own thing before anyone
+ * reads the card aloud. Order matters — NHIE and timed dares win over the
+ * generic buckets.
+ */
+export type PromptCategory = 'nhie' | 'timed' | 'drink' | 'question' | 'dare';
+
+const TIMED_PATTERN = /(\d+)\s*(seconds?|minutes?)\b|\bone[- ]minute\b/i;
+const DRINK_START_PATTERN = /^(drink if|take a (drink|sip|shot)|finish your|down your)/i;
+
+export const getPromptCategory = (prompt: Prompt): PromptCategory => {
+  const text = prompt.text.trim();
+  if (NHIE_PATTERN.test(text)) return 'nhie';
+  if (TIMED_PATTERN.test(text)) return 'timed';
+  if (DRINK_START_PATTERN.test(text)) return 'drink';
+  if (text.includes('?')) return 'question';
+  return 'dare';
+};
 
 export type Prompt = {
   id: number;

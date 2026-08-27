@@ -88,7 +88,6 @@ body {
   }
   body {
     @apply bg-background text-foreground;
-    @apply dark; /* Force dark mode */
   }
 }
 
@@ -98,10 +97,6 @@ body {
     0 0 5px hsl(var(--primary)),
     0 0 10px hsl(var(--primary) / 0.7),
     0 0 20px hsl(var(--primary) / 0.3);
-}
-
-.text-secondary {
-  color: hsl(var(--secondary));
 }
 
 .neon-text-accent {
@@ -156,11 +151,29 @@ body {
   }
 
   .neon-border-violet {
-    box-shadow: 
+    box-shadow:
       0 0 5px hsl(var(--primary)),
       0 0 10px hsl(var(--primary) / 0.5),
       inset 0 0 10px hsl(var(--primary) / 0.3);
     border-color: hsl(var(--primary));
+  }
+
+  /* Extreme + NHIE get the same inset-glow treatment as violet/pink so all
+     four modes read as one system rather than three-plus-an-outlier. */
+  .neon-border-red {
+    box-shadow:
+      0 0 6px hsl(var(--destructive)),
+      0 0 14px hsl(var(--destructive) / 0.55),
+      inset 0 0 12px hsl(var(--destructive) / 0.35);
+    border-color: hsl(var(--destructive));
+  }
+
+  .neon-border-blue {
+    box-shadow:
+      0 0 5px hsl(var(--chart-3)),
+      0 0 12px hsl(var(--chart-3) / 0.5),
+      inset 0 0 10px hsl(var(--chart-3) / 0.3);
+    border-color: hsl(var(--chart-3));
   }
 
   /* Glassmorphism */
