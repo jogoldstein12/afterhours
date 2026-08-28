@@ -190,11 +190,7 @@ export function HomeScreen() {
                     );
                   })}
                 </ul>
-              ) : (
-                <p className="pt-1 text-sm text-muted-foreground">
-                  Add everyone at the table — first names or nicknames both work.
-                </p>
-              )}
+              ) : null}
             </div>
 
             <div className="space-y-3">
