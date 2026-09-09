@@ -179,6 +179,8 @@ button:disabled{opacity:.4;cursor:not-allowed;}
 .footer-actions{display:flex;align-items:center;justify-content:center;gap:1rem;flex-wrap:wrap;padding-top:.5rem;}
 .btn-mini{font-size:.7rem;text-transform:uppercase;letter-spacing:.1em;opacity:.6;display:inline-flex;align-items:center;gap:.5rem;}
 .btn-mini:hover{opacity:1;background:rgba(255,255,255,.05);}
+.btn-skip{opacity:1;color:hsl(var(--accent));border:1px solid hsl(var(--accent)/.3);background:hsl(var(--accent)/.1);}
+.btn-skip:hover{background:hsl(var(--accent)/.2);}
 
 /* ---------- Overlays ---------- */
 .overlay{position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:50;display:none;align-items:center;justify-content:center;padding:1rem;animation:fadeIn .2s ease-out;}
@@ -332,6 +334,10 @@ button:disabled{opacity:.4;cursor:not-allowed;}
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M8 12h8"/><path d="m12 16 4-4-4-4"/></svg>
         </button>
         <div class="footer-actions">
+          <button class="btn btn-ghost btn-mini btn-skip" id="skip-btn">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m5 4 10 8-10 8Z"/><path d="M19 5v14"/></svg>
+            Skip
+          </button>
           <button class="btn btn-ghost btn-mini" id="undo-btn" disabled>
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/></svg>
             Undo
@@ -723,6 +729,24 @@ function nextTurn() {
   renderGame();
 }
 
+// Pass on a card without doing it: a fresh prompt for the *same* player, no
+// turn consumed and no penalty. Mirrors the Skip control in the Next.js app —
+// every prompt in this game is optional, and this is what makes that true.
+function skipTurn() {
+  if (state.gameEnded || !state.currentPrompt) return;
+  state.history.push({
+    index: state.currentPrompt.index,
+    playerIndex: state.currentPlayerIndex,
+    text: state.promptText,
+    upcoming: state.upcoming.slice(),
+  });
+  if (state.history.length > HISTORY_LIMIT) state.history.shift();
+  state.used.add(state.currentPrompt.index);
+  // Deliberately no rotation change: the same player gets another card.
+  selectNewPrompt();
+  renderGame();
+}
+
 function undoTurn() {
   const last = state.history.pop();
   if (!last) return;
@@ -803,6 +827,7 @@ function renderGame() {
 
   $('next-btn-label').textContent = state.gameEnded ? 'Restart Deck' : 'Next Player';
   $('undo-btn').disabled = state.history.length === 0;
+  $('skip-btn').disabled = state.gameEnded;
   renderTimer();
   renderRoster();
 }
@@ -891,6 +916,7 @@ $('add-player-btn').addEventListener('click', addSetupPlayer);
 $('start-game-btn').addEventListener('click', startGame);
 $('next-btn').addEventListener('click', () => (state.gameEnded ? restartDeck() : nextTurn()));
 $('undo-btn').addEventListener('click', undoTurn);
+$('skip-btn').addEventListener('click', skipTurn);
 $('timer-btn').addEventListener('click', startTimer);
 $('manage-btn').addEventListener('click', openSheet);
 $('end-game-btn').addEventListener('click', openDialog);

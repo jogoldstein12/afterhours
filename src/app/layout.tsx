@@ -4,6 +4,8 @@ import './globals.css';
 import { Toaster } from "@/components/ui/toaster";
 import { cn } from '@/lib/utils';
 import { Atmosphere } from '@/components/shared/Atmosphere';
+import { AgeGate } from '@/components/shared/AgeGate';
+import { MonitoringInit } from '@/components/shared/MonitoringInit';
 
 const inter = Inter({
   subsets: ['latin'],
@@ -18,7 +20,15 @@ const spaceGrotesk = Space_Grotesk({
 
 export const metadata: Metadata = {
   title: 'After Hours Party Game',
-  description: 'Neon-styled party game for adults.',
+  description: 'An explicit party game for adults. 18+ only.',
+  // Machine-readable adult labels. `rating` is what most parental-control
+  // filters and crawlers look for; the RTA string is the long-standing
+  // self-labelling standard those same filters recognise. Without them,
+  // filtering software has nothing to match on but the page text.
+  other: {
+    rating: 'adult',
+    'RATING': 'RTA-5042-1996-1400-1577-RTA',
+  },
   appleWebApp: {
     capable: true,
     statusBarStyle: 'black-translucent',
@@ -54,8 +64,9 @@ export default function RootLayout({
         )}
         suppressHydrationWarning 
       >
+        <MonitoringInit />
         <Atmosphere />
-        {children}
+        <AgeGate>{children}</AgeGate>
         <Toaster />
       </body>
     </html>

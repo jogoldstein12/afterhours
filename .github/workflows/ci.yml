@@ -19,6 +19,13 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      # Fails the build on a critical advisory. Not set to `high` yet: the tree
+      # still carries build-time-only postcss issues that live inside Next's own
+      # dependencies and are only fixable by a Next 16 major upgrade. Tighten
+      # this to `high` once that lands.
+      - name: Audit dependencies
+        run: npm audit --audit-level=critical
+
       - name: Typecheck
         run: npm run typecheck
 

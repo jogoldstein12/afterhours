@@ -2,6 +2,24 @@
 # https://firebase.google.com/docs/app-hosting/configure
 
 runConfig:
-  # Increase this value if you'd like to automatically spin up
-  # more instances in response to increased traffic.
-  maxInstances: 1
+  # Every route is statically prerendered, so the CDN absorbs most traffic —
+  # but cache misses, cold paths, and the first request of any quiet period
+  # still land on the container. One instance made that a hard ceiling for the
+  # whole site; 10 gives real headroom for a launch or a link that spreads.
+  minInstances: 0
+  maxInstances: 10
+  # Static responses are cheap to serve, so keep instances small and let a
+  # single one handle plenty of simultaneous requests before another spins up.
+  cpu: 1
+  memoryMiB: 512
+  concurrency: 80
+
+env:
+  # Client-side error reporting. Leave unset to keep monitoring off; set it to a
+  # Sentry DSN (as a plain, public value — the DSN is not a secret) to turn it
+  # on. See src/lib/monitoring.ts.
+  - variable: NEXT_PUBLIC_SENTRY_DSN
+    value: ''
+    availability:
+      - BUILD
+      - RUNTIME

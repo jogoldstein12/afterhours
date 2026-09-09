@@ -29,6 +29,7 @@ import {
   TrendingUp,
   Trophy,
   Sparkles,
+  SkipForward,
   type LucideIcon,
 } from 'lucide-react';
 import {
@@ -146,7 +147,16 @@ const vibrate = (pattern: number | number[]) => {
   if (typeof navigator !== 'undefined' && 'vibrate' in navigator) navigator.vibrate(pattern);
 };
 
-type TurnSnapshot = { prompt: Prompt; playerIndex: number; text: string; upcoming: number[] };
+// `countedTurn` distinguishes a played card (which incremented the player's
+// tally and advanced the rotation) from a skipped one (which did neither), so
+// Undo can reverse each correctly.
+type TurnSnapshot = {
+  prompt: Prompt;
+  playerIndex: number;
+  text: string;
+  upcoming: number[];
+  countedTurn: boolean;
+};
 const HISTORY_LIMIT = 20;
 
 function GamePageContent() {
@@ -155,6 +165,9 @@ function GamePageContent() {
   const { toast } = useToast();
 
   const [players, setPlayers] = useState<string[]>([]);
+  // Distinguishes "still reading the URL" from "the URL has no roster", so the
+  // screen can bounce to setup instead of holding a loader forever.
+  const [rosterChecked, setRosterChecked] = useState(false);
   const [nsfwLevel, setNsfwLevel] = useState<GameMode>('Mild');
   const [currentPlayerIndex, setCurrentPlayerIndex] = useState(0);
   const [currentPrompt, setCurrentPrompt] = useState<Prompt | null>(null);
@@ -224,7 +237,15 @@ function GamePageContent() {
     if (nsfwLevelQuery && GAME_MODES.some((m) => m.id === nsfwLevelQuery)) {
       setNsfwLevel(nsfwLevelQuery);
     }
+    setRosterChecked(true);
   }, [searchParams]);
+
+  // Reaching /game without a roster — a bookmark, a shared link with the query
+  // stripped, a crawler — used to hold "Charging Neon..." forever with no way
+  // out. Send them to setup instead.
+  useEffect(() => {
+    if (rosterChecked && players.length === 0) router.replace('/');
+  }, [rosterChecked, players.length, router]);
 
   // Tint the nightclub atmosphere (R6) to the mode in play. Cleared on unmount
   // so the setup lobby falls back to the default violet/pink night.
@@ -361,7 +382,7 @@ function GamePageContent() {
 
     setHistory(prev => [
       ...prev.slice(-(HISTORY_LIMIT - 1)),
-      { prompt: currentPrompt, playerIndex: currentPlayerIndex, text: processedPromptText, upcoming: upcomingTurns },
+      { prompt: currentPrompt, playerIndex: currentPlayerIndex, text: processedPromptText, upcoming: upcomingTurns, countedTurn: true },
     ]);
 
     const newUsedPromptIds = new Set(usedPromptIds);
@@ -376,11 +397,33 @@ function GamePageContent() {
     selectNewPrompt(availablePrompts, newUsedPromptIds);
   }, [gameEnded, currentPrompt, players, currentPlayerIndex, processedPromptText, upcomingTurns, usedPromptIds, availablePrompts, selectNewPrompt]);
 
+  // Pass on a card without doing it. Deals a fresh prompt to the *same* player,
+  // so declining costs nothing and skips no one's turn: no tally, no rotation,
+  // no penalty. Every prompt in this game is optional, and this is the control
+  // that makes that true in the product rather than only in the rules.
+  const handleSkip = useCallback(() => {
+    if (gameEnded || !currentPrompt) return;
+    vibrate(8);
+
+    setHistory(prev => [
+      ...prev.slice(-(HISTORY_LIMIT - 1)),
+      { prompt: currentPrompt, playerIndex: currentPlayerIndex, text: processedPromptText, upcoming: upcomingTurns, countedTurn: false },
+    ]);
+
+    const newUsedPromptIds = new Set(usedPromptIds);
+    newUsedPromptIds.add(currentPrompt.id);
+    setUsedPromptIds(newUsedPromptIds);
+
+    selectNewPrompt(availablePrompts, newUsedPromptIds);
+  }, [gameEnded, currentPrompt, currentPlayerIndex, processedPromptText, upcomingTurns, usedPromptIds, availablePrompts, selectNewPrompt]);
+
   const handleUndo = () => {
     const last = history[history.length - 1];
     if (!last) return;
     const restoredName = players[Math.min(last.playerIndex, players.length - 1)];
-    if (restoredName) {
+    // A skipped card never incremented the tally, so undoing one must not
+    // decrement it.
+    if (restoredName && last.countedTurn) {
       setTurnsByName(prev => {
         const next = { ...prev };
         if (next[restoredName]) next[restoredName] -= 1;
@@ -778,7 +821,8 @@ function GamePageContent() {
             <ArrowRightCircle className="ml-1 h-5 w-5" />
           </Button>
 
-          <div className="mt-2 grid grid-cols-3 gap-2">
+          <div className="mt-2 grid grid-cols-4 gap-2">
+            <DockButton icon={SkipForward} label="Skip" onClick={handleSkip} accent />
             <DockButton icon={Undo2} label="Undo" onClick={handleUndo} disabled={history.length === 0} />
             <DockButton icon={Users} label="Group" onClick={() => setIsEditSheetOpen(true)} />
             <DockButton icon={RotateCcw} label="End" onClick={() => setIsNewGameDialogOpen(true)} />
@@ -789,12 +833,19 @@ function GamePageContent() {
   );
 }
 
-function DockButton({ icon: Icon, label, onClick, disabled }: { icon: LucideIcon; label: string; onClick: () => void; disabled?: boolean }) {
+function DockButton({ icon: Icon, label, onClick, disabled, accent }: { icon: LucideIcon; label: string; onClick: () => void; disabled?: boolean; accent?: boolean }) {
   return (
     <button
       onClick={onClick}
       disabled={disabled}
-      className="flex min-h-[52px] flex-col items-center justify-center gap-1 rounded-xl py-1.5 text-white/75 transition-colors hover:bg-white/5 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:opacity-30 disabled:pointer-events-none touch-manipulation"
+      className={cn(
+        "flex min-h-[52px] flex-col items-center justify-center gap-1 rounded-xl py-1.5 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:opacity-30 disabled:pointer-events-none touch-manipulation",
+        accent
+          // Skip is an offer, not a utility — it sits in the accent so declining
+          // a card reads as a first-class move rather than a hidden escape.
+          ? "border border-accent/30 bg-accent/10 text-accent hover:bg-accent/20"
+          : "text-white/75 hover:bg-white/5 hover:text-white",
+      )}
     >
       <Icon className="h-5 w-5" />
       <span className="text-[10px] font-semibold uppercase tracking-widest">{label}</span>

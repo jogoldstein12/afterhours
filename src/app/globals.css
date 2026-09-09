@@ -287,3 +287,23 @@ body {
     transition: none;
   }
 }
+/* Reading styles for the Terms and Privacy pages. Kept deliberately calm — no
+   neon glow on body copy — so a long document stays legible on a phone. */
+.legal-prose h2 {
+  @apply mt-8 mb-3 font-headline text-lg font-bold text-white;
+}
+.legal-prose p {
+  @apply mb-4;
+}
+.legal-prose ul {
+  @apply mb-4 list-disc space-y-1.5 pl-5;
+}
+.legal-prose a {
+  @apply text-primary underline underline-offset-2 transition-colors hover:text-primary/80;
+}
+.legal-prose code {
+  @apply rounded bg-white/10 px-1.5 py-0.5 text-xs text-white/90;
+}
+.legal-prose strong {
+  @apply font-semibold text-white;
+}

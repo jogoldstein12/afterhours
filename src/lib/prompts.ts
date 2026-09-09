@@ -213,16 +213,16 @@ export const PROMPTS: Prompt[] = [
   { id: 197, text: "Let {{randomOtherPlayer}} whisper something dirty in your ear — you have to keep a straight face or drink.", nsfwLevel: 'Medium' },
   { id: 198, text: "Whisper your biggest turn-on into {{randomOtherPlayer}}'s ear — or take 2 drinks.", nsfwLevel: 'Medium' },
   { id: 199, text: "Get blindfolded and guess who kisses you — if wrong, drink.", nsfwLevel: 'Medium' },
-  { id: 200, text: "Lick {{randomOtherPlayer}}'s neck — no hands.", nsfwLevel: 'Medium' },
-  { id: 201, text: "Give {{randomOtherPlayer}} a massage with both hands — no speaking.", nsfwLevel: 'Medium' },
+  { id: 200, text: "Lick {{randomOtherPlayer}}'s neck, no hands — or take 2 drinks.", nsfwLevel: 'Medium' },
+  { id: 201, text: "Give {{randomOtherPlayer}} a massage with both hands, no speaking — or take 2 drinks.", nsfwLevel: 'Medium' },
   { id: 202, text: "Make intense eye contact with {{randomOtherPlayer}} while slowly taking a sip of their drink.", nsfwLevel: 'Medium' },
   { id: 203, text: "Stare into {{randomOtherPlayer}}'s eyes without breaking eye contact for 60 seconds.", nsfwLevel: 'Medium' },
   { id: 204, text: "Perform your best attempt at a romantic movie scene with {{randomOtherPlayer}}.", nsfwLevel: 'Medium' },
   { id: 205, text: "Slow dance with {{randomOtherPlayer}} to the next song, regardless of what comes on.", nsfwLevel: 'Medium' },
   { id: 206, text: "Do a sexual dance in front of the group, or finish your drink.", nsfwLevel: 'Medium' },
   { id: 207, text: "Make an orgasm face until another player makes eye contact with you.", nsfwLevel: 'Medium' },
-  { id: 208, text: "Give a lap dance to {{randomOtherPlayer}}.", nsfwLevel: 'Medium' },
-  { id: 209, text: "Sit on {{randomOtherPlayer}}'s lap for the next two rounds.", nsfwLevel: 'Medium' },
+  { id: 208, text: "Give a lap dance to {{randomOtherPlayer}} — or take 2 drinks.", nsfwLevel: 'Medium' },
+  { id: 209, text: "Sit on {{randomOtherPlayer}}'s lap for the next two rounds — or take 2 drinks.", nsfwLevel: 'Medium' },
   { id: 210, text: "Remove one article of your own clothing — or take 3 drinks.", nsfwLevel: 'Medium' },
   { id: 211, text: "Let {{randomOtherPlayer}} choose which article of clothing you remove — or take 3 drinks.", nsfwLevel: 'Medium' },
   { id: 212, text: "Anyone willing to take their pants off can give out 3 drinks.", nsfwLevel: 'Medium' },
@@ -318,17 +318,17 @@ export const PROMPTS: Prompt[] = [
 
   // --- Extreme: Kissing ---
   { id: 327, text: "Start with a teasing kiss to {{randomOtherPlayer}} — just a peck — or take 2 drinks.", nsfwLevel: 'Extreme' },
-  { id: 328, text: "Make out with {{randomOtherPlayer}} for 15 seconds.", nsfwLevel: 'Extreme' },
+  { id: 328, text: "Make out with {{randomOtherPlayer}} for 15 seconds — or take 3 drinks.", nsfwLevel: 'Extreme' },
   { id: 329, text: "Make out with {{randomOtherPlayer}} for 30 seconds or take 3 drinks.", nsfwLevel: 'Extreme' },
   { id: 330, text: "Full makeout session with {{randomOtherPlayer}} — or finish your drink.", nsfwLevel: 'Extreme' },
-  { id: 331, text: "French kiss {{randomOtherPlayer}} while the group watches.", nsfwLevel: 'Extreme' },
+  { id: 331, text: "French kiss {{randomOtherPlayer}} while the group watches — or take 3 drinks.", nsfwLevel: 'Extreme' },
   { id: 332, text: "Pull {{randomOtherPlayer}} into a passionate kiss or drink 3 times.", nsfwLevel: 'Extreme' },
-  { id: 333, text: "Kiss everyone in the room on the lips.", nsfwLevel: 'Extreme' },
+  { id: 333, text: "Kiss everyone in the room who's up for it on the lips — or take 3 drinks.", nsfwLevel: 'Extreme' },
   { id: 334, text: "Kiss any spot {{randomOtherPlayer}} chooses — or take 2 shots.", nsfwLevel: 'Extreme' },
   { id: 335, text: "Pick any body part on {{randomOtherPlayer}} and plant a long, wet kiss — or take 2 drinks.", nsfwLevel: 'Extreme' },
   { id: 336, text: "Let {{randomOtherPlayer}} kiss anywhere on your body they choose — or take 3 drinks.", nsfwLevel: 'Extreme' },
   { id: 337, text: "Hover your lips close to {{randomOtherPlayer}}'s without kissing for 30 seconds — or take 3 drinks.", nsfwLevel: 'Extreme' },
-  { id: 338, text: "Put an ice cube in your mouth and kiss {{randomOtherPlayer}}.", nsfwLevel: 'Extreme' },
+  { id: 338, text: "Put an ice cube in your mouth and kiss {{randomOtherPlayer}} — or take 3 drinks.", nsfwLevel: 'Extreme' },
   { id: 339, text: "Demonstrate on {{randomOtherPlayer}} how you like to be kissed — or take 3 drinks.", nsfwLevel: 'Extreme' },
 
   // --- Extreme: Kissing Body Parts ---
@@ -339,7 +339,7 @@ export const PROMPTS: Prompt[] = [
   { id: 344, text: "Kiss {{randomOtherPlayer}}'s stomach for 10 seconds — or take 3 drinks.", nsfwLevel: 'Extreme' },
   { id: 345, text: "Kiss a trail down {{randomOtherPlayer}}'s stomach — or take 2 drinks.", nsfwLevel: 'Extreme' },
   { id: 346, text: "Kiss down the length of {{randomOtherPlayer}}'s spine — or take 2 drinks.", nsfwLevel: 'Extreme' },
-  { id: 347, text: "Lick {{randomOtherPlayer}}'s inner thigh.", nsfwLevel: 'Extreme' },
+  { id: 347, text: "Lick {{randomOtherPlayer}}'s inner thigh — or take 3 drinks.", nsfwLevel: 'Extreme' },
   { id: 348, text: "Kiss {{randomOtherPlayer}}'s inner thighs — or take 3 drinks.", nsfwLevel: 'Extreme' },
   { id: 349, text: "Kiss from {{randomOtherPlayer}}'s ankle to their inner thigh or take 3 drinks.", nsfwLevel: 'Extreme' },
   { id: 350, text: "Let {{randomOtherPlayer}} kiss your body (excluding genitals) for 1 minute or take 3 drinks.", nsfwLevel: 'Extreme' },
@@ -354,8 +354,8 @@ export const PROMPTS: Prompt[] = [
   { id: 358, text: "Let {{randomOtherPlayer}} leave a lipstick mark (or kiss mark) anywhere visible on your body — or take 3 drinks.", nsfwLevel: 'Extreme' },
 
   // --- Extreme: Licking & Sensual Touch ---
-  { id: 359, text: "Lick {{randomOtherPlayer}}'s nipples for 10 seconds.", nsfwLevel: 'Extreme' },
-  { id: 360, text: "Suck on {{randomOtherPlayer}}'s finger slowly.", nsfwLevel: 'Extreme' },
+  { id: 359, text: "Lick {{randomOtherPlayer}}'s nipples for 10 seconds — or take 3 drinks.", nsfwLevel: 'Extreme' },
+  { id: 360, text: "Suck on {{randomOtherPlayer}}'s finger slowly — or take 3 drinks.", nsfwLevel: 'Extreme' },
   { id: 361, text: "Let {{randomOtherPlayer}} suck on your fingers or drink 2 times.", nsfwLevel: 'Extreme' },
   { id: 362, text: "Suck on {{randomOtherPlayer}}'s toe or take 2 shots.", nsfwLevel: 'Extreme' },
   { id: 363, text: "Run your lips gently over any body part of {{randomOtherPlayer}} above the waist — or take 2 drinks.", nsfwLevel: 'Extreme' },
@@ -370,7 +370,7 @@ export const PROMPTS: Prompt[] = [
   { id: 371, text: "Pour a shot into {{randomOtherPlayer}}'s belly button and drink it.", nsfwLevel: 'Extreme' },
   { id: 372, text: "Take a shot off {{randomOtherPlayer}}'s body — you pick the spot.", nsfwLevel: 'Extreme' },
   { id: 373, text: "Let {{randomOtherPlayer}} take a shot off your body — they pick the spot.", nsfwLevel: 'Extreme' },
-  { id: 374, text: "Lick whipped cream off {{randomOtherPlayer}}'s neck.", nsfwLevel: 'Extreme' },
+  { id: 374, text: "Lick whipped cream off {{randomOtherPlayer}}'s neck — or take 3 drinks.", nsfwLevel: 'Extreme' },
   { id: 375, text: "Lick whipped cream off any body part {{randomOtherPlayer}} chooses — or finish your drink.", nsfwLevel: 'Extreme' },
   { id: 376, text: "Cover any body part you choose on {{randomOtherPlayer}} with whipped cream and lick it clean — or take 3 drinks.", nsfwLevel: 'Extreme' },
   { id: 377, text: "Let {{randomOtherPlayer}} lick whipped cream off your body or drink 3 times.", nsfwLevel: 'Extreme' },
@@ -384,7 +384,7 @@ export const PROMPTS: Prompt[] = [
   { id: 383, text: "Let {{randomOtherPlayer}} run an ice cube anywhere on your body with their mouth — or take 3 drinks.", nsfwLevel: 'Extreme' },
 
   // --- Extreme: Lap Dances & Grinding ---
-  { id: 384, text: "Pick {{randomOtherPlayer}} to give you a lap dance.", nsfwLevel: 'Extreme' },
+  { id: 384, text: "Ask {{randomOtherPlayer}} for a lap dance — if either of you passes, you take 3 drinks.", nsfwLevel: 'Extreme' },
   { id: 385, text: "Give a full lap dance to {{randomOtherPlayer}} — or take 3 drinks.", nsfwLevel: 'Extreme' },
   { id: 386, text: "Receive a lap dance from {{randomOtherPlayer}} — or take 3 drinks.", nsfwLevel: 'Extreme' },
   { id: 387, text: "Grind on {{randomOtherPlayer}} for 2 minutes — or take 3 drinks.", nsfwLevel: 'Extreme' },
@@ -392,7 +392,7 @@ export const PROMPTS: Prompt[] = [
   { id: 389, text: "Let {{randomOtherPlayer}} grind on you for 30 seconds or take 3 drinks.", nsfwLevel: 'Extreme' },
   { id: 390, text: "Grind on {{randomOtherPlayer}}'s lap for one full song — or finish your drink.", nsfwLevel: 'Extreme' },
   { id: 391, text: "Straddle {{randomOtherPlayer}} for 30 seconds — or take 3 drinks.", nsfwLevel: 'Extreme' },
-  { id: 392, text: "Sit on {{randomOtherPlayer}}'s lap naked for the next 2 rounds.", nsfwLevel: 'Extreme' },
+  { id: 392, text: "Sit on {{randomOtherPlayer}}'s lap naked for the next 2 rounds — or take 3 drinks.", nsfwLevel: 'Extreme' },
   { id: 393, text: "Sit on {{randomOtherPlayer}}'s lap facing them for 1 minute or drink 3 times.", nsfwLevel: 'Extreme' },
 
   // --- Extreme: Stripping & Clothing Removal ---
@@ -414,7 +414,7 @@ export const PROMPTS: Prompt[] = [
   { id: 409, text: "Swap underwear with {{randomOtherPlayer}} and wear it for 2 rounds or take 3 drinks.", nsfwLevel: 'Extreme' },
   { id: 410, text: "Remove your underwear and toss it to {{randomOtherPlayer}} or finish your drink.", nsfwLevel: 'Extreme' },
   { id: 411, text: "Go in the bathroom with {{randomOtherPlayer}} and swap one item of clothing or drink 3 times.", nsfwLevel: 'Extreme' },
-  { id: 412, text: "{{randomOtherPlayer}} chooses: kiss them or lose an article of clothing.", nsfwLevel: 'Extreme' },
+  { id: 412, text: "{{randomOtherPlayer}} chooses: kiss them, lose an article of clothing, or take 3 drinks.", nsfwLevel: 'Extreme' },
 
   // --- Extreme: Strip Teases ---
   { id: 413, text: "Give {{randomOtherPlayer}} a strip tease for one full song.", nsfwLevel: 'Extreme' },
@@ -425,7 +425,7 @@ export const PROMPTS: Prompt[] = [
   { id: 418, text: "Have {{randomOtherPlayer}} undress you slowly, the way you describe or take 3 drinks.", nsfwLevel: 'Extreme' },
 
   // --- Extreme: Massage & Touch ---
-  { id: 419, text: "Massage {{randomOtherPlayer}}'s inner thighs for 30 seconds.", nsfwLevel: 'Extreme' },
+  { id: 419, text: "Massage {{randomOtherPlayer}}'s inner thighs for 30 seconds — or take 3 drinks.", nsfwLevel: 'Extreme' },
   { id: 420, text: "Give {{randomOtherPlayer}} a sensual massage above the waist for 1 minute — or take 2 drinks.", nsfwLevel: 'Extreme' },
   { id: 421, text: "Give {{randomOtherPlayer}} a deep massage below the waist for 1 minute — or take 3 drinks.", nsfwLevel: 'Extreme' },
   { id: 422, text: "Give {{randomOtherPlayer}} a 30-second massage anywhere below the waist (over clothes) — or take 3 drinks.", nsfwLevel: 'Extreme' },
@@ -434,7 +434,7 @@ export const PROMPTS: Prompt[] = [
   { id: 425, text: "Let {{randomOtherPlayer}} grope your entire body for 1 minute or drink 3 times.", nsfwLevel: 'Extreme' },
 
   // --- Extreme: Spanking ---
-  { id: 426, text: "Spank {{randomOtherPlayer}} — hard.", nsfwLevel: 'Extreme' },
+  { id: 426, text: "Spank {{randomOtherPlayer}}, hard — or take 3 drinks.", nsfwLevel: 'Extreme' },
   { id: 427, text: "Spank {{randomOtherPlayer}} hard for 30 seconds — or take 3 drinks.", nsfwLevel: 'Extreme' },
   { id: 428, text: "Get spanked hard by {{randomOtherPlayer}} for 30 seconds — or take 3 drinks.", nsfwLevel: 'Extreme' },
   { id: 429, text: "Get spanked with a belt by {{randomOtherPlayer}} or take 3 drinks.", nsfwLevel: 'Extreme' },
@@ -447,7 +447,7 @@ export const PROMPTS: Prompt[] = [
   { id: 434, text: "Motorboat {{randomOtherPlayer}} — or take 2 shots.", nsfwLevel: 'Extreme' },
 
   // --- Extreme: Blindfold Play ---
-  { id: 435, text: "Blindfold {{randomOtherPlayer}} and kiss them somewhere unexpected.", nsfwLevel: 'Extreme' },
+  { id: 435, text: "Blindfold {{randomOtherPlayer}}, if they're up for it, and kiss them somewhere unexpected — or take 3 drinks.", nsfwLevel: 'Extreme' },
   { id: 436, text: "Blindfold {{randomOtherPlayer}} and kiss them somewhere they won't expect — or take 3 drinks.", nsfwLevel: 'Extreme' },
   { id: 437, text: "Get blindfolded and allow {{randomOtherPlayer}} to touch you wherever they want for 15 seconds.", nsfwLevel: 'Extreme' },
   { id: 438, text: "Blindfold yourself and let {{randomOtherPlayer}} control you — or take 2 drinks.", nsfwLevel: 'Extreme' },
@@ -504,7 +504,7 @@ export const PROMPTS: Prompt[] = [
 
   // --- Extreme: Group Activities ---
   { id: 479, text: "Everyone removes one article of clothing. Last person to do so finishes their drink.", nsfwLevel: 'Extreme' },
-  { id: 480, text: "Spin a bottle — whoever it lands on, you have to make out with for 20 seconds.", nsfwLevel: 'Extreme' },
+  { id: 480, text: "Spin a bottle — make out for 20 seconds with whoever it lands on, if you're both up for it — or take 3 drinks.", nsfwLevel: 'Extreme' },
   { id: 481, text: "Seven minutes in heaven with {{randomOtherPlayer}} — or both take 3 drinks.", nsfwLevel: 'Extreme' },
   { id: 482, text: "Go into a private room with {{randomOtherPlayer}} for 3 minutes or take 3 drinks.", nsfwLevel: 'Extreme' },
   { id: 483, text: "Wild Card: Skip this prompt and take {{randomOtherPlayer}} somewhere private for 2 minutes — or both finish your drinks.", nsfwLevel: 'Extreme' },
@@ -663,7 +663,7 @@ export const PROMPTS: Prompt[] = [
   { id: 733, text: "Trade one number with {{randomOtherPlayer}} — body count or number of drinks — you pick which.", nsfwLevel: 'Medium' },
   { id: 734, text: "What's the fantasy you replay the most but have never told anyone?", nsfwLevel: 'Medium' },
   { id: 735, text: "Never have I ever dragged out a situationship way past its expiration date.", nsfwLevel: 'Medium' },
-  { id: 736, text: "Move next to {{randomOtherPlayer}} and describe your version of a perfect kiss.", nsfwLevel: 'Medium' },
+  { id: 736, text: "Move next to {{randomOtherPlayer}} and describe your version of a perfect kiss — or take 2 drinks.", nsfwLevel: 'Medium' },
   { id: 737, text: "What's the pettiest thing you've done to an ex after a breakup?", nsfwLevel: 'Medium' },
   { id: 738, text: "Drink if you've ever screenshotted a flirty conversation to show your friends.", nsfwLevel: 'Medium' },
   { id: 739, text: "Which player has the most 'main character in a rom-com' energy? They give out 3 drinks.", nsfwLevel: 'Medium' },
@@ -731,7 +731,7 @@ export const PROMPTS: Prompt[] = [
   { id: 820, text: "Confess the wildest thing you've ever agreed to in bed, or remove an item of clothing.", nsfwLevel: 'Extreme' },
   { id: 821, text: "Straddle {{randomOtherPlayer}} and whisper what you'd do if the room were empty — or take 3 drinks.", nsfwLevel: 'Extreme' },
   { id: 823, text: "Let {{randomOtherPlayer}} spank you once for every year of your age divided by ten — or take 3 drinks.", nsfwLevel: 'Extreme' },
-  { id: 824, text: "Blindfold yourself and let {{randomOtherPlayer}} kiss you somewhere; guess where — wrong answer, finish your drink.", nsfwLevel: 'Extreme' },
+  { id: 824, text: "Blindfold yourself and let {{randomOtherPlayer}} kiss you somewhere, if you're both up for it; guess where — wrong answer, or a pass from either of you, finish your drink.", nsfwLevel: 'Extreme' },
   { id: 825, text: "Describe your most-used toy and exactly how you use it — or take 3 drinks.", nsfwLevel: 'Extreme' },
   { id: 826, text: "Let {{randomOtherPlayer}} unbutton or unzip one item of your clothing with their mouth — or take 3 drinks.", nsfwLevel: 'Extreme' },
   { id: 827, text: "Never have I ever sent a full video, not just a photo.", nsfwLevel: 'Extreme' },

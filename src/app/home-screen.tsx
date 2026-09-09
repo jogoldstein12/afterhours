@@ -12,6 +12,7 @@ import { GAME_MODES, type GameMode } from '@/lib/prompts';
 import { useToast } from '@/hooks/use-toast';
 import { cn, playersToQuery, playersFromQuery, playerColor } from '@/lib/utils';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { LegalFooter } from '@/components/shared/LegalFooter';
 
 const MIN_PLAYERS = 2;
 const MAX_PLAYERS = 10;
@@ -113,7 +114,7 @@ export function HomeScreen() {
   return (
     <div className="flex flex-col min-h-[100dvh] text-foreground touch-manipulation">
       <Header />
-      <main className="flex-grow flex items-start sm:items-center justify-center p-4 pb-32">
+      <main className="flex-grow flex flex-col items-center justify-start sm:justify-center gap-8 p-4 pb-32">
         <Card className="w-full max-w-md shadow-2xl neon-border-primary bg-card/70 backdrop-blur-md">
           <CardHeader className="text-center">
             <Users className="mx-auto h-11 w-11 text-primary mb-1" />
@@ -238,6 +239,8 @@ export function HomeScreen() {
             </div>
           </CardContent>
         </Card>
+
+        <LegalFooter />
       </main>
 
       {/* Sticky Start bar — always reachable, even with a full 10-player roster. */}

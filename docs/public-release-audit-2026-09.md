@@ -32,6 +32,60 @@ There is also one architectural fact that needs to be confronted before the payw
 
 ---
 
+## Resolution log — September 9, 2026
+
+All seven **Phase 1** items ("before the URL is public") shipped in the same PR
+as this audit. Findings below are left as written; this log is the delta.
+
+| § | Finding | Status |
+|---|---|---|
+| 0.1 | Next.js critical advisory | ✅ Upgraded to 15.5.25; Dependabot added; CI now fails on a critical advisory |
+| 0.2 | No age gate, indexable adult content | ✅ Adults-only interstitial, `rating`/RTA meta, `robots.txt` disallows `/game` |
+| 0.3 | No legal surface | ⚠️ Terms, Privacy Policy, LICENSE, and disclaimers written and linked — **placeholders still to fill** |
+| 0.4 | Consent model | ✅ Skip control in both engines; all 21 no-out prompts now carry an out |
+| 0.5 | No security headers | ✅ CSP, HSTS, X-Frame-Options, nosniff, Referrer-Policy, Permissions-Policy |
+| 1.2 | `/game` dead-end | ✅ Redirects to setup; `error.tsx`, `global-error.tsx`, `not-found.tsx` added |
+| 2.3 | `maxInstances: 1` | ✅ Raised to 10 with cpu/memory/concurrency set |
+| 2.4 | No monitoring | ⚠️ Sentry scaffolded behind `NEXT_PUBLIC_SENTRY_DSN` — **inert until a DSN is set** |
+| 2.6 | Dead `images` config | ✅ Removed |
+| 2.7 | CI gaps | ⚠️ `npm audit` step and Dependabot added; tests and preview deploys still open |
+
+**What shipped alongside, not in the original list:** the standalone `game.html`
+gained the same Skip control, narrowing the engine drift in §2.5 by one feature.
+
+### Still required before launch
+
+1. **Fill in `src/lib/legal.ts`** — entity name, contact email, jurisdiction. Both
+   legal pages render a visible "Draft — not yet in force" banner until you do,
+   and that banner is driven by the placeholders themselves, so it disappears on
+   its own once they are real. Have a lawyer review both documents.
+2. **Set `NEXT_PUBLIC_SENTRY_DSN`** in the App Hosting environment, or monitoring
+   stays off.
+3. **Add uptime monitoring** — an external check, which is not something the repo
+   can carry.
+
+### Verification
+
+Typecheck, lint, production build, `npm audit --audit-level=critical`, and the
+deck-freshness check all pass. Headers were confirmed on a running production
+server. A 21-check browser pass on a 390×844 viewport covered the gate (blocks,
+admits, persists), the `/game` redirect, Skip (new card, same player, consumed
+from the deck), Undo restoring a skipped card, all four dock controls at 44px+,
+and both legal pages — with zero console errors. The standalone engine was
+exercised separately for the same Skip behaviour.
+
+### Two things this deliberately did not do
+
+- **The age gate is client-side**, so the prerendered HTML for `/` is empty for
+  crawlers that do not execute JavaScript. `<head>` metadata (title, description,
+  adult labels) still serves link previews and filters correctly. Server-side
+  gating arrives with the accounts work in Phase 2; pair the fix with §3.2.
+- **`npm audit` is gated at `critical`, not `high`.** Two build-time-only postcss
+  advisories live inside Next's own dependency tree and are fixable only by a
+  Next 16 major upgrade. Tighten the gate when that lands.
+
+---
+
 ## P0 — Blockers
 
 These should be closed before the URL is public, in roughly this order.
