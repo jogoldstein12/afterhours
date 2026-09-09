@@ -2,11 +2,21 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Logo } from './Logo';
 import { ShieldAlert, Wine } from 'lucide-react';
 
 const AGE_GATE_KEY = 'afterhours.ageConfirmed';
+
+/**
+ * Routes that are readable without passing the gate. The gate asks you to agree
+ * to these documents, so gating them would mean agreeing to terms you cannot
+ * read — and it would make the links on the gate loop straight back to it.
+ * Keeping them open also means they prerender real content for the crawlers
+ * robots.txt invites to them.
+ */
+const ALWAYS_READABLE = ['/terms', '/privacy'];
 
 /**
  * Adults-only confirmation shown before the app is reachable.
@@ -26,6 +36,7 @@ export function AgeGate({ children }: { children: React.ReactNode }) {
   // 'checking' renders nothing at all, so the app never flashes behind the gate
   // on a first visit. It resolves in the first client effect.
   const [status, setStatus] = useState<'checking' | 'gated' | 'allowed'>('checking');
+  const pathname = usePathname();
 
   useEffect(() => {
     try {
@@ -44,6 +55,8 @@ export function AgeGate({ children }: { children: React.ReactNode }) {
     setStatus('allowed');
   };
 
+  // Declared after every hook so the hook order never changes between renders.
+  if (ALWAYS_READABLE.includes(pathname)) return <>{children}</>;
   if (status === 'checking') return null;
   if (status === 'allowed') return <>{children}</>;
 

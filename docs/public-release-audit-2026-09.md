@@ -41,7 +41,7 @@ as this audit. Findings below are left as written; this log is the delta.
 |---|---|---|
 | 0.1 | Next.js critical advisory | ✅ Upgraded to 15.5.25; Dependabot added; CI now fails on a critical advisory |
 | 0.2 | No age gate, indexable adult content | ✅ Adults-only interstitial, `rating`/RTA meta, `robots.txt` disallows `/game` |
-| 0.3 | No legal surface | ⚠️ Terms, Privacy Policy, LICENSE, and disclaimers written and linked — **placeholders still to fill** |
+| 0.3 | No legal surface | ✅ Terms, Privacy Policy, LICENSE and disclaimers written, filled in for After Hours Party Game, LLC, and linked — **lawyer review still outstanding** |
 | 0.4 | Consent model | ✅ Skip control in both engines; all 21 no-out prompts now carry an out |
 | 0.5 | No security headers | ✅ CSP, HSTS, X-Frame-Options, nosniff, Referrer-Policy, Permissions-Policy |
 | 1.2 | `/game` dead-end | ✅ Redirects to setup; `error.tsx`, `global-error.tsx`, `not-found.tsx` added |
@@ -55,10 +55,11 @@ gained the same Skip control, narrowing the engine drift in §2.5 by one feature
 
 ### Still required before launch
 
-1. **Fill in `src/lib/legal.ts`** — entity name, contact email, jurisdiction. Both
-   legal pages render a visible "Draft — not yet in force" banner until you do,
-   and that banner is driven by the placeholders themselves, so it disappears on
-   its own once they are real. Have a lawyer review both documents.
+1. **Have a lawyer review the Terms and Privacy Policy.** They are filled in for
+   After Hours Party Game, LLC (New York, USA) and accurate about what the app
+   does, but they have not had legal review. `src/lib/legal.ts` holds every
+   identifying detail, so changes are a one-file edit; leaving a placeholder
+   there re-raises a visible "not yet in force" banner on both pages.
 2. **Set `NEXT_PUBLIC_SENTRY_DSN`** in the App Hosting environment, or monitoring
    stays off.
 3. **Add uptime monitoring** — an external check, which is not something the repo
@@ -78,8 +79,10 @@ exercised separately for the same Skip behaviour.
 
 - **The age gate is client-side**, so the prerendered HTML for `/` is empty for
   crawlers that do not execute JavaScript. `<head>` metadata (title, description,
-  adult labels) still serves link previews and filters correctly. Server-side
-  gating arrives with the accounts work in Phase 2; pair the fix with §3.2.
+  adult labels) still serves link previews and filters correctly, and `/terms`
+  and `/privacy` are exempt from the gate so they prerender in full — you cannot
+  be asked to agree to a document you are not allowed to read. Server-side gating
+  arrives with the accounts work in Phase 2; pair the fix with §3.2.
 - **`npm audit` is gated at `critical`, not `high`.** Two build-time-only postcss
   advisories live inside Next's own dependency tree and are fixable only by a
   Next 16 major upgrade. Tighten the gate when that lands.

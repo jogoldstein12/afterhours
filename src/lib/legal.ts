@@ -1,18 +1,18 @@
 /**
  * Single source of truth for the identifying details in the legal pages.
  *
- * ⚠️ BEFORE PUBLIC LAUNCH: replace every placeholder below, and have a lawyer
- * in your jurisdiction review `src/app/terms/page.tsx` and
- * `src/app/privacy/page.tsx`. These documents were drafted to be accurate about
- * what the app actually does — they are a starting point, not legal advice.
+ * ⚠️ These documents were drafted to be accurate about what the app actually
+ * does. They have NOT been reviewed by a lawyer — do that before launch.
+ * Anything here that changes (a new registered address, a different support
+ * inbox) needs changing once, here.
  */
 export const LEGAL = {
   /** Legal entity or individual publishing the app. */
-  entity: '[ENTITY NAME]',
+  entity: 'After Hours Party Game, LLC',
   /** Reachable inbox for legal, privacy, and takedown notices. */
-  contactEmail: '[CONTACT EMAIL]',
-  /** Governing law for the Terms, e.g. 'the State of New York, USA'. */
-  jurisdiction: '[JURISDICTION]',
+  contactEmail: 'Support@afterhoursgame.com',
+  /** Governing law for the Terms. */
+  jurisdiction: 'the State of New York, USA',
   /** Shown as "Last updated" on both documents. */
   lastUpdated: 'September 9, 2026',
 } as const;
