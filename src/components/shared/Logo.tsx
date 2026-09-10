@@ -30,7 +30,7 @@ export function Logo({ className }: { className?: string }) {
         <span className="text-2xl md:text-3xl font-headline font-bold text-primary neon-text-primary tracking-tight">
           AFTER HOURS
         </span>
-        <span className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground opacity-70">
+        <span className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground/80">
           Party Game
         </span>
       </div>

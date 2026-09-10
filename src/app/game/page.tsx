@@ -1,18 +1,23 @@
 "use client";
 
-import { useEffect, useState, useCallback, useRef, Suspense, type PointerEvent as ReactPointerEvent, type CSSProperties } from 'react';
-import { useSearchParams, useRouter } from 'next/navigation';
+import { useEffect, useState, useCallback, useRef, type PointerEvent as ReactPointerEvent, type CSSProperties } from 'react';
+import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import {
-  PROMPTS,
   Prompt,
   GameMode,
-  isNhiePrompt,
   GAME_MODES,
   getPromptCategory,
   type PromptCategory,
 } from '@/lib/prompts';
+import {
+  extractDurationSeconds,
+  filterDeck,
+  promptById,
+  renderPromptText,
+  shuffledIndices,
+} from '@/lib/game';
 import {
   ArrowRightCircle,
   RotateCcw,
@@ -29,6 +34,7 @@ import {
   TrendingUp,
   Trophy,
   Sparkles,
+  SkipForward,
   type LucideIcon,
 } from 'lucide-react';
 import {
@@ -46,11 +52,19 @@ import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { cn, playersToQuery, playersFromQuery, playerColor } from '@/lib/utils';
+import { cn, playerColor, rosterFromQuery } from '@/lib/utils';
+import { MAX_NAME_LENGTH, MAX_PLAYERS, MIN_PLAYERS, hasName, normalisePlayerName, normaliseRoster } from '@/lib/roster';
+import {
+  HISTORY_LIMIT,
+  clearGame,
+  isGameMode,
+  readGame,
+  writeGame,
+  writeLastSetup,
+  type StoredGame,
+} from '@/lib/session';
 import { Separator } from '@/components/ui/separator';
 
-const MIN_PLAYERS = 2;
-const MAX_PLAYERS = 10;
 // Swipe left deals the next card, swipe right steps back (undo). A gesture
 // commits if it either travels past SWIPE_THRESHOLD or is a quick flick past
 // FLICK_VELOCITY — so a short, fast flick works as well as a long drag.
@@ -68,7 +82,7 @@ const MODE_BORDER: Record<GameMode, string> = {
 const MODE_CHIP: Record<GameMode, string> = {
   Mild: 'text-primary border-primary/50 bg-primary/10',
   Medium: 'text-secondary border-secondary/50 bg-secondary/10',
-  Extreme: 'text-destructive border-destructive/50 bg-destructive/10',
+  Extreme: 'text-[hsl(var(--destructive-bright))] border-destructive/50 bg-destructive/10',
   NHIE: 'text-[hsl(var(--chart-3))] border-[hsl(var(--chart-3)/0.5)] bg-[hsl(var(--chart-3)/0.12)]',
 };
 const MODE_FILL: Record<GameMode, string> = {
@@ -78,10 +92,10 @@ const MODE_FILL: Record<GameMode, string> = {
   NHIE: 'bg-[hsl(var(--chart-3))]',
 };
 const MODE_SELECTED: Record<GameMode, string> = {
-  Mild: 'bg-primary text-white shadow-[0_0_12px_hsl(var(--primary)/0.6)]',
-  Medium: 'bg-secondary text-white shadow-[0_0_12px_hsl(var(--secondary)/0.6)]',
-  Extreme: 'bg-destructive text-white shadow-[0_0_12px_hsl(var(--destructive)/0.6)]',
-  NHIE: 'bg-[hsl(var(--chart-3))] text-black shadow-[0_0_12px_hsl(var(--chart-3)/0.6)]',
+  Mild: 'bg-primary text-primary-foreground shadow-[0_0_12px_hsl(var(--primary)/0.6)]',
+  Medium: 'bg-secondary text-secondary-foreground shadow-[0_0_12px_hsl(var(--secondary)/0.6)]',
+  Extreme: 'bg-destructive text-destructive-foreground shadow-[0_0_12px_hsl(var(--destructive)/0.6)]',
+  NHIE: 'bg-[hsl(var(--chart-3))] text-background shadow-[0_0_12px_hsl(var(--chart-3)/0.6)]',
 };
 
 // "Turn It Up" on the finale steps the group one tier hotter; Extreme is already
@@ -102,18 +116,6 @@ const CATEGORY_META: Record<PromptCategory, { label: string; Icon: LucideIcon; c
   dare: { label: 'Dare', Icon: Flame, className: 'text-secondary' },
 };
 
-// Numeric durations only ("15 seconds", "2 minutes", "one-minute") — spelled-out
-// numbers are skipped on purpose, since those are usually hypothetical
-// ("if you had ten minutes alone...") rather than timed dares.
-const extractDurationSeconds = (text: string): number | null => {
-  const sec = text.match(/(\d+)\s*seconds?\b/i);
-  if (sec) return parseInt(sec[1], 10);
-  const min = text.match(/(\d+)\s*minutes?\b/i);
-  if (min) return parseInt(min[1], 10) * 60;
-  if (/\bone[- ]minute\b/i.test(text)) return 60;
-  return null;
-};
-
 const formatSeconds = (total: number): string =>
   `${Math.floor(total / 60)}:${String(total % 60).padStart(2, '0')}`;
 
@@ -126,35 +128,29 @@ const promptSizeClass = (len: number): string => {
   return 'text-lg sm:text-xl md:text-2xl';
 };
 
-// One shuffled "round" of player indices. Everyone goes once per round; the
-// avoidFirst guard stops the same player getting back-to-back turns across a
-// round boundary.
-const shuffledIndices = (count: number, avoidFirst?: number): number[] => {
-  const order = Array.from({ length: count }, (_, i) => i);
-  for (let i = order.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [order[i], order[j]] = [order[j], order[i]];
-  }
-  if (count > 1 && order[0] === avoidFirst) {
-    const swap = 1 + Math.floor(Math.random() * (count - 1));
-    [order[0], order[swap]] = [order[swap], order[0]];
-  }
-  return order;
-};
-
 const vibrate = (pattern: number | number[]) => {
   if (typeof navigator !== 'undefined' && 'vibrate' in navigator) navigator.vibrate(pattern);
 };
 
-type TurnSnapshot = { prompt: Prompt; playerIndex: number; text: string; upcoming: number[] };
-const HISTORY_LIMIT = 20;
+// `countedTurn` distinguishes a played card (which incremented the player's
+// tally and advanced the rotation) from a skipped one (which did neither), so
+// Undo can reverse each correctly.
+type TurnSnapshot = {
+  prompt: Prompt;
+  playerIndex: number;
+  text: string;
+  upcoming: number[];
+  countedTurn: boolean;
+};
 
-function GamePageContent() {
+export default function GamePage() {
   const router = useRouter();
-  const searchParams = useSearchParams();
   const { toast } = useToast();
 
   const [players, setPlayers] = useState<string[]>([]);
+  // Distinguishes "still reading the URL" from "the URL has no roster", so the
+  // screen can bounce to setup instead of holding a loader forever.
+  const [rosterChecked, setRosterChecked] = useState(false);
   const [nsfwLevel, setNsfwLevel] = useState<GameMode>('Mild');
   const [currentPlayerIndex, setCurrentPlayerIndex] = useState(0);
   const [currentPrompt, setCurrentPrompt] = useState<Prompt | null>(null);
@@ -173,9 +169,20 @@ function GamePageContent() {
   // Running tally of how many cards each player has answered, keyed by name so
   // it survives roster edits. Feeds the "most drawn" stat on the finale.
   const [turnsByName, setTurnsByName] = useState<Record<string, number>>({});
-  // Set just before an undo restores a card, so the processing effect shows the
-  // exact text that was on screen instead of re-randomizing {{randomOtherPlayer}}.
-  const restoredTextRef = useRef<string | null>(null);
+  // The text a restored or undone card was showing, tagged with the card it
+  // belongs to so the processing effect below can show it instead of deriving
+  // the text again and re-rolling {{randomOtherPlayer}} onto somebody else.
+  //
+  // Tagged rather than a one-shot flag, which is what this was and what made it
+  // wrong: hydration lands its state over more than one render, so the effect
+  // runs more than once, and the first pass consumed the flag — leaving a later
+  // pass to re-derive the text. Refreshing mid-card genuinely changed who the
+  // card was pointing at, about half the time with four players.
+  const restoredTextRef = useRef<{ promptId: number; text: string } | null>(null);
+  // The level the loaded deck belongs to. The deck only (re)loads when this
+  // changes, never on roster changes — adding or removing a player mid-game
+  // must not reset progress.
+  const deckLevelRef = useRef<GameMode | null>(null);
 
   // Swipe: the card tracks the finger and, past the threshold or on a flick,
   // flies off — left to deal the next card, right to step back. The transform
@@ -214,17 +221,117 @@ function GamePageContent() {
     setTimerRunning(true);
   };
 
+  // The one entry point for a game's state. Setup writes a record and
+  // navigates to a bare `/game`; a refresh, a locked phone, or Resume from the
+  // home screen reads the same record back and puts the night where it was.
+  //
+  // A legacy play URL (`/game?player=...`) is honoured for exactly one read and
+  // then scrubbed out of the address bar, so a bookmark from before the roster
+  // moved into storage opens into a game instead of a dead end.
   useEffect(() => {
-    const names = playersFromQuery(searchParams);
-    const nsfwLevelQuery = searchParams.get('nsfwLevel') as GameMode;
+    const query = new URLSearchParams(window.location.search);
+    const fromQuery = normaliseRoster(rosterFromQuery(query));
+    if (query.toString()) window.history.replaceState(null, '', window.location.pathname);
 
-    if (names.length > 0) {
-      setPlayers(names);
+    if (fromQuery.length >= MIN_PLAYERS) {
+      const levelFromQuery = query.get('nsfwLevel');
+      const level = isGameMode(levelFromQuery) ? levelFromQuery : 'Mild';
+      setPlayers(fromQuery);
+      setNsfwLevel(level);
+      writeLastSetup({ players: fromQuery, nsfwLevel: level });
+      setRosterChecked(true);
+      return;
     }
-    if (nsfwLevelQuery && GAME_MODES.some((m) => m.id === nsfwLevelQuery)) {
-      setNsfwLevel(nsfwLevelQuery);
+
+    const saved = readGame();
+    if (!saved) {
+      setRosterChecked(true);
+      return;
     }
-  }, [searchParams]);
+
+    setPlayers(saved.players);
+    setNsfwLevel(saved.nsfwLevel);
+    setCurrentPlayerIndex(saved.currentPlayerIndex);
+
+    const card = saved.currentPromptId === null ? null : promptById.get(saved.currentPromptId) ?? null;
+    // A record written by Start carries a roster and nothing else; let the deck
+    // effect below deal it a first card the normal way. Anything further along
+    // is restored wholesale.
+    if (saved.usedPromptIds.length > 0 || card || saved.gameEnded) {
+      // Claim the level before the deck effect runs, so restoring does not read
+      // as a mid-game level change and wipe the progress just loaded.
+      deckLevelRef.current = saved.nsfwLevel;
+      setAvailablePrompts(filterDeck(saved.nsfwLevel));
+      setUsedPromptIds(new Set(saved.usedPromptIds));
+      setUpcomingTurns(saved.upcomingTurns);
+      setTurnsByName(saved.turnsByName);
+      // A card whose id has since left the deck is dropped from the undo stack.
+      setHistory(
+        saved.history.flatMap((turn) => {
+          const prompt = promptById.get(turn.promptId);
+          return prompt
+            ? [{ prompt, playerIndex: turn.playerIndex, text: turn.text, upcoming: turn.upcoming, countedTurn: turn.countedTurn }]
+            : [];
+        }),
+      );
+      setGameEnded(saved.gameEnded);
+      if (card) {
+        // Show the card exactly as it was read out, rather than re-rolling
+        // {{randomOtherPlayer}} under a group that is looking at it.
+        if (saved.processedPromptText) {
+          restoredTextRef.current = { promptId: card.id, text: saved.processedPromptText };
+        }
+        setCurrentPrompt(card);
+      }
+    }
+    setRosterChecked(true);
+  }, []);
+
+  // Mirror the live game back to storage, so a refresh, a backgrounded tab, or
+  // the phone locking mid-round does not restart the night. Deliberately not
+  // driven by the countdown or the swipe transform — those change constantly
+  // and are not worth persisting.
+  useEffect(() => {
+    if (!rosterChecked || players.length === 0) return;
+    const record: StoredGame = {
+      players,
+      nsfwLevel,
+      currentPlayerIndex,
+      currentPromptId: currentPrompt?.id ?? null,
+      processedPromptText,
+      usedPromptIds: [...usedPromptIds],
+      upcomingTurns,
+      turnsByName,
+      history: history.map(({ prompt, playerIndex, text, upcoming, countedTurn }) => ({
+        promptId: prompt.id,
+        playerIndex,
+        text,
+        upcoming,
+        countedTurn,
+      })),
+      gameEnded,
+    };
+    writeGame(record);
+  }, [
+    rosterChecked,
+    players,
+    nsfwLevel,
+    currentPlayerIndex,
+    currentPrompt,
+    processedPromptText,
+    usedPromptIds,
+    upcomingTurns,
+    turnsByName,
+    history,
+    gameEnded,
+  ]);
+
+  // Reaching /game without a roster — a bookmark, a shared link with the query
+  // stripped, a crawler — used to hold "Charging Neon..." forever with no way
+  // out. Send them to setup instead.
+  useEffect(() => {
+    if (rosterChecked && players.length === 0) router.replace('/');
+  }, [rosterChecked, players.length, router]);
 
   // Tint the nightclub atmosphere (R6) to the mode in play. Cleared on unmount
   // so the setup lobby falls back to the default violet/pink night.
@@ -273,9 +380,7 @@ function GamePageContent() {
   }, []);
 
   const loadAndFilterPrompts = useCallback(() => {
-    const filtered = nsfwLevel === 'NHIE'
-      ? PROMPTS.filter(isNhiePrompt)
-      : PROMPTS.filter(p => p.nsfwLevel === nsfwLevel);
+    const filtered = filterDeck(nsfwLevel);
     setAvailablePrompts(filtered);
     setUsedPromptIds(new Set());
     setGameEnded(false);
@@ -301,9 +406,15 @@ function GamePageContent() {
     setNsfwLevel(newLevel);
   };
 
-  // The deck only (re)loads when the level changes, never on roster changes —
-  // adding or removing a player mid-game must not reset progress.
-  const deckLevelRef = useRef<GameMode | null>(null);
+  // "This crew" is the roster as it stands, which may have changed mid-game.
+  // Heading back to setup keeps the crew and ends the saved game — otherwise
+  // setup would offer to resume the night the group just walked away from.
+  const leaveToSetup = useCallback(() => {
+    writeLastSetup({ players, nsfwLevel });
+    clearGame();
+    router.push('/');
+  }, [players, nsfwLevel, router]);
+
   useEffect(() => {
     if (players.length === 0 || deckLevelRef.current === nsfwLevel) return;
     deckLevelRef.current = nsfwLevel;
@@ -311,44 +422,34 @@ function GamePageContent() {
     selectNewPrompt(newPrompts, new Set());
   }, [nsfwLevel, players.length, loadAndFilterPrompts, selectNewPrompt]);
 
+  // A restored game can come back without a card: the saved id no longer
+  // resolves because the deck changed under it. The effect above has already
+  // claimed the level and will not deal one, so the group would be left staring
+  // at an empty card. Deal the next one instead of restarting the night.
   useEffect(() => {
-    if (restoredTextRef.current !== null) {
-      setProcessedPromptText(restoredTextRef.current);
+    if (!rosterChecked || gameEnded || currentPrompt || availablePrompts.length === 0) return;
+    selectNewPrompt(availablePrompts, usedPromptIds);
+  }, [rosterChecked, gameEnded, currentPrompt, availablePrompts, usedPromptIds, selectNewPrompt]);
+
+  useEffect(() => {
+    // Held until a different card is actually dealt, so every render of the
+    // same restored card shows the same words. The `currentPrompt` guard on the
+    // clear matters: this effect also runs on mount, before hydration's state
+    // has landed, and clearing then would throw the restored text away before
+    // the card it belongs to ever arrives.
+    const restored = restoredTextRef.current;
+    if (restored && currentPrompt) {
+      if (restored.promptId === currentPrompt.id) {
+        setProcessedPromptText(restored.text);
+        return;
+      }
       restoredTextRef.current = null;
-    } else if (gameEnded) {
+    }
+
+    if (gameEnded) {
       setProcessedPromptText("Game Over! You've gone through all the prompts for this level.");
     } else if (currentPrompt && players.length > 0) {
-      let text = currentPrompt.text;
-      const currentPlayerName = players[currentPlayerIndex];
-
-      if (text.includes('{{randomOtherPlayer}}')) {
-        const otherPlayers = players.filter((_, index) => index !== currentPlayerIndex);
-        if (otherPlayers.length > 0) {
-          const randomPlayerName = otherPlayers[Math.floor(Math.random() * otherPlayers.length)];
-          text = text.replace(/\{\{randomOtherPlayer\}\}/g, randomPlayerName);
-        } else {
-          text = text.replace(/\{\{randomOtherPlayer\}\}/g, 'another player');
-        }
-      }
-
-      const trimmedLower = text.trim().toLowerCase();
-      const needsPrefix = !text.includes('?') &&
-                         // A prompt that opens by addressing another player never
-                         // also takes the "Name, ..." prefix — that would
-                         // double-address it. Checked against the raw text since
-                         // the placeholder is already substituted by now.
-                         !currentPrompt.text.trimStart().startsWith('{{randomOtherPlayer}}') &&
-                         // "Never have I ever" is called out to the whole room,
-                         // so it never takes the "Name, ..." prefix.
-                         !["if", "everyone", "anybody", "anyone", "any ", "the ", "girls", "men", "women", "no one", "shortest", "youngest", "dominant", "never have i ever"].some(word => trimmedLower.startsWith(word));
-
-      if (needsPrefix && text.length > 0) {
-        text = `${currentPlayerName}, ${text.charAt(0).toLowerCase() + text.slice(1)}`;
-      } else if (text.length > 0) {
-        text = text.charAt(0).toUpperCase() + text.slice(1);
-      }
-
-      setProcessedPromptText(text);
+      setProcessedPromptText(renderPromptText(currentPrompt, players, currentPlayerIndex));
     }
   }, [currentPrompt, players, currentPlayerIndex, gameEnded]);
 
@@ -361,7 +462,7 @@ function GamePageContent() {
 
     setHistory(prev => [
       ...prev.slice(-(HISTORY_LIMIT - 1)),
-      { prompt: currentPrompt, playerIndex: currentPlayerIndex, text: processedPromptText, upcoming: upcomingTurns },
+      { prompt: currentPrompt, playerIndex: currentPlayerIndex, text: processedPromptText, upcoming: upcomingTurns, countedTurn: true },
     ]);
 
     const newUsedPromptIds = new Set(usedPromptIds);
@@ -376,11 +477,33 @@ function GamePageContent() {
     selectNewPrompt(availablePrompts, newUsedPromptIds);
   }, [gameEnded, currentPrompt, players, currentPlayerIndex, processedPromptText, upcomingTurns, usedPromptIds, availablePrompts, selectNewPrompt]);
 
+  // Pass on a card without doing it. Deals a fresh prompt to the *same* player,
+  // so declining costs nothing and skips no one's turn: no tally, no rotation,
+  // no penalty. Every prompt in this game is optional, and this is the control
+  // that makes that true in the product rather than only in the rules.
+  const handleSkip = useCallback(() => {
+    if (gameEnded || !currentPrompt) return;
+    vibrate(8);
+
+    setHistory(prev => [
+      ...prev.slice(-(HISTORY_LIMIT - 1)),
+      { prompt: currentPrompt, playerIndex: currentPlayerIndex, text: processedPromptText, upcoming: upcomingTurns, countedTurn: false },
+    ]);
+
+    const newUsedPromptIds = new Set(usedPromptIds);
+    newUsedPromptIds.add(currentPrompt.id);
+    setUsedPromptIds(newUsedPromptIds);
+
+    selectNewPrompt(availablePrompts, newUsedPromptIds);
+  }, [gameEnded, currentPrompt, currentPlayerIndex, processedPromptText, upcomingTurns, usedPromptIds, availablePrompts, selectNewPrompt]);
+
   const handleUndo = () => {
     const last = history[history.length - 1];
     if (!last) return;
     const restoredName = players[Math.min(last.playerIndex, players.length - 1)];
-    if (restoredName) {
+    // A skipped card never incremented the tally, so undoing one must not
+    // decrement it.
+    if (restoredName && last.countedTurn) {
       setTurnsByName(prev => {
         const next = { ...prev };
         if (next[restoredName]) next[restoredName] -= 1;
@@ -393,7 +516,7 @@ function GamePageContent() {
       next.delete(last.prompt.id);
       return next;
     });
-    restoredTextRef.current = last.text;
+    restoredTextRef.current = { promptId: last.prompt.id, text: last.text };
     setGameEnded(false);
     setCurrentPrompt(last.prompt);
     setCurrentPlayerIndex(Math.min(last.playerIndex, players.length - 1));
@@ -480,9 +603,14 @@ function GamePageContent() {
   };
 
   const handleAddPlayer = () => {
-    const name = newPlayerName.trim();
+    const name = normalisePlayerName(newPlayerName);
     if (!name) return toast({ title: 'Player name cannot be empty.', variant: 'destructive' });
     if (players.length >= MAX_PLAYERS) return toast({ title: `Limit: ${MAX_PLAYERS} players.`, variant: 'destructive' });
+    // The turn tally is keyed by name, so a second "Sam" would share one count
+    // and be indistinguishable on the cards.
+    if (hasName(players, name)) {
+      return toast({ title: `${name} is already in`, description: 'Give this one a different name.', variant: 'destructive' });
+    }
 
     setUpcomingTurns(prev => {
       const queue = [...prev];
@@ -538,7 +666,7 @@ function GamePageContent() {
         turnsByName={turnsByName}
         onRunItBack={restartGame}
         onTurnItUp={() => { const hotter = HOTTER_MODE[nsfwLevel]; if (hotter) setNsfwLevel(hotter); }}
-        onNewCrew={() => router.push(`/?${playersToQuery(players, nsfwLevel)}`)}
+        onNewCrew={leaveToSetup}
       />
     );
   }
@@ -558,12 +686,12 @@ function GamePageContent() {
           <AlertDialogFooter className="flex-col gap-2 sm:flex-col sm:space-x-0">
             <AlertDialogAction
               onClick={restartGame}
-              className="w-full bg-primary text-white touch-manipulation"
+              className="w-full bg-primary text-primary-foreground touch-manipulation"
             >
               Restart Deck
             </AlertDialogAction>
             <AlertDialogAction
-              onClick={() => router.push(`/?${playersToQuery(players, nsfwLevel)}`)}
+              onClick={leaveToSetup}
               className="w-full bg-white/5 border border-white/15 text-white hover:bg-white/10 touch-manipulation"
             >
               Back to Setup
@@ -614,11 +742,12 @@ function GamePageContent() {
                     value={newPlayerName}
                     onChange={(e) => setNewPlayerName(e.target.value)}
                     placeholder="Add a player"
+                    maxLength={MAX_NAME_LENGTH}
                     onKeyDown={(e) => e.key === 'Enter' && handleAddPlayer()}
                     className="bg-white/5 h-11"
                     aria-label="New player name"
                   />
-                  <Button onClick={handleAddPlayer} size="icon" aria-label="Add player" className="h-11 w-11 shrink-0 bg-accent hover:bg-accent/80 touch-manipulation">
+                  <Button onClick={handleAddPlayer} size="icon" aria-label="Add player" className="h-11 w-11 shrink-0 bg-accent text-accent-foreground hover:bg-accent/80 touch-manipulation">
                     <UserPlus className="h-4 w-4" />
                   </Button>
                 </div>
@@ -668,7 +797,7 @@ function GamePageContent() {
             </div>
             <div className="shrink-0 text-right">
               <div className="font-headline text-sm font-bold tabular-nums text-white/90">
-                {cardNumber}<span className="text-white/40"> / {deckTotal}</span>
+                {cardNumber}<span className="text-white/60"> / {deckTotal}</span>
               </div>
               <div className="text-[10px] uppercase tracking-widest text-white/55">
                 Round {roundNumber} · {players.length}p
@@ -772,13 +901,14 @@ function GamePageContent() {
         <footer className="shrink-0 border-t border-white/5 px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
           <Button
             onClick={handleNextPlayer}
-            className="w-full h-14 rounded-2xl text-lg font-bold bg-primary text-white shadow-xl transition-transform active:scale-[0.98] touch-manipulation"
+            className="w-full h-14 rounded-2xl text-lg font-bold bg-primary text-primary-foreground shadow-xl transition-transform active:scale-[0.98] touch-manipulation"
           >
             Next Player
             <ArrowRightCircle className="ml-1 h-5 w-5" />
           </Button>
 
-          <div className="mt-2 grid grid-cols-3 gap-2">
+          <div className="mt-2 grid grid-cols-4 gap-2">
+            <DockButton icon={SkipForward} label="Skip" onClick={handleSkip} accent />
             <DockButton icon={Undo2} label="Undo" onClick={handleUndo} disabled={history.length === 0} />
             <DockButton icon={Users} label="Group" onClick={() => setIsEditSheetOpen(true)} />
             <DockButton icon={RotateCcw} label="End" onClick={() => setIsNewGameDialogOpen(true)} />
@@ -789,12 +919,19 @@ function GamePageContent() {
   );
 }
 
-function DockButton({ icon: Icon, label, onClick, disabled }: { icon: LucideIcon; label: string; onClick: () => void; disabled?: boolean }) {
+function DockButton({ icon: Icon, label, onClick, disabled, accent }: { icon: LucideIcon; label: string; onClick: () => void; disabled?: boolean; accent?: boolean }) {
   return (
     <button
       onClick={onClick}
       disabled={disabled}
-      className="flex min-h-[52px] flex-col items-center justify-center gap-1 rounded-xl py-1.5 text-white/75 transition-colors hover:bg-white/5 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:opacity-30 disabled:pointer-events-none touch-manipulation"
+      className={cn(
+        "flex min-h-[52px] flex-col items-center justify-center gap-1 rounded-xl py-1.5 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:text-white/40 disabled:pointer-events-none touch-manipulation",
+        accent
+          // Skip is an offer, not a utility — it sits in the accent so declining
+          // a card reads as a first-class move rather than a hidden escape.
+          ? "border border-accent/30 bg-accent/10 text-accent hover:bg-accent/20"
+          : "text-white/75 hover:bg-white/5 hover:text-white",
+      )}
     >
       <Icon className="h-5 w-5" />
       <span className="text-[10px] font-semibold uppercase tracking-widest">{label}</span>
@@ -888,7 +1025,7 @@ function GameOverView({
         <div className="animate-finale-rise mt-7 flex w-full flex-col gap-2.5" style={{ animationDelay: '220ms' }}>
           <Button
             onClick={onRunItBack}
-            className="h-14 w-full rounded-2xl bg-primary text-lg font-bold text-white shadow-xl transition-transform active:scale-[0.98] touch-manipulation"
+            className="h-14 w-full rounded-2xl bg-primary text-lg font-bold text-primary-foreground shadow-xl transition-transform active:scale-[0.98] touch-manipulation"
           >
             <Repeat className="mr-2 h-5 w-5" /> Run It Back
           </Button>
@@ -934,19 +1071,3 @@ function MartiniMark({ className }: { className?: string }) {
   );
 }
 
-export default function GamePage() {
-  return (
-    <Suspense
-      fallback={
-        <div className="flex min-h-[100dvh] items-center justify-center p-6">
-          <div className="flex flex-col items-center gap-4">
-            <MartiniMark className="h-14 w-14 animate-pulse" />
-            <p className="font-headline text-xl font-bold text-primary neon-text-primary animate-pulse">Charging Neon...</p>
-          </div>
-        </div>
-      }
-    >
-      <GamePageContent />
-    </Suspense>
-  );
-}

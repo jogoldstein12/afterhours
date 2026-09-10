@@ -43,9 +43,13 @@ next-env.d.ts
 # firebase
 firebase-debug.log
 firestore-debug.log
+# CLI cache. .firebaserc is committed on purpose — it holds a project id, not a secret.
+.firebase/
 
 # next-pwa generated service worker
 /public/sw.js
 /public/sw.js.map
 /public/workbox-*.js
 /public/workbox-*.js.map
+# Sentry CLI credentials, if the CLI is ever run locally.
+.sentryclirc

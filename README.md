@@ -2,13 +2,12 @@
 
 ## Description
 
-"After Hours" is an interactive and edgy party game designed for adults. Built with Next.js and styled with a neon-drenched aesthetic using Tailwind CSS and Shadcn UI, it delivers a seamless experience on both desktop and mobile devices. Players enter their names, select a "NSFW Level" (Mild, Medium, or Extreme), and the game serves up a series of hilarious, daring, and risqué prompts. For fully offline play, use the standalone `game.html` build described below.
+"After Hours" is an interactive and edgy party game designed for adults. Built with Next.js and styled with a neon-drenched aesthetic using Tailwind CSS and Shadcn UI, it delivers a seamless experience on both desktop and mobile devices. Players enter their names, pick a game mode (Mild, Medium, Extreme, or Never Have I Ever), and the game serves up a series of hilarious, daring, and risqué prompts.
 
 ## Features
 
 - **Interactive Gameplay:** Prompts can dynamically include players' names for a more personal and engaging experience.
-- **NSFW Levels:** Choose from three levels of intensity (Mild, Medium, Extreme) to match the party's vibe.
-- **Offline Standalone Build:** `game.html` is the whole game in one file — no server, no dependencies, works offline.
+- **Game Modes:** Three levels of intensity (Mild, Medium, Extreme) to match the party's vibe, plus a Never Have I Ever mode that pulls the NHIE prompts out of every tier.
 - **Responsive Neon UI:** A dark, neon-themed design that looks great on any screen size.
 - **Easy Setup:** Add player names, choose a level, and start the game in seconds.
 
@@ -38,31 +37,21 @@
 
     Open [http://localhost:9002](http://localhost:9002) with your browser to see the result.
 
-## Standalone HTML Version
-
-`game.html` at the repository root is the whole game in a single file — no build
-step, no server, no dependencies. Open it in any browser (double-click it, or
-host it anywhere that serves static files) and the full deck plays offline.
-
-It mirrors the Next.js app: the same setup screen, neon card, randomised turn
-order, `{{randomOtherPlayer}}` substitution, mid-game level switching, and the
-Manage Group sheet. The only external request is the Google Fonts stylesheet,
-which falls back to system fonts when offline.
-
-The file is generated from `src/lib/prompts.ts`, so regenerate it whenever the
-deck changes:
-
-```bash
-npm run build:html
-```
-
-The page markup lives in `tools/standalone-template.html`; the build script
-injects the prompt deck into it.
-
 ## Available Scripts
 
 - `npm run dev`: Starts the application in development mode.
 - `npm run build`: Creates a production build of the application.
-- `npm run build:html`: Regenerates the standalone `game.html` from `src/lib/prompts.ts`.
 - `npm run start`: Starts the production server.
+- `npm test`: Runs the unit tests over the game logic, the deck and the saved game.
+- `npm run test:watch`: The same, in watch mode.
+- `npm run test:e2e`: Runs the browser suite against a production build. Needs `npm run build` first, and Playwright installed (`npm i -D playwright && npx playwright install chromium`).
 - `npm run lint`: Lints the codebase for errors.
+- `npm run typecheck`: Type-checks the codebase without emitting output.
+- `npm run export:deck`: Regenerates `docs/prompts.csv` from `src/lib/prompts.ts`.
+
+## Tests
+
+The unit suite is fast and gates every push in CI. The browser suite is slower,
+needs a build and a browser, and is meant for structural changes — the game
+loop, the saved game, routing, or anything that touches colour, since it checks
+WCAG AA contrast on every screen in every mode.

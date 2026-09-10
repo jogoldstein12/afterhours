@@ -15,15 +15,24 @@ body {
     --popover: 285 50% 8%;
     --popover-foreground: 0 0% 98%;
     --primary: 283 85% 63%; /* #BE52F2 */
-    --primary-foreground: 0 0% 98%; /* White text on primary */
+    /* Ink for text sitting on a solid brand fill. White on the neon violet is
+       3.7:1 and on the pink 3.2:1, both under WCAG AA; the app's own near-black
+       reaches 5.5:1 and 6.3:1 without touching the palette itself, so every
+       glow, border and filament keeps the colour it has. White on the red does
+       clear AA (4.8:1), so --destructive-foreground stays light. */
+    --primary-foreground: 285 56% 5%;
     --secondary: 328 86% 64%; /* #F252A9 - Accent color used as secondary */
-    --secondary-foreground: 0 0% 98%; /* White text on accent */
+    --secondary-foreground: 285 56% 5%;
     --muted: 285 30% 20%;
     --muted-foreground: 0 0% 63.9%;
     --accent: 328 86% 64%; /* #F252A9 */
-    --accent-foreground: 0 0% 98%; /* White text on accent */
+    --accent-foreground: 285 56% 5%;
     --destructive: 0 72% 51%; /* A brighter red for dark mode */
     --destructive-foreground: 0 0% 98%;
+    /* --destructive is tuned for white text on a solid red fill (4.8:1). As
+       small text on a dark red tint it reaches only 3.9:1, under WCAG AA, so
+       the Extreme chip and the Clear hover use this lighter red (5.6:1). */
+    --destructive-bright: 0 85% 65%;
     --border: 285 30% 25%;
     --input: 285 40% 15%;
     --ring: 283 85% 70%; /* Lighter shade of primary for focus rings */
@@ -53,15 +62,16 @@ body {
     --popover: 285 50% 8%;
     --popover-foreground: 0 0% 98%;
     --primary: 283 85% 63%;
-    --primary-foreground: 0 0% 98%;
+    --primary-foreground: 285 56% 5%;
     --secondary: 328 86% 64%;
-    --secondary-foreground: 0 0% 98%;
+    --secondary-foreground: 285 56% 5%;
     --muted: 285 30% 20%;
     --muted-foreground: 0 0% 63.9%;
     --accent: 328 86% 64%;
-    --accent-foreground: 0 0% 98%;
+    --accent-foreground: 285 56% 5%;
     --destructive: 0 72% 51%;
     --destructive-foreground: 0 0% 98%;
+    --destructive-bright: 0 85% 65%;
     --border: 285 30% 25%;
     --input: 285 40% 15%;
     --ring: 283 85% 70%;
@@ -286,4 +296,24 @@ body {
   .bg-nightclub {
     transition: none;
   }
+}
+/* Reading styles for the Terms and Privacy pages. Kept deliberately calm — no
+   neon glow on body copy — so a long document stays legible on a phone. */
+.legal-prose h2 {
+  @apply mt-8 mb-3 font-headline text-lg font-bold text-white;
+}
+.legal-prose p {
+  @apply mb-4;
+}
+.legal-prose ul {
+  @apply mb-4 list-disc space-y-1.5 pl-5;
+}
+.legal-prose a {
+  @apply text-primary underline underline-offset-2 transition-colors hover:text-primary/80;
+}
+.legal-prose code {
+  @apply rounded bg-white/10 px-1.5 py-0.5 text-xs text-white/90;
+}
+.legal-prose strong {
+  @apply font-semibold text-white;
 }

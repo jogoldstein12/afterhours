@@ -4,6 +4,8 @@ import './globals.css';
 import { Toaster } from "@/components/ui/toaster";
 import { cn } from '@/lib/utils';
 import { Atmosphere } from '@/components/shared/Atmosphere';
+import { AgeGate } from '@/components/shared/AgeGate';
+import { MonitoringInit } from '@/components/shared/MonitoringInit';
 
 const inter = Inter({
   subsets: ['latin'],
@@ -16,9 +18,57 @@ const spaceGrotesk = Space_Grotesk({
   variable: '--font-space-grotesk',
 });
 
+// The canonical origin. Absolute URLs are required for OG and Twitter cards —
+// a relative path renders as a broken image in every link preview — so this has
+// to be right in production. Override it per environment if the domain moves.
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://afterhoursgame.com';
+
+const TITLE = 'After Hours Party Game';
+const DESCRIPTION =
+  'An explicit pass-the-phone party game for adults. Pick your crew, pick your intensity, and let the deck do the rest. 18+ only.';
+
 export const metadata: Metadata = {
-  title: 'After Hours Party Game',
-  description: 'Neon-styled party game for adults.',
+  metadataBase: new URL(SITE_URL),
+  title: TITLE,
+  description: DESCRIPTION,
+  // A party game spreads through group chats, so the link preview is the first
+  // thing most people ever see of it.
+  openGraph: {
+    type: 'website',
+    siteName: TITLE,
+    title: TITLE,
+    description: DESCRIPTION,
+    url: SITE_URL,
+    locale: 'en_US',
+    images: [
+      {
+        url: '/og.png',
+        width: 1200,
+        height: 630,
+        alt: 'After Hours Party Game — a neon martini glass and wordmark glowing in violet and pink haze.',
+      },
+    ],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: TITLE,
+    description: DESCRIPTION,
+    images: ['/og.png'],
+  },
+  // Machine-readable adult labels. `rating` is what most parental-control
+  // filters and crawlers look for; the RTA string is the long-standing
+  // self-labelling standard those same filters recognise. Without them,
+  // filtering software has nothing to match on but the page text.
+  other: {
+    rating: 'adult',
+    'RATING': 'RTA-5042-1996-1400-1577-RTA',
+  },
+  // iOS ignores the manifest for home-screen icons and reads this instead. The
+  // file is full-bleed and opaque on the brand background, because iOS applies
+  // its own rounded mask and composites any transparency onto black.
+  icons: {
+    apple: [{ url: '/icons/apple-touch-icon.png', sizes: '180x180', type: 'image/png' }],
+  },
   appleWebApp: {
     capable: true,
     statusBarStyle: 'black-translucent',
@@ -54,8 +104,9 @@ export default function RootLayout({
         )}
         suppressHydrationWarning 
       >
+        <MonitoringInit />
         <Atmosphere />
-        {children}
+        <AgeGate>{children}</AgeGate>
         <Toaster />
       </body>
     </html>

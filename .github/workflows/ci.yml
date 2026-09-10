@@ -19,16 +19,31 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      # Fails the build on a high advisory. The tree is clean at every level
+      # today; `high` leaves a little room for a moderate advisory to land in a
+      # transitive dependency without blocking a release, and Dependabot files
+      # the upgrade either way.
+      - name: Audit dependencies
+        run: npm audit --audit-level=high
+
       - name: Typecheck
         run: npm run typecheck
 
       - name: Lint
         run: npm run lint
 
+      # The fast half of the suite: pure logic over the deck, the roster
+      # normaliser, the saved-game validator and the prompt renderer. Under a
+      # second, so it gates every push. The browser suite (`npm run test:e2e`)
+      # is deliberately not here — it needs a build and a browser, and it is
+      # meant to be run against structural changes rather than every commit.
+      - name: Test
+        run: npm test
+
       - name: Build
         run: npm run build
 
-      - name: Standalone build is in sync with the deck
+      - name: Deck export is in sync with the deck
         run: |
-          npm run build:html
-          git diff --exit-code -- game.html docs/prompts.csv
+          npm run export:deck
+          git diff --exit-code -- docs/prompts.csv

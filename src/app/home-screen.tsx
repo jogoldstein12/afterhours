@@ -1,29 +1,45 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Header } from '@/components/shared/Header';
-import { Users, ShieldAlert, Flame, Plus, X } from 'lucide-react';
+import { Users, ShieldAlert, Flame, Plus, X, PlayCircle } from 'lucide-react';
 import { GAME_MODES, type GameMode } from '@/lib/prompts';
 import { useToast } from '@/hooks/use-toast';
-import { cn, playersToQuery, playersFromQuery, playerColor } from '@/lib/utils';
+import { cn, playerColor, rosterFromQuery } from '@/lib/utils';
+import {
+  MAX_NAME_LENGTH,
+  MAX_PLAYERS,
+  MIN_PLAYERS,
+  hasName,
+  normalisePlayerName,
+  normaliseRoster,
+} from '@/lib/roster';
+import {
+  clearGame,
+  clearLastSetup,
+  isGameMode,
+  isResumable,
+  readGame,
+  readLastSetup,
+  writeGame,
+  writeLastSetup,
+  type StoredGame,
+} from '@/lib/session';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-
-const MIN_PLAYERS = 2;
-const MAX_PLAYERS = 10;
-const LAST_SETUP_KEY = 'afterhours.lastSetup';
+import { LegalFooter } from '@/components/shared/LegalFooter';
 
 // Selected pill lights up in each mode's own color instead of always violet, so
 // the choice previews the intensity you are about to play.
 const MODE_SELECTED: Record<GameMode, string> = {
-  Mild: 'bg-primary text-white shadow-[0_0_12px_hsl(var(--primary)/0.6)]',
-  Medium: 'bg-secondary text-white shadow-[0_0_12px_hsl(var(--secondary)/0.6)]',
-  Extreme: 'bg-destructive text-white shadow-[0_0_12px_hsl(var(--destructive)/0.6)]',
-  NHIE: 'bg-[hsl(var(--chart-3))] text-black shadow-[0_0_12px_hsl(var(--chart-3)/0.6)]',
+  Mild: 'bg-primary text-primary-foreground shadow-[0_0_12px_hsl(var(--primary)/0.6)]',
+  Medium: 'bg-secondary text-secondary-foreground shadow-[0_0_12px_hsl(var(--secondary)/0.6)]',
+  Extreme: 'bg-destructive text-destructive-foreground shadow-[0_0_12px_hsl(var(--destructive)/0.6)]',
+  NHIE: 'bg-[hsl(var(--chart-3))] text-background shadow-[0_0_12px_hsl(var(--chart-3)/0.6)]',
 };
 const MODE_ACCENT_TEXT: Record<GameMode, string> = {
   Mild: 'text-primary',
@@ -38,43 +54,59 @@ export function HomeScreen() {
   const [players, setPlayers] = useState<string[]>([]);
   const [draft, setDraft] = useState('');
   const [nsfwLevel, setNsfwLevel] = useState<GameMode>('Mild');
+  // A game left in progress on this device, offered back rather than resumed
+  // silently — arriving at setup is usually a deliberate "start something new".
+  const [resumable, setResumable] = useState<StoredGame | null>(null);
   const router = useRouter();
-  const searchParams = useSearchParams();
   const { toast } = useToast();
 
-  // "New Game" from the game screen hands the current roster and level back,
-  // so a group can start a fresh deck without retyping every name.
+  // Rosters used to travel between the two screens in the query string. They
+  // travel in `localStorage` now, but a link from before the change still has
+  // to work, so the query is read once and then scrubbed out of the address bar.
+  //
+  // The read happens here rather than through `useSearchParams`, which opts the
+  // whole route out of static prerendering and left `/` shipping an empty body
+  // to crawlers. Nothing needs the value at render time.
   useEffect(() => {
-    const names = playersFromQuery(searchParams);
-    const nsfwLevelQuery = searchParams.get('nsfwLevel');
-    if (names.length >= MIN_PLAYERS) {
-      setPlayers(names.slice(0, MAX_PLAYERS));
+    const query = new URLSearchParams(window.location.search);
+    const fromQuery = normaliseRoster(rosterFromQuery(query));
+    const levelFromQuery = query.get('nsfwLevel');
+    if (query.toString()) {
+      window.history.replaceState(null, '', window.location.pathname);
+    }
+
+    if (fromQuery.length >= MIN_PLAYERS) {
+      setPlayers(fromQuery);
     } else {
-      // No roster handed over — offer the last group that played on this device.
-      try {
-        const saved = JSON.parse(localStorage.getItem(LAST_SETUP_KEY) ?? 'null');
-        if (saved && Array.isArray(saved.players) && saved.players.length >= MIN_PLAYERS) {
-          setPlayers(saved.players.slice(0, MAX_PLAYERS).map((name: unknown) => String(name)));
-          if (!nsfwLevelQuery && GAME_MODES.some((m) => m.id === saved.nsfwLevel)) {
-            setNsfwLevel(saved.nsfwLevel as GameMode);
-          }
-        }
-      } catch {
-        // Storage unavailable or corrupted — start from a blank setup.
+      const saved = readLastSetup();
+      if (saved) {
+        setPlayers(saved.players);
+        if (!levelFromQuery) setNsfwLevel(saved.nsfwLevel);
       }
     }
-    if (nsfwLevelQuery && GAME_MODES.some((m) => m.id === nsfwLevelQuery)) {
-      setNsfwLevel(nsfwLevelQuery as GameMode);
-    }
-  }, [searchParams]);
+    if (isGameMode(levelFromQuery)) setNsfwLevel(levelFromQuery);
+
+    const inProgress = readGame();
+    if (isResumable(inProgress)) setResumable(inProgress);
+  }, []);
 
   const addPlayer = () => {
-    const name = draft.trim();
+    const name = normalisePlayerName(draft);
     if (!name) return;
     if (players.length >= MAX_PLAYERS) {
       toast({
         title: 'Max players reached',
         description: `You can add up to ${MAX_PLAYERS} players.`,
+        variant: 'destructive',
+      });
+      return;
+    }
+    // The turn tally is keyed by name, so two people entered as "Sam" would
+    // share one count and one identity on the cards. Ask for a distinct name.
+    if (hasName(players, name)) {
+      toast({
+        title: `${name} is already in`,
+        description: 'Give the second one a different name — a last initial does it.',
         variant: 'destructive',
       });
       return;
@@ -92,7 +124,7 @@ export function HomeScreen() {
   const clearAll = () => {
     setPlayers([]);
     setDraft('');
-    try { localStorage.removeItem(LAST_SETUP_KEY); } catch { /* storage unavailable */ }
+    clearLastSetup();
   };
 
   const canStart = players.length >= MIN_PLAYERS;
@@ -100,20 +132,73 @@ export function HomeScreen() {
 
   const startGame = () => {
     if (players.length < MIN_PLAYERS) return;
-    try {
-      localStorage.setItem(LAST_SETUP_KEY, JSON.stringify({ players, nsfwLevel }));
-    } catch {
-      // Best-effort convenience only.
-    }
-    router.push(`/game?${playersToQuery(players, nsfwLevel)}`);
+    writeLastSetup({ players, nsfwLevel });
+    // The play screen reads its whole world out of this record, so a new game
+    // starts by writing an empty one. It also replaces whatever was in
+    // progress, which is what pressing Start means.
+    writeGame({
+      players,
+      nsfwLevel,
+      currentPlayerIndex: 0,
+      currentPromptId: null,
+      processedPromptText: '',
+      usedPromptIds: [],
+      upcomingTurns: [],
+      turnsByName: {},
+      history: [],
+      gameEnded: false,
+    });
+    router.push('/game');
+  };
+
+  const discardResumable = () => {
+    clearGame();
+    setResumable(null);
   };
 
   const activeMode = GAME_MODES.find((m) => m.id === nsfwLevel);
+  const resumableMode = resumable ? GAME_MODES.find((m) => m.id === resumable.nsfwLevel) : null;
 
   return (
     <div className="flex flex-col min-h-[100dvh] text-foreground touch-manipulation">
       <Header />
-      <main className="flex-grow flex items-start sm:items-center justify-center p-4 pb-32">
+      <main className="flex-grow flex flex-col items-center justify-start sm:justify-center gap-6 p-4">
+        {resumable && (
+          <section
+            aria-label="Game in progress"
+            className="w-full max-w-md rounded-2xl border border-accent/40 bg-accent/[0.08] p-4 backdrop-blur-md"
+          >
+            <div className="flex items-center gap-3">
+              <PlayCircle className="h-6 w-6 shrink-0 text-accent" />
+              <div className="min-w-0">
+                <p className="font-headline text-base font-bold text-white">Game in progress</p>
+                <p className="truncate text-xs text-muted-foreground">
+                  {resumable.players.length} players · {resumableMode?.label ?? resumable.nsfwLevel} ·{' '}
+                  {resumable.usedPromptIds.length} cards in
+                </p>
+              </div>
+            </div>
+            <div className="mt-3 flex gap-2">
+              {/* Tinted rather than filled: white on a solid accent is only
+                  3.2:1, and a second loud button would compete with Start.
+                  Accent on a 12% accent tint is 4.96:1. */}
+              <Button
+                onClick={() => router.push('/game')}
+                className="h-11 flex-grow border border-accent/40 bg-accent/[0.12] text-accent hover:bg-accent/20 hover:text-accent font-bold touch-manipulation"
+              >
+                Resume
+              </Button>
+              <Button
+                onClick={discardResumable}
+                variant="ghost"
+                className="h-11 shrink-0 border border-white/10 text-muted-foreground hover:bg-white/5 hover:text-white touch-manipulation"
+              >
+                Discard
+              </Button>
+            </div>
+          </section>
+        )}
+
         <Card className="w-full max-w-md shadow-2xl neon-border-primary bg-card/70 backdrop-blur-md">
           <CardHeader className="text-center">
             <Users className="mx-auto h-11 w-11 text-primary mb-1" />
@@ -134,7 +219,7 @@ export function HomeScreen() {
                     <button
                       type="button"
                       onClick={clearAll}
-                      className="rounded-md px-1.5 py-0.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground transition-colors hover:text-destructive focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring touch-manipulation"
+                      className="rounded-md px-1.5 py-0.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground transition-colors hover:text-[hsl(var(--destructive-bright))] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring touch-manipulation"
                     >
                       Clear
                     </button>
@@ -151,6 +236,7 @@ export function HomeScreen() {
                   onChange={(e) => setDraft(e.target.value)}
                   onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addPlayer(); } }}
                   disabled={players.length >= MAX_PLAYERS}
+                  maxLength={MAX_NAME_LENGTH}
                   className="h-11 bg-input border-border focus:neon-border-accent text-foreground placeholder:text-muted-foreground disabled:opacity-60"
                   aria-label="Add a player"
                   autoComplete="off"
@@ -228,7 +314,7 @@ export function HomeScreen() {
                     {[1, 2, 3, 4].map((pip) => (
                       <Flame
                         key={pip}
-                        className={cn("h-3.5 w-3.5", pip <= activeMode.spice ? MODE_ACCENT_TEXT[nsfwLevel] : 'text-white/15')}
+                        className={cn("h-3.5 w-3.5", pip <= activeMode.spice ? MODE_ACCENT_TEXT[nsfwLevel] : 'text-white/40')}
                         fill={pip <= activeMode.spice ? 'currentColor' : 'none'}
                       />
                     ))}
@@ -238,22 +324,24 @@ export function HomeScreen() {
             </div>
           </CardContent>
         </Card>
-      </main>
 
-      {/* Sticky Start bar — always reachable, even with a full 10-player roster. */}
-      <div className="fixed inset-x-0 bottom-0 z-20 border-t border-white/10 bg-background/80 backdrop-blur-md px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
-        <div className="mx-auto w-full max-w-md">
+        <div className="w-full max-w-md">
           <Button
             onClick={startGame}
             disabled={!canStart}
-            className="w-full h-14 rounded-2xl bg-primary hover:bg-primary/90 text-primary-foreground text-lg font-bold neon-border-primary transition-transform active:scale-[0.98] disabled:opacity-50 disabled:neon-border-primary disabled:active:scale-100 touch-manipulation"
+            className="w-full h-14 rounded-2xl bg-primary hover:bg-primary/90 text-primary-foreground text-lg font-bold neon-border-primary transition-transform active:scale-[0.98] disabled:bg-white/[0.06] disabled:text-white/70 disabled:neon-border-primary disabled:active:scale-100 touch-manipulation"
           >
             {canStart
               ? `Start with ${players.length} ${players.length === 1 ? 'player' : 'players'}`
               : `Add ${needed} more ${needed === 1 ? 'player' : 'players'}`}
           </Button>
         </div>
-      </div>
+      </main>
+
+      {/* Outside <main>, so the growing main column pushes it to the foot of
+          the page on a short roster and it simply follows the content on a
+          long one. */}
+      <LegalFooter className="px-4 pt-2 pb-[max(1rem,env(safe-area-inset-bottom))]" />
     </div>
   );
 }

@@ -182,7 +182,10 @@ function useToast() {
         listeners.splice(index, 1)
       }
     }
-  }, [state])
+    // `setState` is stable, so the listener only ever needs subscribing once.
+    // Upstream shadcn ships `[state]` here, which tears the listener down and
+    // rebuilds it on every toast state change.
+  }, [])
 
   return {
     ...state,

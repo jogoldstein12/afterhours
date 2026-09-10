@@ -2,6 +2,56 @@
 # https://firebase.google.com/docs/app-hosting/configure
 
 runConfig:
-  # Increase this value if you'd like to automatically spin up
-  # more instances in response to increased traffic.
-  maxInstances: 1
+  # Every route is statically prerendered, so the CDN absorbs most traffic —
+  # but cache misses, cold paths, and the first request of any quiet period
+  # still land on the container. One instance made that a hard ceiling for the
+  # whole site; 10 gives real headroom for a launch or a link that spreads.
+  minInstances: 0
+  maxInstances: 10
+  # Static responses are cheap to serve, so keep instances small and let a
+  # single one handle plenty of simultaneous requests before another spins up.
+  cpu: 1
+  memoryMiB: 512
+  concurrency: 80
+
+env:
+  # Canonical origin for absolute OG/Twitter card URLs. Set this if the domain
+  # ever differs from the default in src/app/layout.tsx.
+  - variable: NEXT_PUBLIC_SITE_URL
+    value: 'https://afterhoursgame.com'
+    availability:
+      - BUILD
+      - RUNTIME
+
+  # Client-side error reporting. Leave unset to keep monitoring off; set it to a
+  # Sentry DSN (as a plain, public value — the DSN is not a secret) to turn it
+  # on. See src/lib/monitoring.ts.
+  - variable: NEXT_PUBLIC_SENTRY_DSN
+    value: 'https://67b132cab3cfac7a94a52435d3af3544@o4511741932142592.ingest.us.sentry.io/4512063479480320'
+    availability:
+      - BUILD
+      - RUNTIME
+
+  # Source map upload, so a stack trace resolves to real files instead of
+  # `chunk-4bd1b696.js:1:48213`. All three have to be present or next.config.ts
+  # skips the upload entirely and builds exactly as it did before. Neither slug
+  # is a secret; both are visible in any Sentry URL for this project.
+  - variable: SENTRY_ORG
+    value: 'green-sea-rep'
+    availability:
+      - BUILD
+
+  - variable: SENTRY_PROJECT
+    value: 'afterhours'
+    availability:
+      - BUILD
+
+  # Unlike the DSN, this one IS a secret: it can write to your Sentry org.
+  # It lives in Secret Manager, never as a plain value here, and is never
+  # exposed to the running container.
+  #   firebase apphosting:secrets:set sentryAuthToken
+  #   firebase apphosting:secrets:grantaccess sentryAuthToken --backend <backend-id>
+  - variable: SENTRY_AUTH_TOKEN
+    secret: sentryAuthToken
+    availability:
+      - BUILD
