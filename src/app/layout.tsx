@@ -63,6 +63,12 @@ export const metadata: Metadata = {
     rating: 'adult',
     'RATING': 'RTA-5042-1996-1400-1577-RTA',
   },
+  // iOS ignores the manifest for home-screen icons and reads this instead. The
+  // file is full-bleed and opaque on the brand background, because iOS applies
+  // its own rounded mask and composites any transparency onto black.
+  icons: {
+    apple: [{ url: '/icons/apple-touch-icon.png', sizes: '180x180', type: 'image/png' }],
+  },
   appleWebApp: {
     capable: true,
     statusBarStyle: 'black-translucent',

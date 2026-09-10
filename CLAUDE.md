@@ -11,6 +11,7 @@ npm run build       # production build
 npm run typecheck   # tsc --noEmit
 npm run lint        # eslint
 npm run export:deck # regenerate docs/prompts.csv from src/lib/prompts.ts
+npm run build:icons # regenerate every app icon from assets/afterhours-icon.png
 ```
 
 `npm run dev` and `npm run build` share `.next/`, so do not run a build while a
@@ -36,6 +37,16 @@ server starts 404ing until it is restarted.
 - **Sentry is behind a dynamic import** in `src/lib/monitoring.ts` and only
   loads when `NEXT_PUBLIC_SENTRY_DSN` is set. `beforeSend` strips everything
   after `?` or `#` from URLs, because that is where the player names are.
+
+## Icons
+
+`assets/afterhours-icon.png` is the source art and is deliberately *not* in
+`public/` — nothing should serve the 1.4MB original. `npm run build:icons`
+derives everything from it: the PWA icons, an Android maskable variant, the
+apple-touch icon, and `src/app/favicon.ico`. The reasoning behind each crop is
+in `tools/build-icons.js`; the short version is that iOS masks and flattens on
+its own, Android crops to a circle, and the wordmark is unreadable below about
+64px so the favicon uses the glass alone.
 
 ## Deck conventions (`src/lib/prompts.ts`)
 

@@ -2,7 +2,7 @@
   "name": "afterhours",
   "version": "0.1.0",
   "private": true,
-  "description": "After Hours \u2014 an explicit pass-the-phone party game for adults.",
+  "description": "After Hours — an explicit pass-the-phone party game for adults.",
   "license": "UNLICENSED",
   "author": "After Hours Party Game, LLC",
   "repository": {
@@ -16,6 +16,7 @@
     "dev": "next dev --turbopack -p 9002",
     "build": "next build",
     "export:deck": "node tools/export-prompts-csv.js",
+    "build:icons": "node tools/build-icons.js",
     "start": "next start",
     "lint": "next lint",
     "typecheck": "tsc --noEmit"
@@ -45,6 +46,7 @@
     "eslint": "^8.57.1",
     "eslint-config-next": "15.5.25",
     "postcss": "^8.5.23",
+    "sharp": "^0.35.4",
     "tailwindcss": "^3.4.1",
     "typescript": "^5"
   },
