@@ -15,6 +15,14 @@ runConfig:
   concurrency: 80
 
 env:
+  # Canonical origin for absolute OG/Twitter card URLs. Set this if the domain
+  # ever differs from the default in src/app/layout.tsx.
+  - variable: NEXT_PUBLIC_SITE_URL
+    value: 'https://afterhoursgame.com'
+    availability:
+      - BUILD
+      - RUNTIME
+
   # Client-side error reporting. Leave unset to keep monitoring off; set it to a
   # Sentry DSN (as a plain, public value — the DSN is not a secret) to turn it
   # on. See src/lib/monitoring.ts.
