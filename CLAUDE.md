@@ -59,6 +59,12 @@ that looks like the obvious match and is not. Nothing deploys from it. The
 backend id is confirmable without guessing — the live response carries
 `cache-tag: <project number>:<backend>`.
 
+The backend builds from `main` and redeploys itself when a pull request merges,
+so a merge is a release. `x-fah-adapter` in the response is **not** the Next.js
+version — it is Firebase's `@apphosting/adapter-nextjs` package, and it reads
+`nextjs-14.0.21` on a Next 15 build. To tell a deploy apart, look at a response
+header the app itself sets (`content-security-policy`) or at `/robots.txt`.
+
 `apphosting.yaml` is read by that backend at build time and by nothing else, so
 a variable added there does nothing until the backend redeploys. Secrets it
 references (`SENTRY_AUTH_TOKEN`) must exist in the same project and be granted
