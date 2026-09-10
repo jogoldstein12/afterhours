@@ -10,24 +10,12 @@ npm run dev         # dev server on :9002
 npm run build       # production build
 npm run typecheck   # tsc --noEmit
 npm run lint        # eslint
-npm run build:html  # regenerate game.html from src/lib/prompts.ts
+npm run export:deck # regenerate docs/prompts.csv from src/lib/prompts.ts
 ```
 
 `npm run dev` and `npm run build` share `.next/`, so do not run a build while a
 dev server is up — the build pulls the manifests out from under it and the dev
 server starts 404ing until it is restarted.
-
-## Two engines, kept in sync by hand
-
-The game exists twice:
-
-- `src/` — the Next.js app. This is the product.
-- `game.html` — the whole game in one file, offline, no dependencies. Generated
-  by `npm run build:html` from `tools/standalone-template.html` + the deck.
-
-CI checks that the deck baked into `game.html` matches `src/lib/prompts.ts`, so
-**any deck edit must be followed by `npm run build:html`**. CI cannot check that
-the two engines *behave* the same — a gameplay change has to be made in both.
 
 ## Things that will bite you
 
@@ -51,8 +39,10 @@ the two engines *behave* the same — a gameplay change has to be made in both.
 
 ## Deck conventions (`src/lib/prompts.ts`)
 
-- Prompts have a stable numeric `id`. **Never renumber**; `game.html` and any
-  saved state key off these.
+- Prompts have a stable numeric `id`. **Never renumber**; saved state and the
+  CSV export key off these.
+- `docs/prompts.csv` is a generated view of the deck and CI fails if it drifts,
+  so run `npm run export:deck` after any deck edit.
 - `{{randomOtherPlayer}}` is substituted at draw time.
 - Anything directing physical contact should offer a way out — the house
   pattern is `— or take 3 drinks` for a solo dare, and explicit two-way

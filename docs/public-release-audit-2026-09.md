@@ -130,7 +130,7 @@ Missing entirely: Terms of Service, Privacy Policy, `LICENSE` file, content disc
 Specific exposure:
 - **33 prompts** instruct a player to *finish* or *down* a drink. There is no "never drink if you're driving / pregnant / underage / don't want to" copy anywhere.
 - The app stores player names in `localStorage` and passes them in the URL query string. That is personal data under GDPR/CCPA, however trivially. With no privacy policy there is nothing disclosing it.
-- `game.html` loads Google Fonts from `fonts.googleapis.com`, which transmits visitor IPs to a third party — a known GDPR sore point in the EU. (The Next app is fine: `next/font` self-hosts.)
+- ~~`game.html` loads Google Fonts from `fonts.googleapis.com`, which transmits visitor IPs to a third party — a known GDPR sore point in the EU.~~ ✅ Moot since Sept 10 2026: `game.html` is deleted (§2.5). The Next app was always fine — `next/font` self-hosts.
 - No `LICENSE` means the repository is legally "all rights reserved" by default, which may or may not be what you want, but should be a decision.
 
 None of this requires a lawyer to *start* — it requires the pages to exist and be linked from the footer before launch.
@@ -270,7 +270,7 @@ Nothing is instrumented. If the app throws for a class of device tonight, you wi
 
 Minimum before launch: a client error reporter (Sentry or equivalent — a static app needs only the browser SDK), uptime monitoring, and privacy-respecting analytics. Given §0.3, prefer a cookieless analytics tool so this does not itself become a consent-banner problem.
 
-### 2.5 🟡 The two engines have drifted again
+### 2.5 ✅ The two engines have drifted again — *resolved by removal, Sept 10 2026*
 
 The Aug audit reconciled the Next app and `game.html` behaviourally, and CI enforces that `game.html` regenerates from the deck. But the R2–R6 redesign shipped to the Next app only. Current parity:
 
@@ -308,6 +308,15 @@ Separately: the repository is **public**. `game.html` is therefore a complete,
 free, permanently playable copy of the product — deck included — available to
 anyone who finds the repo, as is `docs/prompts.csv`. That is a distribution
 decision, not a build artifact.
+
+**Resolved, September 10 2026.** `game.html` and `tools/standalone-template.html`
+are deleted, along with the `build:html` script and the CI gate on them. There
+is now one engine. `docs/prompts.csv` is kept — it is the practical surface for
+reviewing 874 prompts and it costs nothing but a one-line CI check — and
+`tools/export-prompts-csv.js` generates only that. The Privacy Policy paragraph
+about the offline build is gone with the build it described. Offline play, which
+no visitor could reach, is deliberately not replaced; if it becomes a real
+requirement it should be a maintained PWA, not a hand-synced second engine.
 
 ### 2.6 🟡 Dead configuration that adds attack surface
 
@@ -408,8 +417,7 @@ using what the measurement shows.
 15. Add privacy-respecting analytics (§2.4) — the input to Phase 4
 16. Persist and resume mid-game state (§1.3)
 17. Rebalance Mild and clarify the NHIE intensity signal (§1.6)
-18. Decide what `game.html` is (§2.5) — see the note below; this is now a
-    distribution question, not only an engineering one
+18. ✅ Decided and removed (§2.5) — one engine, September 10 2026
 
 ---
 
@@ -421,11 +429,11 @@ using what the measurement shows.
 22. Move age gating server-side (§0.2), which the backend in 21 makes possible for the first time
 
 **Prerequisite that is not code.** The repository is public and licensed
-all-rights-reserved. Today that means the full deck (`src/lib/prompts.ts`,
-`docs/prompts.csv`) and a complete, playable single-file build of the game
-(`game.html`) can be downloaded by anyone. A licence is a legal deterrent, not
-a technical one. Before charging for this content, decide whether the
-repository stays public — that decision belongs at the top of Phase 4, ahead
+all-rights-reserved, so the full deck — `src/lib/prompts.ts` and its CSV export
+— can be read and copied by anyone who finds it. Deleting `game.html` removed
+the ready-to-play copy, but not the content itself. A licence is a legal
+deterrent, not a technical one. Before charging for this deck, decide whether
+the repository stays public; that decision belongs at the top of Phase 4, ahead
 of any code in it.
 
 ---

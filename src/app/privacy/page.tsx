@@ -85,13 +85,6 @@ export default function PrivacyPage() {
         confirmation of that in writing, or have any other request, contact us.
       </p>
 
-      <h2>Offline version</h2>
-      <p>
-        The standalone <code>game.html</code> build runs entirely in your browser
-        with no network connection required. It requests a font stylesheet from
-        Google Fonts when online, which discloses your IP address to Google; it
-        falls back to your system fonts offline and works exactly the same.
-      </p>
 
       <h2>Changes</h2>
       <p>

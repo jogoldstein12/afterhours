@@ -35,7 +35,7 @@ jobs:
       - name: Build
         run: npm run build
 
-      - name: Standalone build is in sync with the deck
+      - name: Deck export is in sync with the deck
         run: |
-          npm run build:html
-          git diff --exit-code -- game.html docs/prompts.csv
+          npm run export:deck
+          git diff --exit-code -- docs/prompts.csv
