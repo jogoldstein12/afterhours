@@ -1,8 +1,9 @@
 # After Hours is an adults-only party game. The landing page is indexable so the
 # product can be found; the play surface, which renders explicit prompts and is
 # meaningless without the game state held on the device, is not.
+#
+# One line is load-bearing. There is no blanket `Disallow: /`, so every path not
+# matched below is crawlable already — an `Allow:` here would carve an exception
+# out of a restriction that does not exist, and change nothing.
 User-agent: *
-Allow: /$
-Allow: /terms
-Allow: /privacy
 Disallow: /game

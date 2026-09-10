@@ -37,7 +37,7 @@ document.
 | Content safety | C− | A− | Skip is back, every prompt carries an out, and the opt-out ladder is graded by what the card asks. |
 | Infrastructure | D+ | C | `maxInstances: 10`, cpu/memory/concurrency set; Sentry has a real DSN and uploads source maps. But **the backend has never built any of it** (§0.6), the auth token is not yet in the right project's Secret Manager, and there is still no analytics, no uptime check, no staging. |
 | Architecture (for monetisation) | D | D | Unchanged by design — the whole of it is Phase 4. |
-| Code correctness | B− | A− | Both bugs fixed; 78 unit cases gate every push and 73 browser checks cover a full night of play. |
+| Code correctness | B− | A− | Both bugs fixed; 78 unit cases gate every push and 74 browser checks cover a full night of play. |
 | Design / UX | B+ | A− | Error states, share metadata and contrast all landed. The Mild deck is still thin and the NHIE intensity signal still misleads (§1.6). |
 | Repo hygiene | C+ | A− | Licence, metadata, `CLAUDE.md`, one engine, a live test suite. Whether the repo stays public is a Phase 4 decision. |
 
@@ -362,7 +362,7 @@ invariants — unique ids, no duplicate card, one placeholder token, every NHIE
 card room-scoped, every opt-out on one of the four rungs. The deck checks are
 structural rather than counted, so an ordinary deck edit does not fail them.
 
-`npm run test:e2e` — 73 browser checks over a production build: a full night of
+`npm run test:e2e` — 74 browser checks over a production build: a full night of
 play, the saved game and every hostile record, the legacy URL path, and WCAG AA
 contrast on every screen in every mode. Deliberately not in CI and Playwright
 deliberately not a dependency; it is for structural changes, not every commit.
