@@ -384,7 +384,7 @@ export const PROMPTS: Prompt[] = [
   { id: 368, text: "Let {{randomOtherPlayer}} demonstrate on you how they like to be touched — or take a drink.", nsfwLevel: 'Extreme' },
 
   // --- Extreme: Body Shots & Food Play ---
-  { id: 370, text: "Take a body shot off {{randomOtherPlayer}} — or take 3 drinks yourself.", nsfwLevel: 'Extreme' },
+  { id: 370, text: "Take a body shot off {{randomOtherPlayer}} — or take a shot yourself.", nsfwLevel: 'Extreme' },
   { id: 371, text: "Pour a shot into {{randomOtherPlayer}}'s belly button and drink it.", nsfwLevel: 'Extreme' },
   { id: 372, text: "Take a shot off {{randomOtherPlayer}}'s body — you pick the spot.", nsfwLevel: 'Extreme' },
   { id: 373, text: "Let {{randomOtherPlayer}} take a shot off your body — they pick the spot.", nsfwLevel: 'Extreme' },
@@ -920,7 +920,7 @@ export const PROMPTS: Prompt[] = [
   { id: 1021, text: "Kiss {{randomOtherPlayer}} the way you'd kiss someone you were about to take home — or take 2 drinks.", nsfwLevel: 'Extreme' },
   { id: 1022, text: "Bite {{randomOtherPlayer}} anywhere they offer — or take 2 drinks.", nsfwLevel: 'Extreme' },
   { id: 1023, text: "Trace one finger from {{randomOtherPlayer}}'s throat down to their waistband — or take 2 drinks.", nsfwLevel: 'Extreme' },
-  { id: 1024, text: "Take a body shot off {{randomOtherPlayer}} — they pick the spot — or take 3 drinks.", nsfwLevel: 'Extreme' },
+  { id: 1024, text: "Take a body shot off {{randomOtherPlayer}} — they pick the spot — or take a shot.", nsfwLevel: 'Extreme' },
   { id: 1026, text: "Let {{randomOtherPlayer}} pin your wrists and get as close as they want without touching you — or take a drink.", nsfwLevel: 'Extreme' },
   { id: 1027, text: "Moan into {{randomOtherPlayer}}'s ear like you mean it — or take a drink.", nsfwLevel: 'Extreme' },
   { id: 1028, text: "Remove one layer from {{randomOtherPlayer}} using only your teeth — or take a drink.", nsfwLevel: 'Extreme' },

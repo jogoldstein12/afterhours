@@ -65,7 +65,8 @@ its own, Android crops to a circle, and the wordmark is unreadable below about
   `— or take 2 drinks` for physical contact, `— or take 3 drinks` for oral or
   clothing-removal play, and `— or take a shot` at the top for nudity,
   genital or underwear contact, a simulated or real sex act, and sustained
-  mouth-to-mouth.
+  mouth-to-mouth. The two body-shot cards (370, 1024) sit on the shot rung
+  against that rule, because "or take a shot yourself" is the joke.
 - Prompts that ask you to drink a counted amount for something you have done
   are deliberately uncapped — the number is the punchline.
 - Anything directing physical contact should offer a way out — the house
