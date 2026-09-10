@@ -1,6 +1,6 @@
 # After Hours is an adults-only party game. The landing page is indexable so the
-# product can be found; the play surface, which renders explicit prompts and
-# carries player names in its query string, is not.
+# product can be found; the play surface, which renders explicit prompts and is
+# meaningless without the game state held on the device, is not.
 User-agent: *
 Allow: /$
 Allow: /terms

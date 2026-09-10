@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useState, useCallback, useRef, Suspense, type PointerEvent as ReactPointerEvent, type CSSProperties } from 'react';
-import { useSearchParams, useRouter } from 'next/navigation';
+import { useEffect, useState, useCallback, useRef, type PointerEvent as ReactPointerEvent, type CSSProperties } from 'react';
+import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import {
@@ -48,11 +48,19 @@ import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { cn, playersToQuery, playersFromQuery, playerColor } from '@/lib/utils';
+import { cn, playerColor, rosterFromQuery } from '@/lib/utils';
+import { MAX_NAME_LENGTH, MAX_PLAYERS, MIN_PLAYERS, hasName, normalisePlayerName, normaliseRoster } from '@/lib/roster';
+import {
+  HISTORY_LIMIT,
+  clearGame,
+  isGameMode,
+  readGame,
+  writeGame,
+  writeLastSetup,
+  type StoredGame,
+} from '@/lib/session';
 import { Separator } from '@/components/ui/separator';
 
-const MIN_PLAYERS = 2;
-const MAX_PLAYERS = 10;
 // Swipe left deals the next card, swipe right steps back (undo). A gesture
 // commits if it either travels past SWIPE_THRESHOLD or is a quick flick past
 // FLICK_VELOCITY — so a short, fast flick works as well as a long drag.
@@ -158,11 +166,17 @@ type TurnSnapshot = {
   upcoming: number[];
   countedTurn: boolean;
 };
-const HISTORY_LIMIT = 20;
 
-function GamePageContent() {
+/**
+ * The deck for a mode. NHIE is not a tier — it draws its cards out of all three.
+ */
+const filterDeck = (mode: GameMode): Prompt[] =>
+  mode === 'NHIE' ? PROMPTS.filter(isNhiePrompt) : PROMPTS.filter((p) => p.nsfwLevel === mode);
+
+const promptById = new Map(PROMPTS.map((prompt) => [prompt.id, prompt]));
+
+export default function GamePage() {
   const router = useRouter();
-  const searchParams = useSearchParams();
   const { toast } = useToast();
 
   const [players, setPlayers] = useState<string[]>([]);
@@ -190,6 +204,10 @@ function GamePageContent() {
   // Set just before an undo restores a card, so the processing effect shows the
   // exact text that was on screen instead of re-randomizing {{randomOtherPlayer}}.
   const restoredTextRef = useRef<string | null>(null);
+  // The level the loaded deck belongs to. The deck only (re)loads when this
+  // changes, never on roster changes — adding or removing a player mid-game
+  // must not reset progress.
+  const deckLevelRef = useRef<GameMode | null>(null);
 
   // Swipe: the card tracks the finger and, past the threshold or on a flick,
   // flies off — left to deal the next card, right to step back. The transform
@@ -228,18 +246,108 @@ function GamePageContent() {
     setTimerRunning(true);
   };
 
+  // The one entry point for a game's state. Setup writes a record and
+  // navigates to a bare `/game`; a refresh, a locked phone, or Resume from the
+  // home screen reads the same record back and puts the night where it was.
+  //
+  // A legacy play URL (`/game?player=...`) is honoured for exactly one read and
+  // then scrubbed out of the address bar, so a bookmark from before the roster
+  // moved into storage opens into a game instead of a dead end.
   useEffect(() => {
-    const names = playersFromQuery(searchParams);
-    const nsfwLevelQuery = searchParams.get('nsfwLevel') as GameMode;
+    const query = new URLSearchParams(window.location.search);
+    const fromQuery = normaliseRoster(rosterFromQuery(query));
+    if (query.toString()) window.history.replaceState(null, '', window.location.pathname);
 
-    if (names.length > 0) {
-      setPlayers(names);
+    if (fromQuery.length >= MIN_PLAYERS) {
+      const levelFromQuery = query.get('nsfwLevel');
+      const level = isGameMode(levelFromQuery) ? levelFromQuery : 'Mild';
+      setPlayers(fromQuery);
+      setNsfwLevel(level);
+      writeLastSetup({ players: fromQuery, nsfwLevel: level });
+      setRosterChecked(true);
+      return;
     }
-    if (nsfwLevelQuery && GAME_MODES.some((m) => m.id === nsfwLevelQuery)) {
-      setNsfwLevel(nsfwLevelQuery);
+
+    const saved = readGame();
+    if (!saved) {
+      setRosterChecked(true);
+      return;
+    }
+
+    setPlayers(saved.players);
+    setNsfwLevel(saved.nsfwLevel);
+    setCurrentPlayerIndex(saved.currentPlayerIndex);
+
+    const card = saved.currentPromptId === null ? null : promptById.get(saved.currentPromptId) ?? null;
+    // A record written by Start carries a roster and nothing else; let the deck
+    // effect below deal it a first card the normal way. Anything further along
+    // is restored wholesale.
+    if (saved.usedPromptIds.length > 0 || card || saved.gameEnded) {
+      // Claim the level before the deck effect runs, so restoring does not read
+      // as a mid-game level change and wipe the progress just loaded.
+      deckLevelRef.current = saved.nsfwLevel;
+      setAvailablePrompts(filterDeck(saved.nsfwLevel));
+      setUsedPromptIds(new Set(saved.usedPromptIds));
+      setUpcomingTurns(saved.upcomingTurns);
+      setTurnsByName(saved.turnsByName);
+      // A card whose id has since left the deck is dropped from the undo stack.
+      setHistory(
+        saved.history.flatMap((turn) => {
+          const prompt = promptById.get(turn.promptId);
+          return prompt
+            ? [{ prompt, playerIndex: turn.playerIndex, text: turn.text, upcoming: turn.upcoming, countedTurn: turn.countedTurn }]
+            : [];
+        }),
+      );
+      setGameEnded(saved.gameEnded);
+      if (card) {
+        // Show the card exactly as it was read out, rather than re-rolling
+        // {{randomOtherPlayer}} under a group that is looking at it.
+        restoredTextRef.current = saved.processedPromptText || null;
+        setCurrentPrompt(card);
+      }
     }
     setRosterChecked(true);
-  }, [searchParams]);
+  }, []);
+
+  // Mirror the live game back to storage, so a refresh, a backgrounded tab, or
+  // the phone locking mid-round does not restart the night. Deliberately not
+  // driven by the countdown or the swipe transform — those change constantly
+  // and are not worth persisting.
+  useEffect(() => {
+    if (!rosterChecked || players.length === 0) return;
+    const record: StoredGame = {
+      players,
+      nsfwLevel,
+      currentPlayerIndex,
+      currentPromptId: currentPrompt?.id ?? null,
+      processedPromptText,
+      usedPromptIds: [...usedPromptIds],
+      upcomingTurns,
+      turnsByName,
+      history: history.map(({ prompt, playerIndex, text, upcoming, countedTurn }) => ({
+        promptId: prompt.id,
+        playerIndex,
+        text,
+        upcoming,
+        countedTurn,
+      })),
+      gameEnded,
+    };
+    writeGame(record);
+  }, [
+    rosterChecked,
+    players,
+    nsfwLevel,
+    currentPlayerIndex,
+    currentPrompt,
+    processedPromptText,
+    usedPromptIds,
+    upcomingTurns,
+    turnsByName,
+    history,
+    gameEnded,
+  ]);
 
   // Reaching /game without a roster — a bookmark, a shared link with the query
   // stripped, a crawler — used to hold "Charging Neon..." forever with no way
@@ -295,9 +403,7 @@ function GamePageContent() {
   }, []);
 
   const loadAndFilterPrompts = useCallback(() => {
-    const filtered = nsfwLevel === 'NHIE'
-      ? PROMPTS.filter(isNhiePrompt)
-      : PROMPTS.filter(p => p.nsfwLevel === nsfwLevel);
+    const filtered = filterDeck(nsfwLevel);
     setAvailablePrompts(filtered);
     setUsedPromptIds(new Set());
     setGameEnded(false);
@@ -323,15 +429,30 @@ function GamePageContent() {
     setNsfwLevel(newLevel);
   };
 
-  // The deck only (re)loads when the level changes, never on roster changes —
-  // adding or removing a player mid-game must not reset progress.
-  const deckLevelRef = useRef<GameMode | null>(null);
+  // "This crew" is the roster as it stands, which may have changed mid-game.
+  // Heading back to setup keeps the crew and ends the saved game — otherwise
+  // setup would offer to resume the night the group just walked away from.
+  const leaveToSetup = useCallback(() => {
+    writeLastSetup({ players, nsfwLevel });
+    clearGame();
+    router.push('/');
+  }, [players, nsfwLevel, router]);
+
   useEffect(() => {
     if (players.length === 0 || deckLevelRef.current === nsfwLevel) return;
     deckLevelRef.current = nsfwLevel;
     const newPrompts = loadAndFilterPrompts();
     selectNewPrompt(newPrompts, new Set());
   }, [nsfwLevel, players.length, loadAndFilterPrompts, selectNewPrompt]);
+
+  // A restored game can come back without a card: the saved id no longer
+  // resolves because the deck changed under it. The effect above has already
+  // claimed the level and will not deal one, so the group would be left staring
+  // at an empty card. Deal the next one instead of restarting the night.
+  useEffect(() => {
+    if (!rosterChecked || gameEnded || currentPrompt || availablePrompts.length === 0) return;
+    selectNewPrompt(availablePrompts, usedPromptIds);
+  }, [rosterChecked, gameEnded, currentPrompt, availablePrompts, usedPromptIds, selectNewPrompt]);
 
   useEffect(() => {
     if (restoredTextRef.current !== null) {
@@ -526,9 +647,14 @@ function GamePageContent() {
   };
 
   const handleAddPlayer = () => {
-    const name = newPlayerName.trim();
+    const name = normalisePlayerName(newPlayerName);
     if (!name) return toast({ title: 'Player name cannot be empty.', variant: 'destructive' });
     if (players.length >= MAX_PLAYERS) return toast({ title: `Limit: ${MAX_PLAYERS} players.`, variant: 'destructive' });
+    // The turn tally is keyed by name, so a second "Sam" would share one count
+    // and be indistinguishable on the cards.
+    if (hasName(players, name)) {
+      return toast({ title: `${name} is already in`, description: 'Give this one a different name.', variant: 'destructive' });
+    }
 
     setUpcomingTurns(prev => {
       const queue = [...prev];
@@ -584,7 +710,7 @@ function GamePageContent() {
         turnsByName={turnsByName}
         onRunItBack={restartGame}
         onTurnItUp={() => { const hotter = HOTTER_MODE[nsfwLevel]; if (hotter) setNsfwLevel(hotter); }}
-        onNewCrew={() => router.push(`/?${playersToQuery(players, nsfwLevel)}`)}
+        onNewCrew={leaveToSetup}
       />
     );
   }
@@ -609,7 +735,7 @@ function GamePageContent() {
               Restart Deck
             </AlertDialogAction>
             <AlertDialogAction
-              onClick={() => router.push(`/?${playersToQuery(players, nsfwLevel)}`)}
+              onClick={leaveToSetup}
               className="w-full bg-white/5 border border-white/15 text-white hover:bg-white/10 touch-manipulation"
             >
               Back to Setup
@@ -660,6 +786,7 @@ function GamePageContent() {
                     value={newPlayerName}
                     onChange={(e) => setNewPlayerName(e.target.value)}
                     placeholder="Add a player"
+                    maxLength={MAX_NAME_LENGTH}
                     onKeyDown={(e) => e.key === 'Enter' && handleAddPlayer()}
                     className="bg-white/5 h-11"
                     aria-label="New player name"
@@ -988,19 +1115,3 @@ function MartiniMark({ className }: { className?: string }) {
   );
 }
 
-export default function GamePage() {
-  return (
-    <Suspense
-      fallback={
-        <div className="flex min-h-[100dvh] items-center justify-center p-6">
-          <div className="flex flex-col items-center gap-4">
-            <MartiniMark className="h-14 w-14 animate-pulse" />
-            <p className="font-headline text-xl font-bold text-primary neon-text-primary animate-pulse">Charging Neon...</p>
-          </div>
-        </div>
-      }
-    >
-      <GamePageContent />
-    </Suspense>
-  );
-}

@@ -68,9 +68,9 @@ const nextConfig: NextConfig = {
     return [
       { source: '/:path*', headers: securityHeaders },
       {
-        // The play URL carries every player's name in its query string. Sending
-        // that to any other origin as a Referer would leak the roster, so this
-        // route sends no referrer at all.
+        // Rosters no longer travel in this URL, but legacy links still carry
+        // them and are honoured for one read. Sending one to another origin as
+        // a Referer would leak the roster, so this route sends no referrer.
         source: '/game',
         headers: [{ key: 'Referrer-Policy', value: 'no-referrer' }],
       },

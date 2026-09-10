@@ -7,16 +7,31 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Header } from '@/components/shared/Header';
-import { Users, ShieldAlert, Flame, Plus, X } from 'lucide-react';
+import { Users, ShieldAlert, Flame, Plus, X, PlayCircle } from 'lucide-react';
 import { GAME_MODES, type GameMode } from '@/lib/prompts';
 import { useToast } from '@/hooks/use-toast';
-import { cn, playersToQuery, playersFromQuery, playerColor } from '@/lib/utils';
+import { cn, playerColor, rosterFromQuery } from '@/lib/utils';
+import {
+  MAX_NAME_LENGTH,
+  MAX_PLAYERS,
+  MIN_PLAYERS,
+  hasName,
+  normalisePlayerName,
+  normaliseRoster,
+} from '@/lib/roster';
+import {
+  clearGame,
+  clearLastSetup,
+  isGameMode,
+  isResumable,
+  readGame,
+  readLastSetup,
+  writeGame,
+  writeLastSetup,
+  type StoredGame,
+} from '@/lib/session';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { LegalFooter } from '@/components/shared/LegalFooter';
-
-const MIN_PLAYERS = 2;
-const MAX_PLAYERS = 10;
-const LAST_SETUP_KEY = 'afterhours.lastSetup';
 
 // Selected pill lights up in each mode's own color instead of always violet, so
 // the choice previews the intensity you are about to play.
@@ -39,50 +54,59 @@ export function HomeScreen() {
   const [players, setPlayers] = useState<string[]>([]);
   const [draft, setDraft] = useState('');
   const [nsfwLevel, setNsfwLevel] = useState<GameMode>('Mild');
+  // A game left in progress on this device, offered back rather than resumed
+  // silently — arriving at setup is usually a deliberate "start something new".
+  const [resumable, setResumable] = useState<StoredGame | null>(null);
   const router = useRouter();
   const { toast } = useToast();
 
-  // "New Game" from the game screen hands the current roster and level back,
-  // so a group can start a fresh deck without retyping every name.
+  // Rosters used to travel between the two screens in the query string. They
+  // travel in `localStorage` now, but a link from before the change still has
+  // to work, so the query is read once and then scrubbed out of the address bar.
   //
-  // The query string is read here from `window.location` rather than through
-  // `useSearchParams`. Calling that hook during render opts the whole route
-  // out of static prerendering, which left `/` shipping an empty body to
-  // crawlers. Nothing here needs the value at render time — only on mount,
-  // and arriving from /game remounts this screen — so reading it in the
-  // effect keeps the page fully prerendered.
+  // The read happens here rather than through `useSearchParams`, which opts the
+  // whole route out of static prerendering and left `/` shipping an empty body
+  // to crawlers. Nothing needs the value at render time.
   useEffect(() => {
     const query = new URLSearchParams(window.location.search);
-    const names = playersFromQuery(query);
-    const nsfwLevelQuery = query.get('nsfwLevel');
-    if (names.length >= MIN_PLAYERS) {
-      setPlayers(names.slice(0, MAX_PLAYERS));
+    const fromQuery = normaliseRoster(rosterFromQuery(query));
+    const levelFromQuery = query.get('nsfwLevel');
+    if (query.toString()) {
+      window.history.replaceState(null, '', window.location.pathname);
+    }
+
+    if (fromQuery.length >= MIN_PLAYERS) {
+      setPlayers(fromQuery);
     } else {
-      // No roster handed over — offer the last group that played on this device.
-      try {
-        const saved = JSON.parse(localStorage.getItem(LAST_SETUP_KEY) ?? 'null');
-        if (saved && Array.isArray(saved.players) && saved.players.length >= MIN_PLAYERS) {
-          setPlayers(saved.players.slice(0, MAX_PLAYERS).map((name: unknown) => String(name)));
-          if (!nsfwLevelQuery && GAME_MODES.some((m) => m.id === saved.nsfwLevel)) {
-            setNsfwLevel(saved.nsfwLevel as GameMode);
-          }
-        }
-      } catch {
-        // Storage unavailable or corrupted — start from a blank setup.
+      const saved = readLastSetup();
+      if (saved) {
+        setPlayers(saved.players);
+        if (!levelFromQuery) setNsfwLevel(saved.nsfwLevel);
       }
     }
-    if (nsfwLevelQuery && GAME_MODES.some((m) => m.id === nsfwLevelQuery)) {
-      setNsfwLevel(nsfwLevelQuery as GameMode);
-    }
+    if (isGameMode(levelFromQuery)) setNsfwLevel(levelFromQuery);
+
+    const inProgress = readGame();
+    if (isResumable(inProgress)) setResumable(inProgress);
   }, []);
 
   const addPlayer = () => {
-    const name = draft.trim();
+    const name = normalisePlayerName(draft);
     if (!name) return;
     if (players.length >= MAX_PLAYERS) {
       toast({
         title: 'Max players reached',
         description: `You can add up to ${MAX_PLAYERS} players.`,
+        variant: 'destructive',
+      });
+      return;
+    }
+    // The turn tally is keyed by name, so two people entered as "Sam" would
+    // share one count and one identity on the cards. Ask for a distinct name.
+    if (hasName(players, name)) {
+      toast({
+        title: `${name} is already in`,
+        description: 'Give the second one a different name — a last initial does it.',
         variant: 'destructive',
       });
       return;
@@ -100,7 +124,7 @@ export function HomeScreen() {
   const clearAll = () => {
     setPlayers([]);
     setDraft('');
-    try { localStorage.removeItem(LAST_SETUP_KEY); } catch { /* storage unavailable */ }
+    clearLastSetup();
   };
 
   const canStart = players.length >= MIN_PLAYERS;
@@ -108,20 +132,70 @@ export function HomeScreen() {
 
   const startGame = () => {
     if (players.length < MIN_PLAYERS) return;
-    try {
-      localStorage.setItem(LAST_SETUP_KEY, JSON.stringify({ players, nsfwLevel }));
-    } catch {
-      // Best-effort convenience only.
-    }
-    router.push(`/game?${playersToQuery(players, nsfwLevel)}`);
+    writeLastSetup({ players, nsfwLevel });
+    // The play screen reads its whole world out of this record, so a new game
+    // starts by writing an empty one. It also replaces whatever was in
+    // progress, which is what pressing Start means.
+    writeGame({
+      players,
+      nsfwLevel,
+      currentPlayerIndex: 0,
+      currentPromptId: null,
+      processedPromptText: '',
+      usedPromptIds: [],
+      upcomingTurns: [],
+      turnsByName: {},
+      history: [],
+      gameEnded: false,
+    });
+    router.push('/game');
+  };
+
+  const discardResumable = () => {
+    clearGame();
+    setResumable(null);
   };
 
   const activeMode = GAME_MODES.find((m) => m.id === nsfwLevel);
+  const resumableMode = resumable ? GAME_MODES.find((m) => m.id === resumable.nsfwLevel) : null;
 
   return (
     <div className="flex flex-col min-h-[100dvh] text-foreground touch-manipulation">
       <Header />
       <main className="flex-grow flex flex-col items-center justify-start sm:justify-center gap-6 p-4">
+        {resumable && (
+          <section
+            aria-label="Game in progress"
+            className="w-full max-w-md rounded-2xl border border-accent/40 bg-accent/[0.08] p-4 backdrop-blur-md"
+          >
+            <div className="flex items-center gap-3">
+              <PlayCircle className="h-6 w-6 shrink-0 text-accent" />
+              <div className="min-w-0">
+                <p className="font-headline text-base font-bold text-white">Game in progress</p>
+                <p className="truncate text-xs text-muted-foreground">
+                  {resumable.players.length} players · {resumableMode?.label ?? resumable.nsfwLevel} ·{' '}
+                  {resumable.usedPromptIds.length} cards in
+                </p>
+              </div>
+            </div>
+            <div className="mt-3 flex gap-2">
+              <Button
+                onClick={() => router.push('/game')}
+                className="h-11 flex-grow bg-accent text-accent-foreground hover:bg-accent/80 font-bold touch-manipulation"
+              >
+                Resume
+              </Button>
+              <Button
+                onClick={discardResumable}
+                variant="ghost"
+                className="h-11 shrink-0 border border-white/10 text-muted-foreground hover:bg-white/5 hover:text-white touch-manipulation"
+              >
+                Discard
+              </Button>
+            </div>
+          </section>
+        )}
+
         <Card className="w-full max-w-md shadow-2xl neon-border-primary bg-card/70 backdrop-blur-md">
           <CardHeader className="text-center">
             <Users className="mx-auto h-11 w-11 text-primary mb-1" />
@@ -159,6 +233,7 @@ export function HomeScreen() {
                   onChange={(e) => setDraft(e.target.value)}
                   onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addPlayer(); } }}
                   disabled={players.length >= MAX_PLAYERS}
+                  maxLength={MAX_NAME_LENGTH}
                   className="h-11 bg-input border-border focus:neon-border-accent text-foreground placeholder:text-muted-foreground disabled:opacity-60"
                   aria-label="Add a player"
                   autoComplete="off"

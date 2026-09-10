@@ -6,7 +6,8 @@ app.
 ## Core Features
 
 - **Age gate**: an adults-only confirmation before anything else is reachable, remembered per device. `/terms` and `/privacy` stay readable without passing it.
-- **Player Setup**: 2–10 named players, entered as chips rather than a column of inputs. The last roster is remembered on the device and can be handed back from the game screen.
+- **Player Setup**: 2–10 named players, entered as chips rather than a column of inputs. Names are unique within a game and capped at 20 characters. The last roster is remembered on the device and can be handed back from the game screen.
+- **Resume**: the game in progress is saved on the device, so a refresh, a locked phone, or a reclaimed tab returns to the same card with the same player up. Setup offers it back for twelve hours. Nothing about a game travels in the URL.
 - **Game Modes**: three intensity tiers — `Mild`, `Medium`, `Extreme` — plus `Never Have I Ever`, which draws the NHIE prompts out of every tier rather than being a tier of its own.
 - **Randomizer**: prompts are drawn at random from the active deck without repeating, with `{{randomOtherPlayer}}` substitution so cards name the people in the room.
 - **Pass-the-Phone**: one device moves around the group; the screen names the current player and the turn order is randomised.

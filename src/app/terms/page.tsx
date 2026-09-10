@@ -9,7 +9,7 @@ export const metadata: Metadata = {
 
 export default function TermsPage() {
   return (
-    <LegalShell title="Terms of Service">
+    <LegalShell title="Terms of Service" lastUpdated={LEGAL.termsLastUpdated}>
       <p>
         These terms are an agreement between you and {LEGAL.entity} (&ldquo;we&rdquo;,
         &ldquo;us&rdquo;) covering your use of the After Hours party game and this

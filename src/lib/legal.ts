@@ -13,8 +13,10 @@ export const LEGAL = {
   contactEmail: 'Support@afterhoursgame.com',
   /** Governing law for the Terms. */
   jurisdiction: 'the State of New York, USA',
-  /** Shown as "Last updated" on both documents. */
-  lastUpdated: 'September 9, 2026',
+  /** Shown as "Last updated" on the Terms. Bump when the Terms change. */
+  termsLastUpdated: 'September 9, 2026',
+  /** Shown as "Last updated" on the Privacy Policy. Bump when it changes. */
+  privacyLastUpdated: 'September 10, 2026',
 } as const;
 
 /** True while any placeholder is still unfilled, so the UI can say so plainly. */

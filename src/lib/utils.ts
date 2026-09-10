@@ -26,21 +26,24 @@ export const playerColor = (index: number): PlayerColor =>
   PLAYER_COLORS[((index % PLAYER_COLORS.length) + PLAYER_COLORS.length) % PLAYER_COLORS.length];
 
 /**
- * Players travel between the setup and game screens as repeated `player`
- * query params, so names can contain any character (including commas).
- * The legacy comma-joined `players` param is still read for old URLs.
+ * Reads a roster out of a legacy play URL.
+ *
+ * Rosters used to travel between the setup and game screens as repeated
+ * `player` query params (and, before that, as one comma-joined `players`
+ * param). They travel in `localStorage` now — see `src/lib/session.ts` — so
+ * this exists only so a bookmark or a pasted link from an older build still
+ * opens into a game. Both screens scrub the query out of the address bar once
+ * they have read it.
+ *
+ * The names that come back are raw: run them through `normaliseRoster`.
  */
-export function playersToQuery(players: string[], nsfwLevel: string): string {
-  const params = new URLSearchParams();
-  players.forEach((name) => params.append('player', name));
-  params.set('nsfwLevel', nsfwLevel);
-  return params.toString();
-}
-
-export function playersFromQuery(searchParams: { getAll(name: string): string[]; get(name: string): string | null }): string[] {
-  const repeated = searchParams.getAll('player').map((n) => n.trim()).filter(Boolean);
+export function rosterFromQuery(searchParams: {
+  getAll(name: string): string[];
+  get(name: string): string | null;
+}): string[] {
+  const repeated = searchParams.getAll('player');
   if (repeated.length > 0) return repeated;
   const legacy = searchParams.get('players');
   if (!legacy) return [];
-  return decodeURIComponent(legacy).split(',').map((n) => n.trim()).filter(Boolean);
+  return decodeURIComponent(legacy).split(',');
 }

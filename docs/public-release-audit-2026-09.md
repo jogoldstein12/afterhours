@@ -224,6 +224,14 @@ Player names survive a refresh because they live in the URL. Nothing else does: 
 
 For a game played on a phone that is being physically passed around a loud room, tab eviction is not an edge case. Persist the game state to `localStorage`/`sessionStorage` and offer "resume".
 
+**Resolved, September 10 2026.** The whole game — roster, mode, deck progress,
+turn queue, tally, undo history, and the card on screen — is written to
+`localStorage` under `afterhours.game` and read back on load. A refresh, a
+locked phone, or a reclaimed tab returns to the same card with the same player
+up; the home screen offers "Resume" when a night is part-finished, and drops it
+after twelve hours. The card text is stored as rendered rather than re-derived,
+so `{{randomOtherPlayer}}` does not silently swap names under a group mid-read.
+
 ### 1.4 🟡 Input validation gaps
 
 - **No `maxLength` on any input** (verified: zero occurrences in `src/`). A pasted 10 000-character name goes into React state, the URL, and `localStorage`, and breaks the layout.
@@ -231,6 +239,29 @@ For a game played on a phone that is being physically passed around a loud room,
 - **No duplicate-name guard.** Two players called "Alex" share a single `turnsByName` counter (it is keyed by name string), so the end-of-night "most in the hot seat" stat is wrong, and `{{randomOtherPlayer}}` can resolve ambiguously.
 
 None of these are exploitable against anyone but the user's own tab — there is no server and React escapes all output, so there is no XSS here. They are robustness gaps that a public audience will find within a week.
+
+**Resolved, September 10 2026.** `src/lib/roster.ts` is now the single
+normalisation boundary, and every entry point goes through it: both name
+inputs, the saved-game reader, and the legacy query reader. It trims and
+collapses whitespace, strips control and format characters (a pasted
+right-to-left override reorders the sentence around it), caps a name at 20 code
+points, enforces `MAX_PLAYERS`, and rejects case- and accent-folded duplicates
+with a toast — the fix for the tally bug, chosen over a `Player = { id, name }`
+refactor that would have rippled through `upcomingTurns`, `history`, and
+`currentPlayerIndex`. `maxLength` is set on both inputs as the visible guard.
+The `/game` roster cap falls out for free: the bare `setPlayers(names)` is gone
+and a 500-name URL now yields ten players.
+
+**And the URL question underneath it.** The query string was doing two jobs,
+transport and persistence, and needed neither — there is no multiplayer, so
+nobody deep-links a roster. Meanwhile real names were reaching browser history
+and omnibox autocomplete (on a game whose premise is handing someone else the
+phone), server and CDN access logs, and the address bar of every screenshot.
+Three mitigations existed for that one decision: `no-referrer` on `/game`,
+`Disallow: /game`, and Sentry's `scrubUrl`. Names moved into the saved game
+above and `/game` now takes no query string at all; the three mitigations are
+kept as defence in depth and for the legacy path. `/game` also lost
+`useSearchParams` and its `Suspense` boundary with it.
 
 ### 1.5 🟠 Zero automated tests
 
@@ -419,9 +450,9 @@ Found and fixed during the same window, not in the original list:
 Quality gaps a first player would hit in the first ten minutes.
 
 8. ✅ Prompt addressing made explicit via `scope`, and the drink economy rescaled (§1.1) — September 10 2026
-9. OG/Twitter metadata and a share image (§3.2) — the highest-leverage small fix in this document
+9. ✅ OG/Twitter metadata, share image and the full icon set (§3.2) — September 10 2026
 10. Stand up a test suite over the game logic (§1.5)
-11. Input validation: `maxLength`, roster cap on `/game`, duplicate-name handling (§1.4)
+11. ✅ Input validation, and the player names taken out of the URL (§1.4) — September 10 2026
 12. Contrast fixes in the game HUD (§3.3)
 13. **Owner task:** legal review of the Terms and Privacy Policy by a lawyer
 
@@ -434,7 +465,7 @@ using what the measurement shows.
 
 14. **Owner task:** set a real Sentry DSN and add external uptime monitoring (§2.4)
 15. Add privacy-respecting analytics (§2.4) — the input to Phase 4
-16. Persist and resume mid-game state (§1.3)
+16. ✅ Persist and resume mid-game state (§1.3) — September 10 2026, pulled forward: it is the same record as 11
 17. Rebalance Mild and clarify the NHIE intensity signal (§1.6)
 18. ✅ Decided and removed (§2.5) — one engine, September 10 2026
 

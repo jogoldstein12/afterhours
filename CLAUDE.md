@@ -31,12 +31,27 @@ server starts 404ing until it is restarted.
   mounted under `display: none` rather than returning null, so pages still
   prerender. `/terms` and `/privacy` bypass it via `ALWAYS_READABLE` — the gate
   asks you to agree to those documents, so gating them would be circular.
-- **The play URL carries player names in its query string**, which is why
-  `/game` gets `Referrer-Policy: no-referrer` and is disallowed in
-  `robots.txt`.
+- **A game lives in `localStorage`, not in the URL.** `/game` takes no query
+  string. `src/lib/session.ts` is the only reader and writer of the saved game,
+  and everything it returns has been validated — storage is editable by hand,
+  shared with older builds, and outlives deck edits, so a record read back is
+  treated as untrusted input. A legacy `/game?player=...` link is honoured for
+  one read and then scrubbed from the address bar; that path is why `/game`
+  keeps `Referrer-Policy: no-referrer` and stays disallowed in `robots.txt`.
+- **Player names go through `src/lib/roster.ts`.** Every entry point — both name
+  inputs, the storage reader, the legacy query reader — calls
+  `normalisePlayerName` / `normaliseRoster`. That is what bounds name length,
+  strips bidi and zero-width characters, enforces `MAX_PLAYERS`, and rejects
+  duplicates (the turn tally is keyed by name, so a second "Sam" would share one
+  count). Do not add a fourth entry point that skips it.
+- **Restoring a game must claim `deckLevelRef` before the deck effect runs**, or
+  the restore reads as a mid-game level change and wipes the progress it just
+  loaded. If the saved card's id no longer resolves, a recovery effect deals a
+  replacement rather than leaving an empty card.
 - **Sentry is behind a dynamic import** in `src/lib/monitoring.ts` and only
-  loads when `NEXT_PUBLIC_SENTRY_DSN` is set. `beforeSend` strips everything
-  after `?` or `#` from URLs, because that is where the player names are.
+  loads when `NEXT_PUBLIC_SENTRY_DSN` is set. `beforeSend` still strips
+  everything after `?` or `#` from URLs — belt and braces now that names have
+  left the query string, and it still covers a legacy link.
 
 ## Icons
 

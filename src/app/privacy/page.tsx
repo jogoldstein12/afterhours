@@ -9,7 +9,7 @@ export const metadata: Metadata = {
 
 export default function PrivacyPage() {
   return (
-    <LegalShell title="Privacy Policy">
+    <LegalShell title="Privacy Policy" lastUpdated={LEGAL.privacyLastUpdated}>
       <p>
         This policy explains what After Hours does with information when you play.
         The short version: there are no accounts, we have no server that stores
@@ -24,6 +24,7 @@ export default function PrivacyPage() {
       </p>
       <ul>
         <li>the player names you typed and the game mode you last chose, so the same group can start again without retyping;</li>
+        <li>a game you are part-way through — the roster, the mode, which cards have already come up, and the card on screen — so a locked phone or an accidental refresh does not restart your night. A part-finished game is discarded automatically after twelve hours;</li>
         <li>the fact that you confirmed you are 18 or older.</li>
       </ul>
       <p>
@@ -31,13 +32,16 @@ export default function PrivacyPage() {
         browser&rsquo;s site data for this site erases all of it permanently.
       </p>
 
-      <h2>Player names appear in the address bar</h2>
+      <h2>Player names</h2>
       <p>
-        While a game is running, the player names are part of the page URL. That
-        means they are saved in your browser history and are visible to anyone
-        who can see your screen or your history, and anyone you send the link to
-        will see the names in it. Use nicknames if that matters to you, and take
-        care when sharing a game link.
+        Player names stay in your browser&rsquo;s local storage. They are not
+        part of the web address, so they do not appear in your browser history,
+        in a link you send someone, or in our hosting provider&rsquo;s request
+        logs. They are still visible to anyone who can see the screen while you
+        play, which is the point of the game — use nicknames if that matters to
+        you. Tapping <strong>Clear</strong> on the setup screen, or
+        <strong> Discard</strong> on a game in progress, removes them
+        immediately.
       </p>
 
       <h2>What we do not collect</h2>
@@ -45,7 +49,7 @@ export default function PrivacyPage() {
         <li>No accounts, names, email addresses, or phone numbers.</li>
         <li>No advertising or tracking cookies, and no third-party ad networks.</li>
         <li>No location data.</li>
-        <li>No record of which prompts you saw, skipped, or played.</li>
+        <li>No record reaches us of which prompts you saw, skipped, or played — the part-finished game described above stays on your device.</li>
         <li>We never sell or share personal information, because we do not hold any.</li>
       </ul>
 
@@ -55,9 +59,9 @@ export default function PrivacyPage() {
         diagnostic information — the error message, the page it happened on, and
         your browser type and version — to our error-monitoring provider so we
         can fix it. These reports are not used to identify you and are not
-        combined with anything else. Before any report is sent we strip the
-        query string from every URL in it, so the player names described above
-        are never included.
+        combined with anything else. Reports never include anything the game
+        has saved on your device, and before any report is sent we strip the
+        query string from every URL in it.
       </p>
 
       <h2>Hosting</h2>

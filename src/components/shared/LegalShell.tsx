@@ -7,7 +7,16 @@ import { LEGAL, LEGAL_IS_DRAFT } from '@/lib/legal';
  * Shared reading layout for the Terms and Privacy pages: comfortable measure,
  * on-brand but calm (no neon glow on body copy), and a way back to the game.
  */
-export function LegalShell({ title, children }: { title: string; children: React.ReactNode }) {
+export function LegalShell({
+  title,
+  lastUpdated,
+  children,
+}: {
+  title: string;
+  /** Each document carries its own date; changing one must not restamp the other. */
+  lastUpdated: string;
+  children: React.ReactNode;
+}) {
   return (
     <div className="flex min-h-[100dvh] flex-col px-5 pt-[max(1.5rem,env(safe-area-inset-top))] pb-[max(2rem,env(safe-area-inset-bottom))]">
       <div className="mx-auto flex w-full max-w-2xl flex-1 flex-col">
@@ -20,7 +29,7 @@ export function LegalShell({ title, children }: { title: string; children: React
 
         <h1 className="font-headline text-3xl font-bold text-primary neon-text-primary">{title}</h1>
         <p className="mt-2 text-xs uppercase tracking-widest text-muted-foreground/70">
-          Last updated {LEGAL.lastUpdated}
+          Last updated {lastUpdated}
         </p>
 
         {LEGAL_IS_DRAFT && (
