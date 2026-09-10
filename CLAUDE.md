@@ -47,6 +47,23 @@ Adding a `vitest` dependency once tripped an npm 10.9.7 bug
 vitest's optional peers. `npm install --legacy-peer-deps` gets past it once;
 plain `npm install` and `npm ci` work normally afterwards, from the lockfile.
 
+## Where it deploys
+
+Firebase App Hosting, backend `studio` in project **`glowup-after-hours`**
+(`us-central1`), which serves
+`https://studio--glowup-after-hours.us-central1.hosted.app`. `.firebaserc`
+pins that project, so `firebase` commands need no `-P`.
+
+There is a second Firebase project called **After Hours** (`after-hours-97f19`)
+that looks like the obvious match and is not. Nothing deploys from it. The
+backend id is confirmable without guessing — the live response carries
+`cache-tag: <project number>:<backend>`.
+
+`apphosting.yaml` is read by that backend at build time and by nothing else, so
+a variable added there does nothing until the backend redeploys. Secrets it
+references (`SENTRY_AUTH_TOKEN`) must exist in the same project and be granted
+to the backend, or the build falls back to its no-credentials path.
+
 ## Things that will bite you
 
 - **Every route is statically prerendered** (`○ Static` on all five). Calling
