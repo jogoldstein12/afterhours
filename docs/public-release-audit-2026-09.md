@@ -17,25 +17,24 @@ The app itself is in good shape. The build is clean, the gates are on, the desig
 
 There is also one architectural fact that needs to be confronted before the paywall conversation starts: **the entire prompt deck ships to every visitor in a 104 KB JavaScript chunk, including on the setup screen.** The product you intend to sell is currently given away in full to anyone who opens the homepage and views source.
 
-**The one correction this document needs, September 10 2026.** Everything
-below that says "Resolved" is resolved *in the repository*. The App Hosting
-backend has not built any of it, so the public URL still serves a pre-audit
-build with no age gate, no legal pages and no security headers — the three P0
-items this audit opened with. That is §0.6, and closing it is a deploy, not a
-code change.
+**Deployed September 10 2026.** For most of the day this document described
+a repository whose work had never reached the live site — the public URL was
+still serving a pre-audit build with no age gate, no legal pages and no
+security headers. That was §0.6, and it is now closed: the branch merged and
+the `studio` backend rebuilt from it, verified against the running site. What
+remains outstanding is the Sentry project's own settings, uptime monitoring,
+the lawyer, and the domain, none of which live in this repository.
 
 **Scorecard** — the first column is the state on September 9 that the findings
-below describe; the second is after Phases 1 and 2. Read the second column as
-**true on the branch**, not true in production: as of September 10 none of it
-has been deployed, which is §0.6 and is now the single largest gap in this
-document.
+below describe; the second is after Phases 1 and 2, deployed and verified
+against the running site on September 10 (§0.6).
 
 | Area | Sept 9 | Now | What still holds it back |
 |---|---|---|---|
 | Security posture | D | B+ | Headers, patched framework, Dependabot, an audit gate at `high`, zero advisories. The age gate is still client-side (§0.2) and the CSP keeps `'unsafe-inline'` to preserve static rendering. |
 | Legal / compliance readiness | F | B | Terms, Privacy Policy, LICENCE, disclaimers and adult labels all exist, are accurate and are linked. **A lawyer has still not reviewed them** — that alone is the gap. |
 | Content safety | C− | A− | Skip is back, every prompt carries an out, and the opt-out ladder is graded by what the card asks. |
-| Infrastructure | D+ | C | `maxInstances: 10`, cpu/memory/concurrency set; Sentry has a real DSN and uploads source maps. But **the backend has never built any of it** (§0.6), the auth token is not yet in the right project's Secret Manager, and there is still no analytics, no uptime check, no staging. |
+| Infrastructure | D+ | B− | `maxInstances: 10`, cpu/memory/concurrency set; Sentry has a real DSN, live and reporting, with the build plugin emitting debug ids. Still open: the Sentry project's own settings, no analytics, no uptime check, no staging, and the domain still points at a parked page. |
 | Architecture (for monetisation) | D | D | Unchanged by design — the whole of it is Phase 4. |
 | Code correctness | B− | A− | Both bugs fixed; 78 unit cases gate every push and 74 browser checks cover a full night of play. |
 | Design / UX | B+ | A− | Error states, share metadata and contrast all landed. The Mild deck is still thin and the NHIE intensity signal still misleads (§1.6). |
@@ -76,11 +75,9 @@ gained the same Skip control, narrowing the engine drift in §2.5 by one feature
 3. **Add uptime monitoring** — an external check, which is not something the repo
    can carry.
 
-*Update, September 10 2026.* 2 is done in the repository — a real DSN is in
-`apphosting.yaml` and source maps upload at build time (§2.4) — but
-`apphosting.yaml` is read by the App Hosting backend and by nothing else, and
-that backend has not rebuilt since before this audit, so monitoring is still
-off in production. 1 and 3 are unchanged. See §0.6 and the deployment gate.
+*Update, September 10 2026.* 2 is done and live: a real DSN is in
+`apphosting.yaml` (§2.4), and it reached production when the backend rebuilt
+after the merge (§0.6). 1 and 3 are unchanged.
 
 ### Verification
 
@@ -208,7 +205,7 @@ audit began:
 | Age gate markup | not present | present |
 | Terms / Privacy links | not present | present |
 | `robots.txt` | `User-agent: *` / `Allow: /` | `/game` disallowed, landing page allowed |
-| Next.js adapter | `x-fah-adapter: nextjs-14.0.21` | 15.5.25 |
+| Next.js | 15.3.8-era build | 15.5.25 |
 
 **So §0.2, §0.3 and §0.5 — the three P0 items this audit opened with — are
 closed in the repository and open in production.** An explicitly adult drinking
@@ -246,6 +243,35 @@ the scorecard, and every dated resolution note, means "true on
 `claude/public-release-audit-wrivmt`", not "true in production".** They become
 the same thing when that branch merges and the backend rebuilds, and not
 before.
+
+**Resolved, September 10 2026 — the same day.** The pull request merged to
+`main` as `a6b2cb2`, the `studio` backend built from it automatically, and the
+live site now serves the audited build. Verified from outside the console:
+
+| Check | Result |
+|---|---|
+| `Content-Security-Policy` | full policy, `frame-ancestors 'none'` |
+| `Referrer-Policy` | `strict-origin-when-cross-origin`; `no-referrer` on `/game` |
+| `robots.txt` | the new one — `Disallow: /game` |
+| Homepage | 29,541 bytes, matching the local build of `main` |
+| `/`, `/terms`, `/privacy`, `/game` | all 200 |
+| Sentry DSN | inlined in the layout and both error boundaries |
+| Sentry build plugin | debug ids in 14 chunks; no `.map` servable |
+
+Debug ids only appear when `SENTRY_ORG`, `SENTRY_PROJECT` *and*
+`SENTRY_AUTH_TOKEN` were all present at build time, so the token secret
+resolved despite having been created in the wrong project first — worth
+confirming in the console which project now holds it. Whether the maps
+actually reached Sentry is the one thing this cannot see from outside: check
+the project's Source Maps tab for an artifact bundle dated today.
+
+**A misreading corrected while verifying this.** The `x-fah-adapter` header
+was read as the deployed Next.js version, and it is not — it is the version of
+Firebase's own `@apphosting/adapter-nextjs` package. It still reports
+`nextjs-14.0.21` on the new build, which is what proves the point. The table
+above originally used it as evidence of a stale framework; the stale-build
+evidence that does hold is the byte size, the missing headers and the
+`robots.txt`.
 
 ---
 
@@ -447,17 +473,19 @@ release on a third party.
 **Still open under this heading:** uptime monitoring (owner task, needs a
 service outside the repo) and analytics, which is the input to Phase 4.
 
-**None of it is running yet, September 10 2026.** Both the DSN and the upload
+**Live as of the September 10 deploy.** Both the DSN and the upload
 credentials reach the app through `apphosting.yaml`, which only the App Hosting
-backend reads, and only at build time. That backend last built before this
-audit (§0.6), so production currently reports nothing. Two further gaps have to
-close before it will:
+backend reads, and only at build time — so nothing reported until that backend
+rebuilt (§0.6). It has: the DSN is inlined in the deployed layout and both
+error boundaries, and 14 deployed chunks carry Sentry debug ids. Two gaps are
+still open:
 
-- `SENTRY_AUTH_TOKEN` is referenced as a Secret Manager secret, and the secret
-  was created in the wrong Firebase project (`after-hours-97f19`, not
-  `glowup-after-hours`). Until it exists in the right project and the `studio`
-  backend is granted access, builds take the no-credentials path: they succeed,
-  and ship minified traces.
+- `SENTRY_AUTH_TOKEN` is referenced as a Secret Manager secret, and a copy was
+  created in the wrong Firebase project (`after-hours-97f19`, not
+  `glowup-after-hours`). The debug ids prove a token was readable at build
+  time, so the right project has one too — but the stray copy should go, and
+  Sentry's Source Maps tab is the only place that can confirm the maps
+  themselves arrived.
 - The Sentry project's own settings are untouched — allowed domains, IP
   storage, spike protection, the default alert rule. The IP setting is not
   cosmetic: the Privacy Policy enumerates what a crash report contains and does
@@ -655,68 +683,75 @@ Quality gaps a first player would hit in the first ten minutes.
 
 ---
 
-**The deployment gate — between Phases 2 and 3** 🔴 *added September 10, 2026*
+**The deployment gate — between Phases 2 and 3** ✅ *cleared September 10, 2026*
 
-Phase 3 is called "Live, and gathering evidence". Nothing is live (§0.6), so
-none of it can start. This gate is not a work item competing with the numbered
-list; it is the thing that makes the numbered list mean anything. It is also
-almost entirely owner work — the code side is finished and sitting in a
-pull request.
+Phase 3 is called "Live, and gathering evidence", and for most of September 10
+nothing was live (§0.6). The gate below is kept as the record of what closing
+it took, and of the three steps still open.
 
 *Deploy target:* project `glowup-after-hours`, backend `studio`, region
 `us-central1`, serving
 `https://studio--glowup-after-hours.us-central1.hosted.app`. `.firebaserc`
 pins the project, so none of the commands below need `-P`.
 
-**1. Merge the branch the backend builds from.** Check which branch that is —
-Firebase console → App Hosting → `studio` → Settings. If it is `main`, the
-open pull request has to merge before anything else on this list matters.
+**1. ✅ Merge to the branch the backend builds from.** It builds from `main`,
+and it rebuilt on its own the moment the pull request merged. No manual
+deploy was needed.
 
-**2. Put the Sentry auth token in the right project.** It was created in
-`after-hours-97f19` by mistake and secrets do not cross projects:
+**2. ⚠️ Put the Sentry auth token in the right project.** The secret was first
+created in `after-hours-97f19` by mistake, and secrets do not cross projects —
+yet the build emitted Sentry debug ids, which only happens when the token was
+present. Confirm which project actually holds it, and delete the stray copy:
 
 ```bash
-firebase apphosting:secrets:set sentryAuthToken
-firebase apphosting:secrets:grantaccess sentryAuthToken --backend studio
-gcloud secrets delete sentryAuthToken --project after-hours-97f19   # remove the stray copy
+firebase apphosting:secrets:describe sentryAuthToken
+gcloud secrets delete sentryAuthToken --project after-hours-97f19
 ```
 
-Rotate the token in Sentry first if it has ever been pasted anywhere other than
-Secret Manager. Skipping this step does not break the build — `next.config.ts`
-falls back to its no-credentials path and ships minified traces.
+Rotate the token in Sentry if it has ever been pasted anywhere other than
+Secret Manager. Losing it does not break the build — `next.config.ts` falls
+back to its no-credentials path and ships minified traces.
 
-**3. Watch the first build.** The live adapter is `nextjs-14.0.21` and the
-branch is on 15.5.25, so this is the first deploy across a framework major.
-Read the build log rather than assuming it passed.
+**3. ✅ The build went through.** Note that `x-fah-adapter` is *not* the
+Next.js version — it is Firebase's `@apphosting/adapter-nextjs` package, and
+it reads `nextjs-14.0.21` both before and after a Next 15 deploy. Do not use
+it to tell builds apart.
 
-**4. Verify from outside, not from the console.** Each of these separates the
-new build from the old one on its own:
+**4. ✅ Verified from outside, not from the console.** Any one of these
+separates the new build from the old:
 
 ```bash
 U=https://studio--glowup-after-hours.us-central1.hosted.app
-curl -sSI $U | grep -i 'content-security-policy\|x-fah-adapter'  # CSP set, adapter 15.x
-curl -sS  $U/robots.txt | grep -c 'Disallow'                     # 0 = still the old build
-curl -sS  $U | grep -c 'Privacy'                                 # 0 = still the old build
+curl -sSI $U | grep -i content-security-policy   # set only on the new build
+curl -sS  $U/robots.txt | grep -c Disallow       # 1 = new, 0 = old
+curl -sS  $U | grep -c Privacy                   # 1 = new, 0 = old
 ```
 
-Then confirm Sentry received a release for the deployed commit, with an
-artifact bundle attached. A release with no bundle means the token step failed
-silently.
+PowerShell, since that is where these get run:
 
-**5. Finish the Sentry project's own settings** — none of these live in the
+```powershell
+$U = "https://studio--glowup-after-hours.us-central1.hosted.app"
+$r = Invoke-WebRequest $U -UseBasicParsing
+if ($r.Headers['Content-Security-Policy']) { "CSP set - new build" } else { "no CSP - old build" }
+(Invoke-WebRequest "$U/robots.txt" -UseBasicParsing).Content
+```
+
+**5. ⬜ Finish the Sentry project's own settings** — none of these live in the
 repo. Allowed domains, so a stranger's site cannot spend your quota. **Prevent
 Storing of IP Addresses**, which the Privacy Policy's account of a crash report
 depends on being off. Spike protection. And confirm the default alert rule
-actually routes somewhere someone reads.
+actually routes somewhere someone reads. Also check the project's Source Maps
+tab for an artifact bundle from today — the deployed chunks carry debug ids,
+but only Sentry can confirm the maps arrived to match them.
 
-**6. Add uptime monitoring** (§2.4) — an external check, deliberately outside
+**6. ⬜ Add uptime monitoring** (§2.4) — an external check, deliberately outside
 this repo so it can still report when the repo's hosting is what failed.
 
-**7. Only then, move the domain.** `afterhoursgame.com` is a GoDaddy
-"coming soon" page today. Point it at the backend after the `hosted.app` URL
-has been verified serving the current build, not before — and once it resolves,
-run it through Facebook's Sharing Debugger and Twitter's Card Validator, which
-is the last unverified piece of §3.2.
+**7. ⬜ Move the domain.** `afterhoursgame.com` is still a GoDaddy
+"coming soon" page on AWS. The `hosted.app` URL is now verified serving the
+current build, so this is unblocked — and once the domain resolves, run it
+through Facebook's Sharing Debugger and Twitter's Card Validator, which is the
+last unverified piece of §3.2.
 
 ---
 
@@ -725,7 +760,7 @@ is the last unverified piece of §3.2.
 Ship, then learn. Everything here either measures the product or improves it
 using what the measurement shows.
 
-14. ⚠️ Sentry DSN set and source map upload wired (§2.4) — September 10 2026. Code complete and verified against a real build; **reporting nothing until the deployment gate above is cleared.** Owner tasks: the token secret in `glowup-after-hours`, the Sentry project settings, and external uptime monitoring
+14. ⚠️ Sentry DSN set and source map upload wired (§2.4) — September 10 2026, live and reporting since the deploy. Owner tasks remaining: the Sentry project's own settings, confirming the artifact bundle arrived, and external uptime monitoring
 15. Add privacy-respecting analytics (§2.4) — the input to Phase 4
 16. ✅ Persist and resume mid-game state (§1.3) — September 10 2026, pulled forward: it is the same record as 11
 17. Rebalance Mild and clarify the NHIE intensity signal (§1.6)
