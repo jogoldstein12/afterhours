@@ -2,12 +2,12 @@
 
 ## Description
 
-"After Hours" is an interactive and edgy party game designed for adults. Built with Next.js and styled with a neon-drenched aesthetic using Tailwind CSS and Shadcn UI, it delivers a seamless experience on both desktop and mobile devices. Players enter their names, select a "NSFW Level" (Mild, Medium, or Extreme), and the game serves up a series of hilarious, daring, and risqué prompts. For fully offline play, use the standalone `game.html` build described below.
+"After Hours" is an interactive and edgy party game designed for adults. Built with Next.js and styled with a neon-drenched aesthetic using Tailwind CSS and Shadcn UI, it delivers a seamless experience on both desktop and mobile devices. Players enter their names, pick a game mode (Mild, Medium, Extreme, or Never Have I Ever), and the game serves up a series of hilarious, daring, and risqué prompts. For fully offline play, use the standalone `game.html` build described below.
 
 ## Features
 
 - **Interactive Gameplay:** Prompts can dynamically include players' names for a more personal and engaging experience.
-- **NSFW Levels:** Choose from three levels of intensity (Mild, Medium, Extreme) to match the party's vibe.
+- **Game Modes:** Three levels of intensity (Mild, Medium, Extreme) to match the party's vibe, plus a Never Have I Ever mode that pulls the NHIE prompts out of every tier.
 - **Offline Standalone Build:** `game.html` is the whole game in one file — no server, no dependencies, works offline.
 - **Responsive Neon UI:** A dark, neon-themed design that looks great on any screen size.
 - **Easy Setup:** Add player names, choose a level, and start the game in seconds.
@@ -66,3 +66,4 @@ injects the prompt deck into it.
 - `npm run build:html`: Regenerates the standalone `game.html` from `src/lib/prompts.ts`.
 - `npm run start`: Starts the production server.
 - `npm run lint`: Lints the codebase for errors.
+- `npm run typecheck`: Type-checks the codebase without emitting output.
