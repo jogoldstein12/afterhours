@@ -121,7 +121,7 @@ export function HomeScreen() {
   return (
     <div className="flex flex-col min-h-[100dvh] text-foreground touch-manipulation">
       <Header />
-      <main className="flex-grow flex flex-col items-center justify-start sm:justify-center gap-8 p-4 pb-32">
+      <main className="flex-grow flex flex-col items-center justify-start sm:justify-center gap-6 p-4">
         <Card className="w-full max-w-md shadow-2xl neon-border-primary bg-card/70 backdrop-blur-md">
           <CardHeader className="text-center">
             <Users className="mx-auto h-11 w-11 text-primary mb-1" />
@@ -247,12 +247,7 @@ export function HomeScreen() {
           </CardContent>
         </Card>
 
-        <LegalFooter />
-      </main>
-
-      {/* Sticky Start bar — always reachable, even with a full 10-player roster. */}
-      <div className="fixed inset-x-0 bottom-0 z-20 border-t border-white/10 bg-background/80 backdrop-blur-md px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
-        <div className="mx-auto w-full max-w-md">
+        <div className="w-full max-w-md">
           <Button
             onClick={startGame}
             disabled={!canStart}
@@ -263,7 +258,12 @@ export function HomeScreen() {
               : `Add ${needed} more ${needed === 1 ? 'player' : 'players'}`}
           </Button>
         </div>
-      </div>
+      </main>
+
+      {/* Outside <main>, so the growing main column pushes it to the foot of
+          the page on a short roster and it simply follows the content on a
+          long one. */}
+      <LegalFooter className="px-4 pt-2 pb-[max(1rem,env(safe-area-inset-bottom))]" />
     </div>
   );
 }
