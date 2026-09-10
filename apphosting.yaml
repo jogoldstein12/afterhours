@@ -34,19 +34,15 @@ env:
 
   # Source map upload, so a stack trace resolves to real files instead of
   # `chunk-4bd1b696.js:1:48213`. All three have to be present or next.config.ts
-  # skips the upload entirely and builds exactly as it did before.
-  #
-  # The slugs are the two path segments in your Sentry URL:
-  # sentry.io/organizations/<SENTRY_ORG>/projects/<SENTRY_PROJECT>/
-  # Leave them empty to keep upload off; a wrong slug fails the upload loudly
-  # in the build log but does not fail the deploy.
+  # skips the upload entirely and builds exactly as it did before. Neither slug
+  # is a secret; both are visible in any Sentry URL for this project.
   - variable: SENTRY_ORG
-    value: ''
+    value: 'green-sea-rep'
     availability:
       - BUILD
 
   - variable: SENTRY_PROJECT
-    value: ''
+    value: 'afterhours'
     availability:
       - BUILD
 
