@@ -41,7 +41,17 @@
 
 - `npm run dev`: Starts the application in development mode.
 - `npm run build`: Creates a production build of the application.
-- `npm run export:deck`: Regenerates `docs/prompts.csv` from `src/lib/prompts.ts`.
 - `npm run start`: Starts the production server.
+- `npm test`: Runs the unit tests over the game logic, the deck and the saved game.
+- `npm run test:watch`: The same, in watch mode.
+- `npm run test:e2e`: Runs the browser suite against a production build. Needs `npm run build` first, and Playwright installed (`npm i -D playwright && npx playwright install chromium`).
 - `npm run lint`: Lints the codebase for errors.
 - `npm run typecheck`: Type-checks the codebase without emitting output.
+- `npm run export:deck`: Regenerates `docs/prompts.csv` from `src/lib/prompts.ts`.
+
+## Tests
+
+The unit suite is fast and gates every push in CI. The browser suite is slower,
+needs a build and a browser, and is meant for structural changes — the game
+loop, the saved game, routing, or anything that touches colour, since it checks
+WCAG AA contrast on every screen in every mode.

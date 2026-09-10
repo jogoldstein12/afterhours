@@ -27,7 +27,7 @@ export default function Error({
         again, or head back and start a fresh round.
       </p>
       {error.digest && (
-        <p className="mt-3 font-mono text-[10px] uppercase tracking-widest text-muted-foreground/60">
+        <p className="mt-3 font-mono text-[10px] uppercase tracking-widest text-muted-foreground/80">
           ref {error.digest}
         </p>
       )}

@@ -5,15 +5,19 @@ import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import {
-  PROMPTS,
   Prompt,
   GameMode,
-  isNhiePrompt,
-  isRoomPrompt,
   GAME_MODES,
   getPromptCategory,
   type PromptCategory,
 } from '@/lib/prompts';
+import {
+  extractDurationSeconds,
+  filterDeck,
+  promptById,
+  renderPromptText,
+  shuffledIndices,
+} from '@/lib/game';
 import {
   ArrowRightCircle,
   RotateCcw,
@@ -78,7 +82,7 @@ const MODE_BORDER: Record<GameMode, string> = {
 const MODE_CHIP: Record<GameMode, string> = {
   Mild: 'text-primary border-primary/50 bg-primary/10',
   Medium: 'text-secondary border-secondary/50 bg-secondary/10',
-  Extreme: 'text-destructive border-destructive/50 bg-destructive/10',
+  Extreme: 'text-[hsl(var(--destructive-bright))] border-destructive/50 bg-destructive/10',
   NHIE: 'text-[hsl(var(--chart-3))] border-[hsl(var(--chart-3)/0.5)] bg-[hsl(var(--chart-3)/0.12)]',
 };
 const MODE_FILL: Record<GameMode, string> = {
@@ -88,10 +92,10 @@ const MODE_FILL: Record<GameMode, string> = {
   NHIE: 'bg-[hsl(var(--chart-3))]',
 };
 const MODE_SELECTED: Record<GameMode, string> = {
-  Mild: 'bg-primary text-white shadow-[0_0_12px_hsl(var(--primary)/0.6)]',
-  Medium: 'bg-secondary text-white shadow-[0_0_12px_hsl(var(--secondary)/0.6)]',
-  Extreme: 'bg-destructive text-white shadow-[0_0_12px_hsl(var(--destructive)/0.6)]',
-  NHIE: 'bg-[hsl(var(--chart-3))] text-black shadow-[0_0_12px_hsl(var(--chart-3)/0.6)]',
+  Mild: 'bg-primary text-primary-foreground shadow-[0_0_12px_hsl(var(--primary)/0.6)]',
+  Medium: 'bg-secondary text-secondary-foreground shadow-[0_0_12px_hsl(var(--secondary)/0.6)]',
+  Extreme: 'bg-destructive text-destructive-foreground shadow-[0_0_12px_hsl(var(--destructive)/0.6)]',
+  NHIE: 'bg-[hsl(var(--chart-3))] text-background shadow-[0_0_12px_hsl(var(--chart-3)/0.6)]',
 };
 
 // "Turn It Up" on the finale steps the group one tier hotter; Extreme is already
@@ -112,18 +116,6 @@ const CATEGORY_META: Record<PromptCategory, { label: string; Icon: LucideIcon; c
   dare: { label: 'Dare', Icon: Flame, className: 'text-secondary' },
 };
 
-// Numeric durations only ("15 seconds", "2 minutes", "one-minute") — spelled-out
-// numbers are skipped on purpose, since those are usually hypothetical
-// ("if you had ten minutes alone...") rather than timed dares.
-const extractDurationSeconds = (text: string): number | null => {
-  const sec = text.match(/(\d+)\s*seconds?\b/i);
-  if (sec) return parseInt(sec[1], 10);
-  const min = text.match(/(\d+)\s*minutes?\b/i);
-  if (min) return parseInt(min[1], 10) * 60;
-  if (/\bone[- ]minute\b/i.test(text)) return 60;
-  return null;
-};
-
 const formatSeconds = (total: number): string =>
   `${Math.floor(total / 60)}:${String(total % 60).padStart(2, '0')}`;
 
@@ -134,22 +126,6 @@ const promptSizeClass = (len: number): string => {
   if (len <= 110) return 'text-2xl sm:text-3xl md:text-4xl';
   if (len <= 180) return 'text-xl sm:text-2xl md:text-3xl';
   return 'text-lg sm:text-xl md:text-2xl';
-};
-
-// One shuffled "round" of player indices. Everyone goes once per round; the
-// avoidFirst guard stops the same player getting back-to-back turns across a
-// round boundary.
-const shuffledIndices = (count: number, avoidFirst?: number): number[] => {
-  const order = Array.from({ length: count }, (_, i) => i);
-  for (let i = order.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [order[i], order[j]] = [order[j], order[i]];
-  }
-  if (count > 1 && order[0] === avoidFirst) {
-    const swap = 1 + Math.floor(Math.random() * (count - 1));
-    [order[0], order[swap]] = [order[swap], order[0]];
-  }
-  return order;
 };
 
 const vibrate = (pattern: number | number[]) => {
@@ -166,14 +142,6 @@ type TurnSnapshot = {
   upcoming: number[];
   countedTurn: boolean;
 };
-
-/**
- * The deck for a mode. NHIE is not a tier — it draws its cards out of all three.
- */
-const filterDeck = (mode: GameMode): Prompt[] =>
-  mode === 'NHIE' ? PROMPTS.filter(isNhiePrompt) : PROMPTS.filter((p) => p.nsfwLevel === mode);
-
-const promptById = new Map(PROMPTS.map((prompt) => [prompt.id, prompt]));
 
 export default function GamePage() {
   const router = useRouter();
@@ -461,39 +429,7 @@ export default function GamePage() {
     } else if (gameEnded) {
       setProcessedPromptText("Game Over! You've gone through all the prompts for this level.");
     } else if (currentPrompt && players.length > 0) {
-      let text = currentPrompt.text;
-      const currentPlayerName = players[currentPlayerIndex];
-
-      if (text.includes('{{randomOtherPlayer}}')) {
-        const otherPlayers = players.filter((_, index) => index !== currentPlayerIndex);
-        if (otherPlayers.length > 0) {
-          const randomPlayerName = otherPlayers[Math.floor(Math.random() * otherPlayers.length)];
-          text = text.replace(/\{\{randomOtherPlayer\}\}/g, randomPlayerName);
-        } else {
-          text = text.replace(/\{\{randomOtherPlayer\}\}/g, 'another player');
-        }
-      }
-
-      const needsPrefix =
-        // Room-wide cards are called out to everybody and are never
-        // personalised. This is declared per prompt in the deck rather than
-        // guessed from how the sentence opens.
-        !isRoomPrompt(currentPrompt) &&
-        // A question is already directed by the turn indicator, and reads
-        // worse with a name bolted on.
-        !text.includes('?') &&
-        // A prompt that opens by addressing another player never also takes
-        // the "Name, ..." prefix — that would double-address it. Checked
-        // against the raw text since the placeholder is already substituted.
-        !currentPrompt.text.trimStart().startsWith('{{randomOtherPlayer}}');
-
-      if (needsPrefix && text.length > 0) {
-        text = `${currentPlayerName}, ${text.charAt(0).toLowerCase() + text.slice(1)}`;
-      } else if (text.length > 0) {
-        text = text.charAt(0).toUpperCase() + text.slice(1);
-      }
-
-      setProcessedPromptText(text);
+      setProcessedPromptText(renderPromptText(currentPrompt, players, currentPlayerIndex));
     }
   }, [currentPrompt, players, currentPlayerIndex, gameEnded]);
 
@@ -730,7 +666,7 @@ export default function GamePage() {
           <AlertDialogFooter className="flex-col gap-2 sm:flex-col sm:space-x-0">
             <AlertDialogAction
               onClick={restartGame}
-              className="w-full bg-primary text-white touch-manipulation"
+              className="w-full bg-primary text-primary-foreground touch-manipulation"
             >
               Restart Deck
             </AlertDialogAction>
@@ -791,7 +727,7 @@ export default function GamePage() {
                     className="bg-white/5 h-11"
                     aria-label="New player name"
                   />
-                  <Button onClick={handleAddPlayer} size="icon" aria-label="Add player" className="h-11 w-11 shrink-0 bg-accent hover:bg-accent/80 touch-manipulation">
+                  <Button onClick={handleAddPlayer} size="icon" aria-label="Add player" className="h-11 w-11 shrink-0 bg-accent text-accent-foreground hover:bg-accent/80 touch-manipulation">
                     <UserPlus className="h-4 w-4" />
                   </Button>
                 </div>
@@ -841,7 +777,7 @@ export default function GamePage() {
             </div>
             <div className="shrink-0 text-right">
               <div className="font-headline text-sm font-bold tabular-nums text-white/90">
-                {cardNumber}<span className="text-white/40"> / {deckTotal}</span>
+                {cardNumber}<span className="text-white/60"> / {deckTotal}</span>
               </div>
               <div className="text-[10px] uppercase tracking-widest text-white/55">
                 Round {roundNumber} · {players.length}p
@@ -945,7 +881,7 @@ export default function GamePage() {
         <footer className="shrink-0 border-t border-white/5 px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
           <Button
             onClick={handleNextPlayer}
-            className="w-full h-14 rounded-2xl text-lg font-bold bg-primary text-white shadow-xl transition-transform active:scale-[0.98] touch-manipulation"
+            className="w-full h-14 rounded-2xl text-lg font-bold bg-primary text-primary-foreground shadow-xl transition-transform active:scale-[0.98] touch-manipulation"
           >
             Next Player
             <ArrowRightCircle className="ml-1 h-5 w-5" />
@@ -969,7 +905,7 @@ function DockButton({ icon: Icon, label, onClick, disabled, accent }: { icon: Lu
       onClick={onClick}
       disabled={disabled}
       className={cn(
-        "flex min-h-[52px] flex-col items-center justify-center gap-1 rounded-xl py-1.5 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:opacity-30 disabled:pointer-events-none touch-manipulation",
+        "flex min-h-[52px] flex-col items-center justify-center gap-1 rounded-xl py-1.5 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:text-white/40 disabled:pointer-events-none touch-manipulation",
         accent
           // Skip is an offer, not a utility — it sits in the accent so declining
           // a card reads as a first-class move rather than a hidden escape.
@@ -1069,7 +1005,7 @@ function GameOverView({
         <div className="animate-finale-rise mt-7 flex w-full flex-col gap-2.5" style={{ animationDelay: '220ms' }}>
           <Button
             onClick={onRunItBack}
-            className="h-14 w-full rounded-2xl bg-primary text-lg font-bold text-white shadow-xl transition-transform active:scale-[0.98] touch-manipulation"
+            className="h-14 w-full rounded-2xl bg-primary text-lg font-bold text-primary-foreground shadow-xl transition-transform active:scale-[0.98] touch-manipulation"
           >
             <Repeat className="mr-2 h-5 w-5" /> Run It Back
           </Button>

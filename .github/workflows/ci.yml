@@ -32,6 +32,14 @@ jobs:
       - name: Lint
         run: npm run lint
 
+      # The fast half of the suite: pure logic over the deck, the roster
+      # normaliser, the saved-game validator and the prompt renderer. Under a
+      # second, so it gates every push. The browser suite (`npm run test:e2e`)
+      # is deliberately not here — it needs a build and a browser, and it is
+      # meant to be run against structural changes rather than every commit.
+      - name: Test
+        run: npm test
+
       - name: Build
         run: npm run build
 

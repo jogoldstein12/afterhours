@@ -33,7 +33,15 @@ const INVISIBLE = /[\p{Cc}\p{Cf}]/gu;
  */
 export function normalisePlayerName(raw: unknown): string | null {
   if (typeof raw !== 'string' && typeof raw !== 'number') return null;
-  const cleaned = String(raw).replace(INVISIBLE, '').replace(/\s+/g, ' ').trim();
+  const cleaned = String(raw)
+    // Tabs and newlines are control characters too, so they have to become
+    // spaces before the strip below — otherwise a name pasted off two lines
+    // comes back with its words glued together.
+    .replace(/\s+/g, ' ')
+    .replace(INVISIBLE, '')
+    // Removing an invisible character can leave two spaces touching.
+    .replace(/\s+/g, ' ')
+    .trim();
   if (!cleaned) return null;
   return Array.from(cleaned).slice(0, MAX_NAME_LENGTH).join('');
 }

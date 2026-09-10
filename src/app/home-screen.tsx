@@ -36,10 +36,10 @@ import { LegalFooter } from '@/components/shared/LegalFooter';
 // Selected pill lights up in each mode's own color instead of always violet, so
 // the choice previews the intensity you are about to play.
 const MODE_SELECTED: Record<GameMode, string> = {
-  Mild: 'bg-primary text-white shadow-[0_0_12px_hsl(var(--primary)/0.6)]',
-  Medium: 'bg-secondary text-white shadow-[0_0_12px_hsl(var(--secondary)/0.6)]',
-  Extreme: 'bg-destructive text-white shadow-[0_0_12px_hsl(var(--destructive)/0.6)]',
-  NHIE: 'bg-[hsl(var(--chart-3))] text-black shadow-[0_0_12px_hsl(var(--chart-3)/0.6)]',
+  Mild: 'bg-primary text-primary-foreground shadow-[0_0_12px_hsl(var(--primary)/0.6)]',
+  Medium: 'bg-secondary text-secondary-foreground shadow-[0_0_12px_hsl(var(--secondary)/0.6)]',
+  Extreme: 'bg-destructive text-destructive-foreground shadow-[0_0_12px_hsl(var(--destructive)/0.6)]',
+  NHIE: 'bg-[hsl(var(--chart-3))] text-background shadow-[0_0_12px_hsl(var(--chart-3)/0.6)]',
 };
 const MODE_ACCENT_TEXT: Record<GameMode, string> = {
   Mild: 'text-primary',
@@ -179,9 +179,12 @@ export function HomeScreen() {
               </div>
             </div>
             <div className="mt-3 flex gap-2">
+              {/* Tinted rather than filled: white on a solid accent is only
+                  3.2:1, and a second loud button would compete with Start.
+                  Accent on a 12% accent tint is 4.96:1. */}
               <Button
                 onClick={() => router.push('/game')}
-                className="h-11 flex-grow bg-accent text-accent-foreground hover:bg-accent/80 font-bold touch-manipulation"
+                className="h-11 flex-grow border border-accent/40 bg-accent/[0.12] text-accent hover:bg-accent/20 hover:text-accent font-bold touch-manipulation"
               >
                 Resume
               </Button>
@@ -216,7 +219,7 @@ export function HomeScreen() {
                     <button
                       type="button"
                       onClick={clearAll}
-                      className="rounded-md px-1.5 py-0.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground transition-colors hover:text-destructive focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring touch-manipulation"
+                      className="rounded-md px-1.5 py-0.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground transition-colors hover:text-[hsl(var(--destructive-bright))] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring touch-manipulation"
                     >
                       Clear
                     </button>
@@ -311,7 +314,7 @@ export function HomeScreen() {
                     {[1, 2, 3, 4].map((pip) => (
                       <Flame
                         key={pip}
-                        className={cn("h-3.5 w-3.5", pip <= activeMode.spice ? MODE_ACCENT_TEXT[nsfwLevel] : 'text-white/15')}
+                        className={cn("h-3.5 w-3.5", pip <= activeMode.spice ? MODE_ACCENT_TEXT[nsfwLevel] : 'text-white/40')}
                         fill={pip <= activeMode.spice ? 'currentColor' : 'none'}
                       />
                     ))}
@@ -326,7 +329,7 @@ export function HomeScreen() {
           <Button
             onClick={startGame}
             disabled={!canStart}
-            className="w-full h-14 rounded-2xl bg-primary hover:bg-primary/90 text-primary-foreground text-lg font-bold neon-border-primary transition-transform active:scale-[0.98] disabled:opacity-50 disabled:neon-border-primary disabled:active:scale-100 touch-manipulation"
+            className="w-full h-14 rounded-2xl bg-primary hover:bg-primary/90 text-primary-foreground text-lg font-bold neon-border-primary transition-transform active:scale-[0.98] disabled:bg-white/[0.06] disabled:text-white/70 disabled:neon-border-primary disabled:active:scale-100 touch-manipulation"
           >
             {canStart
               ? `Start with ${players.length} ${players.length === 1 ? 'player' : 'players'}`

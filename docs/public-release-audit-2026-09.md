@@ -269,6 +269,28 @@ There is no test file, no test runner, and no test script in `package.json`. The
 
 For this app specifically, the untested logic is the *entire product*: turn rotation fairness, deck exhaustion, undo/redo state restoration, `{{randomOtherPlayer}}` substitution, the prefix rules above, category classification, and roster edits mid-game. Every one of those is a pure function or a small reducer and would be cheap to cover. CI already runs typecheck/lint/build — a `vitest` job slots straight in.
 
+**Resolved, September 10 2026.** Two suites, split by what they cost.
+
+`npm test` — 78 vitest cases over pure logic, under a second, gating every push
+in CI. The game logic that was locked inside the play screen (the deck filter,
+the turn shuffle, the duration parser, and the `{{randomOtherPlayer}}` and
+prefix rules) was extracted to `src/lib/game.ts` to make it testable at all.
+Covers the roster normaliser, the saved-game validator, the renderer, and deck
+invariants — unique ids, no duplicate card, one placeholder token, every NHIE
+card room-scoped, every opt-out on one of the four rungs. The deck checks are
+structural rather than counted, so an ordinary deck edit does not fail them.
+
+`npm run test:e2e` — 73 browser checks over a production build: a full night of
+play, the saved game and every hostile record, the legacy URL path, and WCAG AA
+contrast on every screen in every mode. Deliberately not in CI and Playwright
+deliberately not a dependency; it is for structural changes, not every commit.
+
+Two real bugs fell out of writing them. `normalisePlayerName` stripped tabs and
+newlines as control characters *before* collapsing whitespace, so a name pasted
+off two lines came back with its words glued together. And a restored game
+whose current card id no longer resolved kept every other piece of state but
+never dealt a card, leaving the group on a blank one.
+
 ### 1.6 🟡 Mode balance works against the funnel
 
 | Mode | Cards | Note |
@@ -392,6 +414,39 @@ requirement it should be a maintained PWA, not a hand-synced second engine.
 
 `text-white/40` over the `#0A040F` background computes to roughly **3.9:1**, under the 4.5:1 AA threshold for normal text. It is used for the deck counter (`/ {deckTotal}`) among others. `text-white/55` (≈6.4:1) is fine. Also `disabled:opacity-30` on the dock buttons pushes the disabled Undo label well below any readable threshold.
 
+**Resolved, September 10 2026 — and the finding was understated.** Measuring
+every rendered text run rather than reading the stylesheet turned up a larger,
+systemic failure the two examples above were symptoms of.
+
+Both named items are fixed: the deck counter goes to `text-white/60` (7.1:1),
+and the dock's disabled state stops fading the whole button and colours the
+label instead (about 2:1 → 3.75:1), which keeps a disabled Undo legible.
+
+The systemic one: **white text on a solid brand fill**. White on the neon
+violet is 3.65:1 and on the pink 3.17:1, which put `Next Player` — the
+most-tapped control in the game — at 3.66:1, along with `Start`, the selected
+mode pill, the age-gate CTA and `Done`. Fixed by flipping
+`--primary-foreground`, `--secondary-foreground` and `--accent-foreground` to
+the app's own near-black (5.45:1 and 6.27:1) rather than darkening the palette,
+so every glow, border and filament keeps the colour it has. The NHIE pill
+already used black on its neon blue, so the pattern was in the app already.
+White on the red does clear AA (4.80:1), so `--destructive-foreground` stays
+light.
+
+Also found and fixed: the Extreme HUD chip put `--destructive` on its own 10%
+tint at 3.88:1 (new `--destructive-bright` token, 5.6:1, also used for the
+Clear hover); the logo subtitle stacked `opacity-70` on an already-muted grey
+(4.3:1); `text-muted-foreground/70` on the legal footer, the legal page dates
+and the age-gate footnote (4.13:1) and `/60` on the error page (3.37:1); the
+unfilled spice pips at 1.46:1, which made "2 of 4" unreadable as a scale; and
+the disabled Start button, whose label is the instruction telling you what to
+do next, at 1.89:1.
+
+`e2e/contrast.js` now composites what the browser actually computed and fails
+any text run under AA, across every screen and every mode, so this cannot
+quietly come back. It exempts `aria-hidden` decoration and disabled controls,
+which WCAG 1.4.3 does too.
+
 ### 3.4 ⚪ Privacy details worth a decision
 
 Player names are placed in the URL query string and persisted to `localStorage` under `afterhours.lastSetup`. Neither is dangerous, but both are choices to disclose in the privacy policy: URLs land in browser history and in any future analytics pageview data, and a shared game link contains the roster of everyone who was in the room.
@@ -445,15 +500,15 @@ Found and fixed during the same window, not in the original list:
 
 ---
 
-**Phase 2 — Before you show anyone**
+**Phase 2 — Before you show anyone** ✅ *code complete, September 10 2026 — only the owner task remains*
 
 Quality gaps a first player would hit in the first ten minutes.
 
 8. ✅ Prompt addressing made explicit via `scope`, and the drink economy rescaled (§1.1) — September 10 2026
 9. ✅ OG/Twitter metadata, share image and the full icon set (§3.2) — September 10 2026
-10. Stand up a test suite over the game logic (§1.5)
+10. ✅ Test suite over the game logic, plus a browser suite (§1.5) — September 10 2026
 11. ✅ Input validation, and the player names taken out of the URL (§1.4) — September 10 2026
-12. Contrast fixes in the game HUD (§3.3)
+12. ✅ Contrast fixes, well past the HUD (§3.3) — September 10 2026
 13. **Owner task:** legal review of the Terms and Privacy Policy by a lawyer
 
 ---

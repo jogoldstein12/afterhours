@@ -8,6 +8,9 @@ An explicit pass-the-phone party game for adults. Next.js 15 App Router, React
 ```bash
 npm run dev         # dev server on :9002
 npm run build       # production build
+npm test            # unit tests (vitest), under a second
+npm run test:watch  # the same, in watch mode
+npm run test:e2e    # browser suite — needs a build and Playwright, ~2 minutes
 npm run typecheck   # tsc --noEmit
 npm run lint        # eslint
 npm run export:deck # regenerate docs/prompts.csv from src/lib/prompts.ts
@@ -16,7 +19,33 @@ npm run build:icons # regenerate every app icon from assets/afterhours-icon.png
 
 `npm run dev` and `npm run build` share `.next/`, so do not run a build while a
 dev server is up — the build pulls the manifests out from under it and the dev
-server starts 404ing until it is restarted.
+server starts 404ing until it is restarted. `npm run test:e2e` runs a build's
+output, so the same applies to it.
+
+## When to run which tests
+
+The suite is in two halves on purpose, because they cost very different things.
+
+- **`npm test` is free.** Pure logic, no DOM, no browser, under a second. Run it
+  as often as you like; CI runs it on every push. If you have changed anything
+  under `src/lib/`, run it before you say you are done.
+- **`npm run test:e2e` is not.** It needs a production build and a real browser
+  and takes a couple of minutes. **Do not run it after every small change** — a
+  copy tweak, a spacing fix, a one-line guard. Run it when a change is
+  structural or could plausibly break something you are not looking at:
+  - the game loop, the saved game, or routing
+  - anything that changes colours, opacity or the theme tokens (it checks WCAG
+    AA contrast on every screen, in every mode)
+  - a dependency or Next upgrade
+  - before opening or updating a PR that touches any of the above
+
+  It is deliberately not in CI, and Playwright is deliberately not a dependency
+  — `npm run test:e2e` prints the one-line install if it is missing.
+
+Adding a `vitest` dependency once tripped an npm 10.9.7 bug
+(`Cannot read properties of null (reading 'edgesOut')`) while resolving
+vitest's optional peers. `npm install --legacy-peer-deps` gets past it once;
+plain `npm install` and `npm ci` work normally afterwards, from the lockfile.
 
 ## Things that will bite you
 
@@ -48,6 +77,14 @@ server starts 404ing until it is restarted.
   the restore reads as a mid-game level change and wipes the progress it just
   loaded. If the saved card's id no longer resolves, a recovery effect deals a
   replacement rather than leaving an empty card.
+- **Contrast is enforced, not eyeballed.** `e2e/contrast.js` composites what
+  the browser actually computed — translucent white over a translucent panel
+  over the near-black page — and fails any text run under WCAG AA. Text on a
+  solid brand fill takes the app's near-black ink (`--primary-foreground` and
+  friends), because white on the neon violet is only 3.7:1; the palette itself
+  is never darkened, so the glows keep their colour. `--destructive-bright`
+  exists because `--destructive` is tuned for white-on-red and is too dark for
+  small red text on a dark tint.
 - **Sentry is behind a dynamic import** in `src/lib/monitoring.ts` and only
   loads when `NEXT_PUBLIC_SENTRY_DSN` is set. `beforeSend` still strips
   everything after `?` or `#` from URLs — belt and braces now that names have

@@ -116,7 +116,7 @@ export function AgeGate({ children }: { children: React.ReactNode }) {
               </p>
             </div>
 
-            <p className="mt-6 text-xs text-muted-foreground/70">
+            <p className="mt-6 text-xs text-muted-foreground/80">
               Not 18? Please close this page.
             </p>
           </main>

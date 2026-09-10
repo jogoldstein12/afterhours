@@ -2,7 +2,7 @@
   "name": "afterhours",
   "version": "0.1.0",
   "private": true,
-  "description": "After Hours — an explicit pass-the-phone party game for adults.",
+  "description": "After Hours \u2014 an explicit pass-the-phone party game for adults.",
   "license": "UNLICENSED",
   "author": "After Hours Party Game, LLC",
   "repository": {
@@ -10,16 +10,19 @@
     "url": "git+https://github.com/jogoldstein12/afterhours.git"
   },
   "engines": {
-    "node": ">=20"
+    "node": ">=20.19"
   },
   "scripts": {
     "dev": "next dev --turbopack -p 9002",
     "build": "next build",
-    "export:deck": "node tools/export-prompts-csv.js",
-    "build:icons": "node tools/build-icons.js",
     "start": "next start",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:e2e": "node e2e/run.js",
+    "typecheck": "tsc --noEmit",
     "lint": "next lint",
-    "typecheck": "tsc --noEmit"
+    "export:deck": "node tools/export-prompts-csv.js",
+    "build:icons": "node tools/build-icons.js"
   },
   "dependencies": {
     "@radix-ui/react-alert-dialog": "^1.1.6",
@@ -48,7 +51,8 @@
     "postcss": "^8.5.23",
     "sharp": "^0.35.4",
     "tailwindcss": "^3.4.1",
-    "typescript": "^5"
+    "typescript": "^5",
+    "vitest": "^4.1.11"
   },
   "overrides": {
     "postcss": "^8.5.23"

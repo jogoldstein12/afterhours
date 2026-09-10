@@ -28,7 +28,7 @@ export function LegalShell({
         </Link>
 
         <h1 className="font-headline text-3xl font-bold text-primary neon-text-primary">{title}</h1>
-        <p className="mt-2 text-xs uppercase tracking-widest text-muted-foreground/70">
+        <p className="mt-2 text-xs uppercase tracking-widest text-muted-foreground/80">
           Last updated {lastUpdated}
         </p>
 
