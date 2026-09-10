@@ -1,6 +1,6 @@
 # After Hours — Public Release Readiness Audit
 
-**Date:** September 9, 2026
+**Date:** September 9, 2026 · **Last updated:** September 10, 2026
 **Scope:** Everything that stands between "works for my friends" and "safe to put behind a public URL and charge for" — security, infrastructure, architecture, code correctness, content/legal exposure, and design polish.
 **Method:** Full source read of both engines; `npm ci` + `npm audit` on a clean tree; typecheck, lint, and production build run and passing; build manifest and emitted chunks inspected; all 874 prompts scanned programmatically for content-risk categories and prompt-rendering behaviour; git history scanned for secrets; a candidate framework upgrade applied and verified, then reverted.
 **Relationship to prior audits:** `docs/audit-2026-08.md` (Aug 26) explicitly put security out of scope and assumed an internal friend-group context. `docs/ui-ux-audit-2026-08.md` (Aug 27) covered mobile design and its top recommendations (R2–R6) shipped. This audit covers the delta: what changes when *anyone* can reach the app, and what a paywall implies.
@@ -17,15 +17,25 @@ The app itself is in good shape. The build is clean, the gates are on, the desig
 
 There is also one architectural fact that needs to be confronted before the paywall conversation starts: **the entire prompt deck ships to every visitor in a 104 KB JavaScript chunk, including on the setup screen.** The product you intend to sell is currently given away in full to anyone who opens the homepage and views source.
 
+**The one correction this document needs, September 10 2026.** Everything
+below that says "Resolved" is resolved *in the repository*. The App Hosting
+backend has not built any of it, so the public URL still serves a pre-audit
+build with no age gate, no legal pages and no security headers — the three P0
+items this audit opened with. That is §0.6, and closing it is a deploy, not a
+code change.
+
 **Scorecard** — the first column is the state on September 9 that the findings
-below describe; the second is after Phases 1 and 2, and is what is true now.
+below describe; the second is after Phases 1 and 2. Read the second column as
+**true on the branch**, not true in production: as of September 10 none of it
+has been deployed, which is §0.6 and is now the single largest gap in this
+document.
 
 | Area | Sept 9 | Now | What still holds it back |
 |---|---|---|---|
 | Security posture | D | B+ | Headers, patched framework, Dependabot, an audit gate at `high`, zero advisories. The age gate is still client-side (§0.2) and the CSP keeps `'unsafe-inline'` to preserve static rendering. |
 | Legal / compliance readiness | F | B | Terms, Privacy Policy, LICENCE, disclaimers and adult labels all exist, are accurate and are linked. **A lawyer has still not reviewed them** — that alone is the gap. |
 | Content safety | C− | A− | Skip is back, every prompt carries an out, and the opt-out ladder is graded by what the card asks. |
-| Infrastructure | D+ | C+ | `maxInstances: 10`, cpu/memory/concurrency set. Sentry is wired but inert without a DSN, and there is still no analytics, no uptime check, no staging. |
+| Infrastructure | D+ | C | `maxInstances: 10`, cpu/memory/concurrency set; Sentry has a real DSN and uploads source maps. But **the backend has never built any of it** (§0.6), the auth token is not yet in the right project's Secret Manager, and there is still no analytics, no uptime check, no staging. |
 | Architecture (for monetisation) | D | D | Unchanged by design — the whole of it is Phase 4. |
 | Code correctness | B− | A− | Both bugs fixed; 78 unit cases gate every push and 73 browser checks cover a full night of play. |
 | Design / UX | B+ | A− | Error states, share metadata and contrast all landed. The Mild deck is still thin and the NHIE intensity signal still misleads (§1.6). |
@@ -65,6 +75,12 @@ gained the same Skip control, narrowing the engine drift in §2.5 by one feature
    stays off.
 3. **Add uptime monitoring** — an external check, which is not something the repo
    can carry.
+
+*Update, September 10 2026.* 2 is done in the repository — a real DSN is in
+`apphosting.yaml` and source maps upload at build time (§2.4) — but
+`apphosting.yaml` is read by the App Hosting backend and by nothing else, and
+that backend has not rebuilt since before this audit, so monitoring is still
+off in production. 1 and 3 are unchanged. See §0.6 and the deployment gate.
 
 ### Verification
 
@@ -174,6 +190,61 @@ Separately, prompt **1150** ("Show {{randomOtherPlayer}} the spiciest thing on y
 - `Referrer-Policy` — player names travel in the query string; browser defaults happen to protect this cross-origin today, but that should be explicit not accidental
 - `Permissions-Policy` — the app requests `wakeLock` and `vibrate`; everything else (camera, mic, geolocation, payment) should be denied outright
 - `Strict-Transport-Security`
+
+### 0.6 🔴 None of this is deployed — production is running a pre-audit build
+
+*Found September 10, 2026, after everything above was written.*
+
+Every "Resolved" note in this document describes the state of the repository.
+It does not describe the state of the live site. The App Hosting backend has
+not built this work, so the public URL is still serving a build from before the
+audit began:
+
+| | Live | Current build |
+|---|---|---|
+| Homepage HTML | 11,348 bytes | 29,541 bytes |
+| `Content-Security-Policy` | absent | set |
+| `Referrer-Policy`, HSTS, `X-Frame-Options` | absent | set |
+| Age gate markup | not present | present |
+| Terms / Privacy links | not present | present |
+| `robots.txt` | `User-agent: *` / `Allow: /` | `/game` disallowed, landing page allowed |
+| Next.js adapter | `x-fah-adapter: nextjs-14.0.21` | 15.5.25 |
+
+**So §0.2, §0.3 and §0.5 — the three P0 items this audit opened with — are
+closed in the repository and open in production.** An explicitly adult drinking
+game is reachable right now at a public URL with no age gate, no Terms, no
+Privacy Policy and no security headers. The live `robots.txt` is the blanket
+`Allow: /` that §0.2 was written about, so `/game` and its explicit prompts are
+invited in rather than excluded. Reach is low: the address is not linked from
+anywhere and `afterhoursgame.com` still points at a GoDaddy "coming soon" page
+on AWS, unrelated to Firebase. It is nonetheless live and crawlable, and it is
+the version anyone who finds the app today will play.
+
+Nothing here is a code defect. The fixes exist and are verified; they are
+sitting in an unmerged pull request. What is missing is a deploy.
+
+**Two Firebase projects made this hard to see.** The account holds both
+**After Hours** (`after-hours-97f19`) and **GlowUp After Hours**
+(`glowup-after-hours`). The first has the matching name and deploys nothing;
+the second runs the site, from backend `studio` in `us-central1`. The live
+response settles it without guesswork, because App Hosting tags every response
+with the project number and backend id:
+
+```
+cache-tag: 885949399310:studio
+```
+
+`.firebaserc` now pins `glowup-after-hours` so the CLI cannot drift to the
+other one, and `CLAUDE.md` records the distinction. A `sentryAuthToken` secret
+was created in the wrong project along the way and has to be recreated in the
+right one — see the deployment gate at the end of this document for the full
+sequence.
+
+The correction this forces on the rest of the document: **the "Now" column in
+the scorecard, and every dated resolution note, means "true on
+`claude/public-release-audit-wrivmt`", not "true in production".** They become
+the same thing when that branch merges and the backend rebuilds, and not
+before.
 
 ---
 
@@ -375,6 +446,28 @@ release on a third party.
 **Still open under this heading:** uptime monitoring (owner task, needs a
 service outside the repo) and analytics, which is the input to Phase 4.
 
+**None of it is running yet, September 10 2026.** Both the DSN and the upload
+credentials reach the app through `apphosting.yaml`, which only the App Hosting
+backend reads, and only at build time. That backend last built before this
+audit (§0.6), so production currently reports nothing. Two further gaps have to
+close before it will:
+
+- `SENTRY_AUTH_TOKEN` is referenced as a Secret Manager secret, and the secret
+  was created in the wrong Firebase project (`after-hours-97f19`, not
+  `glowup-after-hours`). Until it exists in the right project and the `studio`
+  backend is granted access, builds take the no-credentials path: they succeed,
+  and ship minified traces.
+- The Sentry project's own settings are untouched — allowed domains, IP
+  storage, spike protection, the default alert rule. The IP setting is not
+  cosmetic: the Privacy Policy enumerates what a crash report contains and does
+  not list an IP address, so leaving Sentry's default on makes that document
+  inaccurate.
+
+The upload path itself is verified rather than assumed: a credentialed build
+created release `abe2801934abf538116b42a75221db9c8c4e11b4` in Sentry with one
+artifact bundle attached, 15 chunks carrying debug ids, and zero `.map` files
+left in `.next/static`.
+
 ### 2.5 ✅ The two engines have drifted again — *resolved by removal, Sept 10 2026*
 
 The Aug audit reconciled the Next app and `game.html` behaviourally, and CI enforces that `game.html` regenerates from the deck. But the R2–R6 redesign shipped to the Next app only. Current parity:
@@ -561,12 +654,77 @@ Quality gaps a first player would hit in the first ten minutes.
 
 ---
 
+**The deployment gate — between Phases 2 and 3** 🔴 *added September 10, 2026*
+
+Phase 3 is called "Live, and gathering evidence". Nothing is live (§0.6), so
+none of it can start. This gate is not a work item competing with the numbered
+list; it is the thing that makes the numbered list mean anything. It is also
+almost entirely owner work — the code side is finished and sitting in a
+pull request.
+
+*Deploy target:* project `glowup-after-hours`, backend `studio`, region
+`us-central1`, serving
+`https://studio--glowup-after-hours.us-central1.hosted.app`. `.firebaserc`
+pins the project, so none of the commands below need `-P`.
+
+**1. Merge the branch the backend builds from.** Check which branch that is —
+Firebase console → App Hosting → `studio` → Settings. If it is `main`, the
+open pull request has to merge before anything else on this list matters.
+
+**2. Put the Sentry auth token in the right project.** It was created in
+`after-hours-97f19` by mistake and secrets do not cross projects:
+
+```bash
+firebase apphosting:secrets:set sentryAuthToken
+firebase apphosting:secrets:grantaccess sentryAuthToken --backend studio
+gcloud secrets delete sentryAuthToken --project after-hours-97f19   # remove the stray copy
+```
+
+Rotate the token in Sentry first if it has ever been pasted anywhere other than
+Secret Manager. Skipping this step does not break the build — `next.config.ts`
+falls back to its no-credentials path and ships minified traces.
+
+**3. Watch the first build.** The live adapter is `nextjs-14.0.21` and the
+branch is on 15.5.25, so this is the first deploy across a framework major.
+Read the build log rather than assuming it passed.
+
+**4. Verify from outside, not from the console.** Each of these separates the
+new build from the old one on its own:
+
+```bash
+U=https://studio--glowup-after-hours.us-central1.hosted.app
+curl -sSI $U | grep -i 'content-security-policy\|x-fah-adapter'  # CSP set, adapter 15.x
+curl -sS  $U/robots.txt | grep -c 'Disallow'                     # 0 = still the old build
+curl -sS  $U | grep -c 'Privacy'                                 # 0 = still the old build
+```
+
+Then confirm Sentry received a release for the deployed commit, with an
+artifact bundle attached. A release with no bundle means the token step failed
+silently.
+
+**5. Finish the Sentry project's own settings** — none of these live in the
+repo. Allowed domains, so a stranger's site cannot spend your quota. **Prevent
+Storing of IP Addresses**, which the Privacy Policy's account of a crash report
+depends on being off. Spike protection. And confirm the default alert rule
+actually routes somewhere someone reads.
+
+**6. Add uptime monitoring** (§2.4) — an external check, deliberately outside
+this repo so it can still report when the repo's hosting is what failed.
+
+**7. Only then, move the domain.** `afterhoursgame.com` is a GoDaddy
+"coming soon" page today. Point it at the backend after the `hosted.app` URL
+has been verified serving the current build, not before — and once it resolves,
+run it through Facebook's Sharing Debugger and Twitter's Card Validator, which
+is the last unverified piece of §3.2.
+
+---
+
 **Phase 3 — Live, and gathering evidence**
 
 Ship, then learn. Everything here either measures the product or improves it
 using what the measurement shows.
 
-14. ⚠️ Sentry DSN set and source map upload wired (§2.4) — September 10 2026. **Owner task remaining:** external uptime monitoring, and the Sentry project's own settings (allowed domains, alert rule, `SENTRY_AUTH_TOKEN` in Secret Manager)
+14. ⚠️ Sentry DSN set and source map upload wired (§2.4) — September 10 2026. Code complete and verified against a real build; **reporting nothing until the deployment gate above is cleared.** Owner tasks: the token secret in `glowup-after-hours`, the Sentry project settings, and external uptime monitoring
 15. Add privacy-respecting analytics (§2.4) — the input to Phase 4
 16. ✅ Persist and resume mid-game state (§1.3) — September 10 2026, pulled forward: it is the same record as 11
 17. Rebalance Mild and clarify the NHIE intensity signal (§1.6)
