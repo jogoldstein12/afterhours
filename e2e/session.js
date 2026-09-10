@@ -7,7 +7,7 @@
  * a real browser rather than a stub.
  */
 
-const { makeCheck, freshContext, bodyText, storageItem, savedGame, cardText, addPlayers } = require('./lib');
+const { makeCheck, freshContext, bodyText, storageItem, savedGame, cardText, settledCard, addPlayers } = require('./lib');
 
 module.exports = async function session(browser, BASE, results) {
   const check = makeCheck(results);
@@ -23,19 +23,22 @@ module.exports = async function session(browser, BASE, results) {
   await page.waitForTimeout(500);
   check('Start navigates to a bare /game, with no query string', new URL(page.url()).search === '', page.url());
 
+  let previous;
   for (let i = 0; i < 3; i++) {
+    previous = await settledCard(page, { not: previous });
     await page.getByRole('button', { name: /next/i }).first().click();
-    await page.waitForTimeout(220);
   }
-  const before = await cardText(page);
+  // Wait for the last deal to land before reading either the screen or the
+  // record, so the two are never sampled from different renders.
+  const before = await settledCard(page, { not: previous });
   const first = await savedGame(page);
   check('The saved game records deck progress', first.usedPromptIds.length === 3, `used: ${first.usedPromptIds.length}`);
   check('The saved game holds the roster', JSON.stringify(first.players) === '["Alex","Sam","Jordan"]', JSON.stringify(first.players));
 
   await page.reload({ waitUntil: 'networkidle' });
-  await page.waitForTimeout(600);
+  const onScreen = await cardText(page, { expect: before });
   const after = await savedGame(page);
-  check('A refresh keeps the same card on screen', (await cardText(page)) === before, JSON.stringify(before.slice(0, 55)));
+  check('A refresh keeps the same card on screen', onScreen === before, JSON.stringify(before.slice(0, 55)));
   check('A refresh keeps deck progress', after.usedPromptIds.length === 3, `used: ${after.usedPromptIds.length}`);
   check('A refresh keeps whose turn it is', after.currentPlayerIndex === first.currentPlayerIndex);
   check('A refresh keeps the turn tally', JSON.stringify(after.turnsByName) === JSON.stringify(first.turnsByName), JSON.stringify(after.turnsByName));
@@ -114,6 +117,35 @@ module.exports = async function session(browser, BASE, results) {
   chips = await page.locator('main ul li span.truncate').allInnerTexts();
   check('Bidi and zero-width characters are stripped from a name', chips[2] === 'Zoe', JSON.stringify(chips[2]));
   await context.close();
+
+  // --- A restored card must keep naming the same person --------------------
+  // Regression guard. `{{randomOtherPlayer}}` is substituted at draw time, so
+  // a restore that re-derives the text instead of using the stored copy picks
+  // a different player — the card silently changes who it is pointing at
+  // between one refresh and the next. Four players, so a re-roll has a two in
+  // three chance of showing up on any given load.
+  {
+    const CARD = 602; // "...Demonstrate it on {{randomOtherPlayer}}."
+    const stored = "What emoji do you send when you're flirting? Demonstrate it on Sam.";
+    context = await freshContext(browser, {
+      'afterhours.game': JSON.stringify({
+        v: 1, savedAt: Date.now(), players: ['Alex', 'Sam', 'Jordan', 'Riley'], nsfwLevel: 'Mild',
+        currentPlayerIndex: 0, currentPromptId: CARD, processedPromptText: stored,
+        usedPromptIds: [1, 2, 3], upcomingTurns: [1, 2, 3], turnsByName: { Alex: 1 },
+        history: [], gameEnded: false,
+      }),
+    });
+    page = await context.newPage();
+    const rendered = new Set();
+    for (let i = 0; i < 8; i++) {
+      await page.goto(BASE + '/game', { waitUntil: 'networkidle' });
+      rendered.add(await cardText(page, { expect: stored }));
+    }
+    check('A restored card names the same player on every load',
+      rendered.size === 1 && rendered.has(stored),
+      [...rendered].map((t) => JSON.stringify(t.slice(-24))).join(' vs '));
+    await context.close();
+  }
 
   // --- A legacy play URL still opens, and cleans up after itself -----------
   context = await freshContext(browser);

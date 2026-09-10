@@ -233,6 +233,15 @@ up; the home screen offers "Resume" when a night is part-finished, and drops it
 after twelve hours. The card text is stored as rendered rather than re-derived,
 so `{{randomOtherPlayer}}` does not silently swap names under a group mid-read.
 
+**Correction, later the same day.** Storing the text was necessary but not
+sufficient, and the first version of this shipped broken: the restore used a
+one-shot flag to decide whether to use the stored copy, hydration ran the
+text-processing effect more than once, and a later pass re-derived the text
+anyway. Measured on a four-player roster, **9 refreshes in 15 named a
+different player**. The flag is now tagged with the card's id and is not
+cleared while there is no current card; the same measurement is 15 in 15
+unchanged, and `e2e/session.js` guards it.
+
 ### 1.4 🟡 Input validation gaps
 
 - **No `maxLength` on any input** (verified: zero occurrences in `src/`). A pasted 10 000-character name goes into React state, the URL, and `localStorage`, and breaks the layout.
@@ -342,6 +351,29 @@ More broadly, there is **no deployment story in the repo**: no staging environme
 Nothing is instrumented. If the app throws for a class of device tonight, you will find out from a text message. There is also no funnel data — which matters concretely for the paywall, because you cannot price or place a paywall without knowing where people stop.
 
 Minimum before launch: a client error reporter (Sentry or equivalent — a static app needs only the browser SDK), uptime monitoring, and privacy-respecting analytics. Given §0.3, prefer a cookieless analytics tool so this does not itself become a consent-banner problem.
+
+**Error reporting done, September 10 2026.** A real DSN is set in
+`apphosting.yaml` (the DSN is public by design and ships in the client bundle,
+so it is not a secret), and `next.config.ts` uploads source maps at build time
+so a stack trace resolves to real files instead of `chunk-…js:1:48213`.
+
+Both are wired to stay out of the way of everything else this app depends on.
+The SDK is still behind the dynamic import in `src/lib/monitoring.ts` — eager
+initialisation, which the Sentry setup wizard installs by default, would put
+~121 KB gzipped into a first load that is 148 KB in total. The build plugin is
+configured for source map upload only: no server, middleware or app-directory
+instrumentation, and no tunnel route, which would have been this app's only
+non-static route. Verified against a build: all five routes stay `○ Static`,
+Sentry stays absent from the prerendered HTML, and the maps are deleted from
+the output after upload. Adding the plugin costs 2 KB of first load, for the
+debug ids that let a map be matched to an event.
+
+A failed upload — an expired token, Sentry unreachable — warns in the build log
+and lets the deploy continue with minified traces, rather than blocking a
+release on a third party.
+
+**Still open under this heading:** uptime monitoring (owner task, needs a
+service outside the repo) and analytics, which is the input to Phase 4.
 
 ### 2.5 ✅ The two engines have drifted again — *resolved by removal, Sept 10 2026*
 
@@ -534,7 +566,7 @@ Quality gaps a first player would hit in the first ten minutes.
 Ship, then learn. Everything here either measures the product or improves it
 using what the measurement shows.
 
-14. **Owner task:** set a real Sentry DSN and add external uptime monitoring (§2.4)
+14. ⚠️ Sentry DSN set and source map upload wired (§2.4) — September 10 2026. **Owner task remaining:** external uptime monitoring, and the Sentry project's own settings (allowed domains, alert rule, `SENTRY_AUTH_TOKEN` in Secret Manager)
 15. Add privacy-respecting analytics (§2.4) — the input to Phase 4
 16. ✅ Persist and resume mid-game state (§1.3) — September 10 2026, pulled forward: it is the same record as 11
 17. Rebalance Mild and clarify the NHIE intensity signal (§1.6)

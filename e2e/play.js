@@ -7,7 +7,7 @@
  * function.
  */
 
-const { makeCheck, freshContext, bodyText, savedGame, cardText } = require('./lib');
+const { makeCheck, freshContext, bodyText, savedGame, cardText, settledCard } = require('./lib');
 
 module.exports = async function play(browser, BASE, results) {
   const check = makeCheck(results);
@@ -35,11 +35,17 @@ module.exports = async function play(browser, BASE, results) {
   await page.waitForTimeout(400);
 
   const seen = new Set();
+  let previous;
   for (let i = 0; i < 20; i++) {
-    seen.add(await cardText(page));
+    // Wait for the deal to land rather than guessing at it, so a slow render
+    // cannot make two turns look like the same card.
+    previous = await settledCard(page, { not: previous });
+    seen.add(previous);
     await page.getByRole('button', { name: /next/i }).first().click();
-    await page.waitForTimeout(160);
   }
+  // Wait for the twentieth deal to land before reading the record, or the read
+  // races the write that the deal triggers.
+  previous = await settledCard(page, { not: previous });
   let record = await savedGame(page);
   check('Twenty cards deal without a repeat', seen.size === 20, `${seen.size} distinct`);
   check('The record tracks the deck', record.usedPromptIds.length === 20);
@@ -50,17 +56,17 @@ module.exports = async function play(browser, BASE, results) {
 
   const beforeSkip = record;
   await page.getByRole('button', { name: /^skip$/i }).click();
-  await page.waitForTimeout(250);
+  // Skip deals a replacement to the same player; wait for it rather than
+  // sleeping, so what is read back is never the outgoing card.
+  const skipped = await settledCard(page, { not: previous });
   const afterSkip = await savedGame(page);
   check('Skip consumes a card without counting a turn',
     afterSkip.usedPromptIds.length === beforeSkip.usedPromptIds.length + 1 &&
       JSON.stringify(afterSkip.turnsByName) === JSON.stringify(beforeSkip.turnsByName));
   check('Skip keeps the same player up', afterSkip.currentPlayerIndex === beforeSkip.currentPlayerIndex);
 
-  const skipped = await cardText(page);
   await page.reload({ waitUntil: 'networkidle' });
-  await page.waitForTimeout(600);
-  check('A refresh after a skip keeps the card', (await cardText(page)) === skipped);
+  check('A refresh after a skip keeps the card', (await cardText(page, { expect: skipped })) === skipped);
 
   // --- Roster edits mid-game -----------------------------------------------
   await page.getByRole('button', { name: /^group$/i }).click();

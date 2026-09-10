@@ -77,6 +77,14 @@ plain `npm install` and `npm ci` work normally afterwards, from the lockfile.
   the restore reads as a mid-game level change and wipes the progress it just
   loaded. If the saved card's id no longer resolves, a recovery effect deals a
   replacement rather than leaving an empty card.
+- **`restoredTextRef` is tagged with a prompt id, not a one-shot flag.**
+  Hydration lands its state over several renders, so the text-processing effect
+  runs more than once — and it runs the first time before `currentPrompt` is
+  set. A flag consumed on the first pass let a later pass re-derive the text
+  and re-roll `{{randomOtherPlayer}}`, so a mid-card refresh changed who the
+  card was pointing at (about half the time with four players). Two rules keep
+  it right: match the stored text to the card by id, and never clear the ref
+  while `currentPrompt` is still null. `e2e/session.js` guards this.
 - **Contrast is enforced, not eyeballed.** `e2e/contrast.js` composites what
   the browser actually computed — translucent white over a translucent panel
   over the near-black page — and fails any text run under WCAG AA. Text on a
@@ -88,7 +96,18 @@ plain `npm install` and `npm ci` work normally afterwards, from the lockfile.
 - **Sentry is behind a dynamic import** in `src/lib/monitoring.ts` and only
   loads when `NEXT_PUBLIC_SENTRY_DSN` is set. `beforeSend` still strips
   everything after `?` or `#` from URLs — belt and braces now that names have
-  left the query string, and it still covers a legacy link.
+  left the query string, and it still covers a legacy link. Keep it lazy: the
+  SDK is ~121 KB gzipped against a 148 KB first load, so eager initialisation
+  (what `npx @sentry/wizard` installs by default) would roughly double what
+  every visitor downloads. **Do not run the wizard** — it also wraps
+  `next.config.ts`, adds server and edge configs with no server to instrument,
+  and offers a tunnel route that would be this app's only non-static route.
+- **Source map upload is opt-in and no-ops without credentials.**
+  `next.config.ts` wraps the config in `withSentryConfig` only when
+  `SENTRY_ORG`, `SENTRY_PROJECT` and `SENTRY_AUTH_TOKEN` are all set, so a
+  local or CI build produces exactly the output it did before. The token is a
+  real secret (unlike the DSN) and lives in Secret Manager. A failed upload
+  warns and lets the deploy through rather than blocking a release.
 
 ## Icons
 

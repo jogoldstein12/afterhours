@@ -169,9 +169,16 @@ export default function GamePage() {
   // Running tally of how many cards each player has answered, keyed by name so
   // it survives roster edits. Feeds the "most drawn" stat on the finale.
   const [turnsByName, setTurnsByName] = useState<Record<string, number>>({});
-  // Set just before an undo restores a card, so the processing effect shows the
-  // exact text that was on screen instead of re-randomizing {{randomOtherPlayer}}.
-  const restoredTextRef = useRef<string | null>(null);
+  // The text a restored or undone card was showing, tagged with the card it
+  // belongs to so the processing effect below can show it instead of deriving
+  // the text again and re-rolling {{randomOtherPlayer}} onto somebody else.
+  //
+  // Tagged rather than a one-shot flag, which is what this was and what made it
+  // wrong: hydration lands its state over more than one render, so the effect
+  // runs more than once, and the first pass consumed the flag — leaving a later
+  // pass to re-derive the text. Refreshing mid-card genuinely changed who the
+  // card was pointing at, about half the time with four players.
+  const restoredTextRef = useRef<{ promptId: number; text: string } | null>(null);
   // The level the loaded deck belongs to. The deck only (re)loads when this
   // changes, never on roster changes — adding or removing a player mid-game
   // must not reset progress.
@@ -271,7 +278,9 @@ export default function GamePage() {
       if (card) {
         // Show the card exactly as it was read out, rather than re-rolling
         // {{randomOtherPlayer}} under a group that is looking at it.
-        restoredTextRef.current = saved.processedPromptText || null;
+        if (saved.processedPromptText) {
+          restoredTextRef.current = { promptId: card.id, text: saved.processedPromptText };
+        }
         setCurrentPrompt(card);
       }
     }
@@ -423,10 +432,21 @@ export default function GamePage() {
   }, [rosterChecked, gameEnded, currentPrompt, availablePrompts, usedPromptIds, selectNewPrompt]);
 
   useEffect(() => {
-    if (restoredTextRef.current !== null) {
-      setProcessedPromptText(restoredTextRef.current);
+    // Held until a different card is actually dealt, so every render of the
+    // same restored card shows the same words. The `currentPrompt` guard on the
+    // clear matters: this effect also runs on mount, before hydration's state
+    // has landed, and clearing then would throw the restored text away before
+    // the card it belongs to ever arrives.
+    const restored = restoredTextRef.current;
+    if (restored && currentPrompt) {
+      if (restored.promptId === currentPrompt.id) {
+        setProcessedPromptText(restored.text);
+        return;
+      }
       restoredTextRef.current = null;
-    } else if (gameEnded) {
+    }
+
+    if (gameEnded) {
       setProcessedPromptText("Game Over! You've gone through all the prompts for this level.");
     } else if (currentPrompt && players.length > 0) {
       setProcessedPromptText(renderPromptText(currentPrompt, players, currentPlayerIndex));
@@ -496,7 +516,7 @@ export default function GamePage() {
       next.delete(last.prompt.id);
       return next;
     });
-    restoredTextRef.current = last.text;
+    restoredTextRef.current = { promptId: last.prompt.id, text: last.text };
     setGameEnded(false);
     setCurrentPrompt(last.prompt);
     setCurrentPlayerIndex(Math.min(last.playerIndex, players.length - 1));

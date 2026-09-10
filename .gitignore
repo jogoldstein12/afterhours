@@ -49,3 +49,5 @@ firestore-debug.log
 /public/sw.js.map
 /public/workbox-*.js
 /public/workbox-*.js.map
+# Sentry CLI credentials, if the CLI is ever run locally.
+.sentryclirc
