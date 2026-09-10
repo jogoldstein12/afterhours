@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -40,14 +40,21 @@ export function HomeScreen() {
   const [draft, setDraft] = useState('');
   const [nsfwLevel, setNsfwLevel] = useState<GameMode>('Mild');
   const router = useRouter();
-  const searchParams = useSearchParams();
   const { toast } = useToast();
 
   // "New Game" from the game screen hands the current roster and level back,
   // so a group can start a fresh deck without retyping every name.
+  //
+  // The query string is read here from `window.location` rather than through
+  // `useSearchParams`. Calling that hook during render opts the whole route
+  // out of static prerendering, which left `/` shipping an empty body to
+  // crawlers. Nothing here needs the value at render time — only on mount,
+  // and arriving from /game remounts this screen — so reading it in the
+  // effect keeps the page fully prerendered.
   useEffect(() => {
-    const names = playersFromQuery(searchParams);
-    const nsfwLevelQuery = searchParams.get('nsfwLevel');
+    const query = new URLSearchParams(window.location.search);
+    const names = playersFromQuery(query);
+    const nsfwLevelQuery = query.get('nsfwLevel');
     if (names.length >= MIN_PLAYERS) {
       setPlayers(names.slice(0, MAX_PLAYERS));
     } else {
@@ -67,7 +74,7 @@ export function HomeScreen() {
     if (nsfwLevelQuery && GAME_MODES.some((m) => m.id === nsfwLevelQuery)) {
       setNsfwLevel(nsfwLevelQuery as GameMode);
     }
-  }, [searchParams]);
+  }, []);
 
   const addPlayer = () => {
     const name = draft.trim();
