@@ -104,7 +104,20 @@ function buildIco(pngs, sizes) {
   const sizes = [16, 32, 48];
   const glass = await sharp(path.join(ICONS, 'icon-512x512.png')).extract(GLASS).toBuffer();
   const pngs = await Promise.all(
-    sizes.map((s) => sharp(glass).resize(s, s).flatten({ background: BG }).png({ compressionLevel: 9 }).toBuffer()),
+    sizes.map((s) =>
+      sharp(glass)
+        .resize(s, s)
+        .flatten({ background: BG })
+        // flatten() drops the alpha channel and leaves 3-channel RGB, which
+        // Turbopack's ICO decoder rejects outright ("The PNG is not in RGBA
+        // format"). Put an opaque alpha channel back, and keep these frames
+        // truecolour — a palette PNG inside an ICO is refused for the same
+        // reason. `next build` does not decode the file, so only the dev
+        // server surfaces this.
+        .ensureAlpha()
+        .png({ compressionLevel: 9, palette: false })
+        .toBuffer(),
+    ),
   );
   fs.writeFileSync(FAVICON, buildIco(pngs, sizes));
   written.push(FAVICON);
