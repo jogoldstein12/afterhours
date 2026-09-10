@@ -171,8 +171,15 @@ its own, Android crops to a circle, and the wordmark is unreadable below about
 
 ## Open work
 
-`docs/public-release-audit-2026-09.md` is the standing list of what is left
-before and after public launch. Read the scorecard and the phased plan at the
+`docs/launch-readiness-audit-2026-09.md` (September 10) is the current plan:
+it reviews the earlier audit against the live site, adds the mobile, payment
+and accounts strategy, and carries the phased roadmap (Parts 6–8). Two facts
+in it override older notes in this file until they are fixed: production is
+served by a **Vercel** project, not the Firebase backend described above, and
+that deployment has no Sentry DSN.
+
+`docs/public-release-audit-2026-09.md` is the earlier standing list of what was
+left before and after public launch. Read the scorecard and the phased plan at the
 bottom for current state; the findings themselves are left as first written,
 each with a dated **Resolved** note underneath where one has shipped, so the
 original reasoning stays readable next to what was done about it. Phases 1 and
