@@ -285,6 +285,30 @@ The Aug audit reconciled the Next app and `game.html` behaviourally, and CI enfo
 
 CI checks that the *deck data* matches; it cannot check that the *engines* match, and they no longer do. Decide what `game.html` is for: if it is a real offline product, the shared engine refactor (open since Aug as 1.7) needs to happen; if it is a demo, say so in the README and stop implying parity.
 
+**Addendum, September 10 2026 — nothing consumes it.** Traced through the repo:
+`game.html` sits at the repository root, not in `public/`, so Next never serves
+it. No route, component, or link in the app points at it. The only reference in
+shipped code is a paragraph in the Privacy Policy describing its Google Fonts
+request — a disclosure about an artifact no visitor to the site can obtain.
+
+What it does cost is real: a CI freshness gate on every PR, and a second engine
+that has to be edited by hand for every gameplay change. `git log` shows that
+tax being paid repeatedly — "Reconcile game behavior between the app and the
+standalone build", "Add a countdown timer to timed prompts in both engines",
+"Cap the drink economy at 3 drinks per turn across every tier", the Skip button
+removed and later restored in both. The parity table above is the result of
+that tax going unpaid once.
+
+It is also the only reason the PWA layer was deleted in the Aug audit
+("`game.html` is the verified offline story"). Since no user can reach it, that
+offline story does not currently exist for anyone. Removing `game.html` does
+not lose offline play; it makes an already-absent capability honest.
+
+Separately: the repository is **public**. `game.html` is therefore a complete,
+free, permanently playable copy of the product — deck included — available to
+anyone who finds the repo, as is `docs/prompts.csv`. That is a distribution
+decision, not a build artifact.
+
 ### 2.6 🟡 Dead configuration that adds attack surface
 
 `next.config.ts` allows remote images from `placehold.co`, but **`next/image` is not used anywhere in the codebase** (verified: zero imports). Several of the Next advisories in §0.1 target the image optimizer and its `remotePatterns` handling specifically. Delete the block.
@@ -326,33 +350,83 @@ Player names are placed in the URL query string and persisted to `localStorage` 
 
 ## Recommended order of work
 
-**Before the URL is public**
+*Re-phased September 10, 2026.* The original plan put the paywall second, on
+the reasoning that payment eligibility could invalidate everything else. That
+question is now settled — Stripe is confirmed — and with it the reason to keep
+the paywall early. It moves to the end, as a phase of its own, for two reasons:
 
-1. Upgrade Next.js to 15.5.25 and add Dependabot + an `npm audit` CI step (§0.1) — verified, ~10 minutes
-2. Add security headers and delete the dead `images` config (§0.5, §2.6) — one file
-3. Age gate + `rating`/RTA meta + a `robots.txt` decision (§0.2)
-4. Terms, Privacy Policy, LICENSE, alcohol/liability disclaimer, footer links (§0.3)
-5. Fix the `/game` dead-end and add `error.tsx` / `not-found.tsx` (§1.2, §3.1)
-6. Restore a Skip/Pass affordance and resolve the 21 no-out contact prompts (§0.4)
-7. Raise `maxInstances`, set `minInstances`, and add error tracking + uptime monitoring (§2.3, §2.4)
+- **It should be placed on evidence.** Nobody has played the public product
+  yet. Deciding where the wall goes before you can see where people stop
+  playing is guessing at the most consequential product decision in the list.
+- **It is the one change that undoes the app's biggest structural advantage.**
+  Everything in §0–§3 is small precisely because there is no server, no
+  database, no accounts, and no secrets. The paywall adds all four. That is a
+  cost worth paying deliberately and once, not woven through other work.
 
-**Before you charge anyone**
+Phases 2 and 3 are ordered so the game is worth showing people before it is
+shown to people, and instrumented before it is monetised.
 
-8. **Confirm payment-processor eligibility for adult content first** (§2.2) — this can change the entire plan
-9. Split `GAME_MODES` out of `prompts.ts` and load decks dynamically (§2.1)
-10. Design the backend: identity, entitlements, server-gated content (§2.2)
-11. Add analytics so the paywall is placed on evidence, not instinct (§2.4)
+---
 
-**Quality, in parallel**
+**Phase 1 — Before the URL is public** ✅ *complete, September 9–10 2026*
 
-12. Fix the 119 mis-personalised prompts in both engines (§1.1)
-13. Stand up a test suite over the game logic (§1.5)
-14. Persist and resume mid-game state (§1.3)
-15. OG/Twitter metadata and a share image (§3.2)
-16. Input validation: `maxLength`, roster cap on `/game`, duplicate-name handling (§1.4)
+1. ✅ Upgrade Next.js to 15.5.25 and add Dependabot + an `npm audit` CI step (§0.1)
+2. ✅ Add security headers and delete the dead `images` config (§0.5, §2.6)
+3. ✅ Age gate + `rating`/RTA meta + a `robots.txt` decision (§0.2)
+4. ✅ Terms, Privacy Policy, LICENSE, alcohol/liability disclaimer, footer links (§0.3)
+5. ✅ Fix the `/game` dead-end and add `error.tsx` / `not-found.tsx` (§1.2, §3.1)
+6. ✅ Restore a Skip/Pass affordance and resolve the 21 no-out contact prompts (§0.4)
+7. ✅ Raise `maxInstances`, set `minInstances`, and scaffold error tracking (§2.3, §2.4)
+
+Found and fixed during the same window, not in the original list:
+
+- ✅ `/` prerendered to an empty body — `useSearchParams()` during render opted the route out of static generation
+- ✅ Four postcss advisories inside Next's nested copy, resolved with an `overrides` pin rather than a Next 16 major
+- ✅ Repo hygiene (§3.5): package metadata, `CLAUDE.md`, this document's stale sibling `blueprint.md`, the toast listener, the Firebase emulators in `.idx/dev.nix`
+
+---
+
+**Phase 2 — Before you show anyone**
+
+Quality gaps a first player would hit in the first ten minutes.
+
+8. Fix the 119 mis-personalised prompts in both engines (§1.1)
+9. OG/Twitter metadata and a share image (§3.2) — the highest-leverage small fix in this document
+10. Stand up a test suite over the game logic (§1.5)
+11. Input validation: `maxLength`, roster cap on `/game`, duplicate-name handling (§1.4)
+12. Contrast fixes in the game HUD (§3.3)
+13. **Owner task:** legal review of the Terms and Privacy Policy by a lawyer
+
+---
+
+**Phase 3 — Live, and gathering evidence**
+
+Ship, then learn. Everything here either measures the product or improves it
+using what the measurement shows.
+
+14. **Owner task:** set a real Sentry DSN and add external uptime monitoring (§2.4)
+15. Add privacy-respecting analytics (§2.4) — the input to Phase 4
+16. Persist and resume mid-game state (§1.3)
 17. Rebalance Mild and clarify the NHIE intensity signal (§1.6)
-18. Decide what `game.html` is, then either share the engine or document the difference (§2.5)
-19. Contrast fixes, repo hygiene, stale docs (§3.3, §3.5)
+18. Decide what `game.html` is (§2.5) — see the note below; this is now a
+    distribution question, not only an engineering one
+
+---
+
+**Phase 4 — The paywall, last and on its own**
+
+19. ✅ Payment-processor eligibility confirmed (§2.2) — Stripe, September 10 2026
+20. Split `GAME_MODES` out of `prompts.ts` and load decks dynamically (§2.1) — the deck must be separable before any of it can be gated
+21. Design the backend: identity, entitlements, server-gated content (§2.2)
+22. Move age gating server-side (§0.2), which the backend in 21 makes possible for the first time
+
+**Prerequisite that is not code.** The repository is public and licensed
+all-rights-reserved. Today that means the full deck (`src/lib/prompts.ts`,
+`docs/prompts.csv`) and a complete, playable single-file build of the game
+(`game.html`) can be downloaded by anyone. A licence is a legal deterrent, not
+a technical one. Before charging for this content, decide whether the
+repository stays public — that decision belongs at the top of Phase 4, ahead
+of any code in it.
 
 ---
 
