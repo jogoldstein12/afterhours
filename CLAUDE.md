@@ -60,10 +60,12 @@ its own, Android crops to a circle, and the wordmark is unreadable below about
   everybody and is never personalised. Mark a new prompt `'room'` if it reads
   wrong with one name in front of it; NHIE cards and anything whose subject is
   the group always are.
-- The opt-out ladder is driven by what the card asks, not by its tier:
-  `— or take a drink` is the default (say, show, answer, confess),
-  `— or take 2 drinks` for physical contact, `— or take a shot` for removing
-  clothing or a directed sexual act. Nothing uses "3 drinks".
+- The opt-out ladder is driven by what the card asks, not by its tier. Four
+  rungs: `— or take a drink` is the default (say, show, answer, confess),
+  `— or take 2 drinks` for physical contact, `— or take 3 drinks` for oral or
+  clothing-removal play, and `— or take a shot` at the top for nudity,
+  genital or underwear contact, a simulated or real sex act, and sustained
+  mouth-to-mouth.
 - Prompts that ask you to drink a counted amount for something you have done
   are deliberately uncapped — the number is the punchline.
 - Anything directing physical contact should offer a way out — the house
