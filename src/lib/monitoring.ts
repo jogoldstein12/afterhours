@@ -6,9 +6,11 @@
  * the dynamic import below means it does not even reach the main bundle — so
  * this is safe to ship before an account exists.
  *
- * Player names travel in the game URL, so every payload is scrubbed of query
- * strings before it leaves the browser (see `scrubUrl`). That keeps crash
- * reports free of the roster, which is what the privacy policy promises.
+ * Player names no longer travel in the URL — a game lives in `localStorage`
+ * (see `src/lib/session.ts`) and nothing here reads it — but every payload is
+ * still scrubbed of query strings before it leaves the browser (see
+ * `scrubUrl`). That covers a legacy `/game?player=...` link, which is still
+ * honoured for one read, and keeps the promise the privacy policy makes.
  */
 const DSN = process.env.NEXT_PUBLIC_SENTRY_DSN;
 
@@ -17,7 +19,7 @@ type SentryModule = typeof import('@sentry/nextjs');
 let sentry: SentryModule | null = null;
 let loading: Promise<SentryModule | null> | null = null;
 
-/** Drop everything after `?` or `#` — that is where the player names live. */
+/** Drop everything after `?` or `#` — where a legacy link's player names live. */
 const scrubUrl = (url: string): string => url.split(/[?#]/)[0];
 
 const load = (): Promise<SentryModule | null> => {

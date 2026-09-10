@@ -17,18 +17,19 @@ The app itself is in good shape. The build is clean, the gates are on, the desig
 
 There is also one architectural fact that needs to be confronted before the paywall conversation starts: **the entire prompt deck ships to every visitor in a 104 KB JavaScript chunk, including on the setup screen.** The product you intend to sell is currently given away in full to anyone who opens the homepage and views source.
 
-**Scorecard**
+**Scorecard** — the first column is the state on September 9 that the findings
+below describe; the second is after Phases 1 and 2, and is what is true now.
 
-| Area | Grade | One-liner |
-|---|---|---|
-| Security posture | D | No headers, unpatched critical framework CVE, no dependency automation — but no secrets and a tiny attack surface |
-| Legal / compliance readiness | F | No age gate, no ToS, no privacy policy, no licence, no alcohol disclaimer, indexable by search |
-| Content safety | C− | 21 prompts direct intimate contact on a randomly-chosen player with no opt-out, and the Skip button was removed |
-| Infrastructure | D+ | `maxInstances: 1`, no monitoring, no error tracking, no analytics, no staging, no rollback story |
-| Architecture (for monetisation) | D | Fully static, no auth, no entitlements; the deck is client-side and free to anyone with devtools |
-| Code correctness | B− | Clean build and types; one 14%-of-deck rendering bug, one permanent dead-end route, zero tests |
-| Design / UX | B+ | The Aug redesign landed well; gaps are now error states, share metadata, and contrast |
-| Repo hygiene | C+ | No licence, stale blueprint doc, placeholder package name, two drifted engines |
+| Area | Sept 9 | Now | What still holds it back |
+|---|---|---|---|
+| Security posture | D | B+ | Headers, patched framework, Dependabot, an audit gate at `high`, zero advisories. The age gate is still client-side (§0.2) and the CSP keeps `'unsafe-inline'` to preserve static rendering. |
+| Legal / compliance readiness | F | B | Terms, Privacy Policy, LICENCE, disclaimers and adult labels all exist, are accurate and are linked. **A lawyer has still not reviewed them** — that alone is the gap. |
+| Content safety | C− | A− | Skip is back, every prompt carries an out, and the opt-out ladder is graded by what the card asks. |
+| Infrastructure | D+ | C+ | `maxInstances: 10`, cpu/memory/concurrency set. Sentry is wired but inert without a DSN, and there is still no analytics, no uptime check, no staging. |
+| Architecture (for monetisation) | D | D | Unchanged by design — the whole of it is Phase 4. |
+| Code correctness | B− | A− | Both bugs fixed; 78 unit cases gate every push and 73 browser checks cover a full night of play. |
+| Design / UX | B+ | A− | Error states, share metadata and contrast all landed. The Mild deck is still thin and the NHIE intensity signal still misleads (§1.6). |
+| Repo hygiene | C+ | A− | Licence, metadata, `CLAUDE.md`, one engine, a live test suite. Whether the repo stays public is a Phase 4 decision. |
 
 ---
 
@@ -398,6 +399,12 @@ requirement it should be a maintained PWA, not a hand-synced second engine.
 
 `.github/workflows/ci.yml` runs typecheck, lint, build, and a deck-freshness check — a good baseline. Missing: `npm audit` (or a dedicated scanner), a test job, Dependabot/Renovate, preview deployments, and a Lighthouse/bundle-size budget check. There is no `CODEOWNERS`, no `SECURITY.md`, and no PR template.
 
+**Mostly resolved.** `npm audit --audit-level=high` and Dependabot landed
+September 9; the test job landed September 10 and runs the unit suite on every
+push. **Still open:** preview deployments, a Lighthouse or bundle-size budget,
+`CODEOWNERS`, `SECURITY.md`, and a PR template. The browser suite is
+deliberately not in CI — see §1.5.
+
 ---
 
 ## P3 — Design, polish, and hygiene
@@ -409,6 +416,15 @@ requirement it should be a maintained PWA, not a hand-synced second engine.
 ### 3.2 🟠 Shared links render bare — on a product that spreads by sharing
 
 `metadata` in `src/app/layout.tsx` has only `title` and `description`. There is no `openGraph`, no `twitter` card, no `metadataBase`, and no OG image. A party game is shared in group chats; right now every one of those links renders as a grey box with no image and no styling. For something you want to *market*, this is one of the highest-leverage small fixes in this document.
+
+**Resolved, September 10 2026.** Full `openGraph` and `twitter` blocks, a
+`metadataBase` on `afterhoursgame.com`, and a 1200×630 share image. The icon
+set came with it: `npm run build:icons` derives the PWA icons, an Android
+maskable variant, the apple-touch icon and the favicon from one source file,
+so the crop reasoning lives in `tools/build-icons.js` rather than in shell
+history. **Still to do, and it needs a deployed URL:** run the live link
+through Facebook's Sharing Debugger and Twitter's Card Validator once the
+domain is serving.
 
 ### 3.3 🟡 Contrast below WCAG AA in the game HUD
 

@@ -130,4 +130,9 @@ its own, Android crops to a circle, and the wordmark is unreadable below about
 ## Open work
 
 `docs/public-release-audit-2026-09.md` is the standing list of what is left
-before and after public launch, with a resolution log at the top.
+before and after public launch. Read the scorecard and the phased plan at the
+bottom for current state; the findings themselves are left as first written,
+each with a dated **Resolved** note underneath where one has shipped, so the
+original reasoning stays readable next to what was done about it. Phases 1 and
+2 are complete bar the lawyer review; Phase 3 is analytics, deck balance and
+the two owner tasks; Phase 4 is the paywall.

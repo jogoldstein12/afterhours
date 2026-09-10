@@ -21,6 +21,8 @@ app.
 - Background color: very dark violet `#0A040F` (`--background: 285 56% 5%`) for a dark-mode aesthetic.
 - Accent color: saturated pink `#F252A9` (`--accent: 328 86% 64%`), closely analogous to the violet, for calls to action and highlights.
 - Every colour is an HSL custom property in `src/app/globals.css`; nothing hard-codes a hex value.
+- Text on a solid brand fill is the near-black ink, not white: white on the neon violet is 3.7:1 and on the pink 3.2:1, both under WCAG AA. The palette itself is never darkened to fix this, so the glows, borders and filaments keep their colour.
+- Every text run on every screen meets WCAG AA (4.5:1, or 3:1 for large text), enforced by `e2e/contrast.js` rather than by eye.
 - Headline and body font: 'Space Grotesk' for a computerized, techy look, falling back to Inter.
 - Minimalist icons (lucide) appropriate to the content of each prompt.
 - Simple, smooth transition animations between turns.
