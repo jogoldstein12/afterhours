@@ -214,8 +214,9 @@ audit began:
 closed in the repository and open in production.** An explicitly adult drinking
 game is reachable right now at a public URL with no age gate, no Terms, no
 Privacy Policy and no security headers. The live `robots.txt` is the blanket
-`Allow: /` that §0.2 was written about, so `/game` and its explicit prompts are
-invited in rather than excluded. Reach is low: the address is not linked from
+`Allow: /` that §0.2 was written about, so `/game` is invited in rather than
+excluded — a listing risk rather than a content one, since the prerendered
+`/game` carries chrome only and the prompts are drawn on the device. Reach is low: the address is not linked from
 anywhere and `afterhoursgame.com` still points at a GoDaddy "coming soon" page
 on AWS, unrelated to Firebase. It is nonetheless live and crawlable, and it is
 the version anyone who finds the app today will play.
