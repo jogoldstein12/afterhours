@@ -9,6 +9,7 @@ import {
   Prompt,
   GameMode,
   isNhiePrompt,
+  isRoomPrompt,
   GAME_MODES,
   getPromptCategory,
   type PromptCategory,
@@ -352,16 +353,18 @@ function GamePageContent() {
         }
       }
 
-      const trimmedLower = text.trim().toLowerCase();
-      const needsPrefix = !text.includes('?') &&
-                         // A prompt that opens by addressing another player never
-                         // also takes the "Name, ..." prefix — that would
-                         // double-address it. Checked against the raw text since
-                         // the placeholder is already substituted by now.
-                         !currentPrompt.text.trimStart().startsWith('{{randomOtherPlayer}}') &&
-                         // "Never have I ever" is called out to the whole room,
-                         // so it never takes the "Name, ..." prefix.
-                         !["if", "everyone", "anybody", "anyone", "any ", "the ", "girls", "men", "women", "no one", "shortest", "youngest", "dominant", "never have i ever"].some(word => trimmedLower.startsWith(word));
+      const needsPrefix =
+        // Room-wide cards are called out to everybody and are never
+        // personalised. This is declared per prompt in the deck rather than
+        // guessed from how the sentence opens.
+        !isRoomPrompt(currentPrompt) &&
+        // A question is already directed by the turn indicator, and reads
+        // worse with a name bolted on.
+        !text.includes('?') &&
+        // A prompt that opens by addressing another player never also takes
+        // the "Name, ..." prefix — that would double-address it. Checked
+        // against the raw text since the placeholder is already substituted.
+        !currentPrompt.text.trimStart().startsWith('{{randomOtherPlayer}}');
 
       if (needsPrefix && text.length > 0) {
         text = `${currentPlayerName}, ${text.charAt(0).toLowerCase() + text.slice(1)}`;

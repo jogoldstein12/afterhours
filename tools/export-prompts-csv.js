@@ -27,8 +27,8 @@ const prompts = eval(arrayLiteral);
 
 const csvEscape = (value) => '"' + String(value).replace(/"/g, '""') + '"';
 const csv =
-  'id,nsfwLevel,text\n' +
-  prompts.map((p) => [p.id, p.nsfwLevel, csvEscape(p.text)].join(',')).join('\n') +
+  'id,nsfwLevel,scope,text\n' +
+  prompts.map((p) => [p.id, p.nsfwLevel, p.scope ?? 'player', csvEscape(p.text)].join(',')).join('\n') +
   '\n';
 fs.writeFileSync(csvPath, csv);
 

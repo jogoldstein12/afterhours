@@ -178,7 +178,7 @@ Separately, prompt **1150** ("Show {{randomOtherPlayer}} the spiciest thing on y
 
 ## P1 — Correctness and product bugs
 
-### 1.1 🟠 119 prompts (14% of the deck) are rendered with the wrong meaning
+### 1.1 ⚠️ 119 prompts (14% of the deck) are rendered with the wrong meaning — *overstated; corrected Sept 10 2026*
 
 `src/app/game/page.tsx:335` builds a "Name, ..." prefix for any prompt that has no `?` and does not start with one of 14 stop-words. The stop-word list does not include `"drink if"` — so every room-wide drink rule gets personalised into a single-player instruction:
 
@@ -192,6 +192,25 @@ That silently converts a rule the whole room answers into a card that only Alex 
 493 of 874 prompts take the prefix; 119 of those should not. **The same bug exists identically in the standalone engine** (`tools/standalone-template.html:676`, same `PREFIX_EXCEPTIONS` array), so fixing it means fixing both.
 
 **Fix:** add `drink if`, `take a drink`, `take a sip`, `take a shot`, `whoever`, `last person`, `first person`, `everybody`, `vote` to the exception list in both engines, and add a test that asserts the classification and the prefix decision agree.
+
+**Correction, September 10 2026.** The 119 figure was wrong, and the framing
+with it. Auditing all 493 prefixed prompts for cases the prefix genuinely
+breaks turned up exactly **one** — id 182, whose subject is the room ("Vote on
+who has the best ass in the room"). Twenty-nine others mention the group and
+all of them read correctly with a name in front: *"Alex, tell the group how
+many people you've slept with"* is fine. `Drink if…` personalised is not a
+defect either — *"Alex, drink if you've ever been arrested"* is coherent, and
+is the more entertaining card most of the time. This section asserted a
+correctness bug where there was a design preference.
+
+**What was actually done.** The inference was replaced with data: a `scope:
+'player' | 'room'` field on every prompt, so addressing is declared rather
+than guessed from how a sentence opens. 264 prompts are `room` — the 233 the
+old stop-word list protected, id 182, and 30 of the 115 `Drink if` rules
+picked for spread across tiers and topics. The other 85 `Drink if` rules stay
+personal. Verified against the old logic: 844 of 874 prompts address
+identically, the 30 differences are the intended ones, and nothing became
+personalised that was not before.
 
 ### 1.2 🟠 `/game` with no query params is a permanent dead-end
 
@@ -399,7 +418,7 @@ Found and fixed during the same window, not in the original list:
 
 Quality gaps a first player would hit in the first ten minutes.
 
-8. Fix the 119 mis-personalised prompts in both engines (§1.1)
+8. ✅ Prompt addressing made explicit via `scope`, and the drink economy rescaled (§1.1) — September 10 2026
 9. OG/Twitter metadata and a share image (§3.2) — the highest-leverage small fix in this document
 10. Stand up a test suite over the game logic (§1.5)
 11. Input validation: `maxLength`, roster cap on `/game`, duplicate-name handling (§1.4)

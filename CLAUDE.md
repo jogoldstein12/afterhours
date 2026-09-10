@@ -55,6 +55,17 @@ its own, Android crops to a circle, and the wordmark is unreadable below about
 - `docs/prompts.csv` is a generated view of the deck and CI fails if it drifts,
   so run `npm run export:deck` after any deck edit.
 - `{{randomOtherPlayer}}` is substituted at draw time.
+- `scope` decides who a card is talking to. Absent means `'player'` — the game
+  screen prepends the current player's name. `scope: 'room'` is called out to
+  everybody and is never personalised. Mark a new prompt `'room'` if it reads
+  wrong with one name in front of it; NHIE cards and anything whose subject is
+  the group always are.
+- The opt-out ladder is driven by what the card asks, not by its tier:
+  `— or take a drink` is the default (say, show, answer, confess),
+  `— or take 2 drinks` for physical contact, `— or take a shot` for removing
+  clothing or a directed sexual act. Nothing uses "3 drinks".
+- Prompts that ask you to drink a counted amount for something you have done
+  are deliberately uncapped — the number is the punchline.
 - Anything directing physical contact should offer a way out — the house
   pattern is `— or take 3 drinks` for a solo dare, and explicit two-way
   language (`if either of you passes`) when a second player is involved.
