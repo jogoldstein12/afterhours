@@ -10,6 +10,16 @@ updates:
       # come through on their own so they get read properly.
       minor-and-patch:
         update-types: ['minor', 'patch']
+    ignore:
+      # A React major moves four packages at once — react, react-dom and both
+      # @types. Dependabot raises them as separate PRs, so each one is half an
+      # upgrade whose peer ranges cannot resolve, and every one fails at
+      # `npm ci`. See the closed #11 and #13. Majors here are ours to do
+      # deliberately, in one PR; minors and patches still come through.
+      - dependency-name: 'react*'
+        update-types: ['version-update:semver-major']
+      - dependency-name: '@types/react*'
+        update-types: ['version-update:semver-major']
 
   - package-ecosystem: github-actions
     directory: /
