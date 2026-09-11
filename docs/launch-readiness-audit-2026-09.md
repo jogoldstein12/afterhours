@@ -1,6 +1,6 @@
 # After Hours — Launch Readiness Audit
 
-**Date:** September 10, 2026
+**Date:** September 10, 2026 · **Updated:** September 11, 2026 (Part 9, competitive landscape)
 **Scope:** A review of `docs/public-release-audit-2026-09.md` (the standing spec) against the repository and the live site, plus a full audit of the code, security, infrastructure, legal surface, deck, and product, with the goal of taking the app from a side project to a publicly released, paid product on the web and in the app stores.
 **Method:** Clean `npm ci`; `npm audit`, typecheck, lint, the unit suite and a production build run and passing; the build manifest and emitted chunks inspected; the live site at `afterhoursgame.com` and the Firebase backend probed from outside; the Vercel project and GitHub state read through their APIs; five focused review passes (engine code, security/infra/legal, deck content, UX/features, and payment/app-store policy research), each spot-checked against the source before anything was written here.
 **Relationship to prior audits:** `docs/public-release-audit-2026-09.md` (Sept 9–10) is the standing list and is not rewritten here. This document corrects it where it has drifted, and adds what it does not cover: the mobile and payment strategy, the engine bugs, the deck's remaining gaps, and the feature roadmap.
@@ -265,7 +265,7 @@ This is the decision the rest of the roadmap hangs on, so it is stated in full.
 | Android | Play Billing | Mandatory for in-app unlock |
 | All three | **RevenueCat** as the entitlement ledger | Wraps StoreKit, Play Billing and its own Stripe-backed web billing behind one `entitlements` check, with webhooks into your database |
 
-A one-time unlock converts better than a subscription for a party game people play a few times a year; a subscription only earns its keep if new packs ship monthly. Recommended shape, as a product opinion to test: **Mild free** (the on-ramp), **one-time unlock for Medium, Extreme and NHIE**, and **paid packs** (couples, sober, themed) on top, which is what the `pack` field in 5.3 is for.
+A one-time unlock converts better than a subscription for a party game people play a few times a year; a subscription only earns its keep if new packs ship monthly. Recommended shape, refined by the competitive research in Part 9: **Mild and Medium free** (gate escalation, not entry), **a one-time unlock for Extreme and NHIE**, and **paid packs** (sober, bachelorette, couples, themed) on top, which is what the `pack` field in 5.3 is for.
 
 ### 6.3 Architecture
 
@@ -352,6 +352,71 @@ Ordered so that each phase leaves a shippable product. Effort is for one enginee
 **Phase E — App stores (4–6 weeks after D)**
 16. Capacitor shell with haptics, wake lock, share, RevenueCat StoreKit/Play Billing, Declared Age Range and Play Age Signals.
 17. 18+ listing with descriptors, screenshots, the required subscription copy if any, and a review-ready build; Expo only if 4.2 rejects it.
+
+---
+
+## Part 9 — Competitive landscape
+
+*Added September 11, 2026.* Three research passes over the App Store and Google Play listings, official sites and review aggregators, covering the three apps the owner named (Picolo, Cheers, Partybus), the wider drinking and party-game field, and the explicit and couples segment After Hours actually competes in. Prices are as listed on September 10–11, 2026, in USD; "not found" means no reliable public figure.
+
+### 9.1 The three named apps
+
+| | Picolo (Marmelapp) | Cheers – Party Games (Peter Skarheim) | Partybus (Ecapp BV) |
+|---|---|---|---|
+| Since | 2015, iOS + Android + Amazon | 2017, iOS | 2021, iOS + Android |
+| Rating | iOS 4.7 (~45k); Play has fallen to ~3.3 (~47k) | iOS 4.9 (~22k) | iOS 4.6 stars (1.7k) but 3.2 on written reviews (402) |
+| Model | Free base deck, subscription-first, no ads | Free base games, one-time-feeling premium | Free download, almost everything locked |
+| Weekly | $4.49, 3-day trial | — | $9.99 (also $5.99) |
+| Monthly / yearly | $7.99 or $13.99 / $45.99 | $9.99–$29.99 SKUs, cadence unclear | $14.99 / $29.99 |
+| One-time | $8.99 Premium; packs $3.99 each | $9.99–$29.99 | $32.99 lifetime |
+| Content | Cards plus "Virus" rule cards that persist across turns, Pyramid mode, Couples mode; packs Getting Crazy, Caliente, Bar, War; 14 languages | 12+ mini-games in one app (NHIE, Would You Rather, Truth or Dare, Most Likely, Higher/Lower, Horserace, Spin the Bottle…); 3 languages | NHIE, Truth or Dare, Most Likely To, Do or Drink under five tiers: Warming Up, Easy, Party, Fire, Extreme; 3,000+ questions; 12 languages |
+| Age rating | 17+: frequent alcohol references, sexual content | 17+ | 18+ |
+| Top complaint | Auto-charged weekly, cannot find cancel, content that used to be one-time is now subscription | Repetitive in long sessions; no remote play | Paywall (48 distinct mentions in one review sample); crashes |
+
+Three lessons, one per app. **Picolo** is the warning about switching a beloved one-time purchase to a subscription: eight million installs and the Play rating still dropped from about 4.7 to 3.3. **Cheers** shows that bundling several named games in one app raises perceived value and that polish, not breadth, is what keeps a 4.9. **Partybus** validates a five-rung intensity ladder, and shows what happens when the wall gates entry rather than escalation: a star rating that reviewers' words contradict.
+
+### 9.2 The wider field and the explicit segment
+
+| App | Segment | Model and prices | Free tier | Age | Rating (n) |
+|---|---|---|---|---|---|
+| Truth or Dare ⋆ Party Games (Chouic) | Explicit dares | Weekly $2.99–3.99, monthly $7.99–11.99, yearly $24.99; one-time Hot $3.99, Hard $4.99, Extreme $6.99, Everything $8.99 | Fun + Soft levels | 18+, frequent sexual content | 4.9 (13k) |
+| Do or Drink | Drinking | Premium bundle $9.99; decks $4.99 (NSFW, Dirty Deeds, NHIE, WYR, Bar) | Classic deck | 18+ | 4.6 (3.9k) |
+| Never Have I Ever 18+ (Teo Braun) | NHIE | Full unlock $9.99; weekly $4.99; yearly $39.99; 3-day trial | Trial only | 18+ | 4.5 (376) |
+| Spicer | Couples | Monthly $6.99, yearly $59.99, lifetime $109.99; packs $1.99–5.99 | Limited | 18+ | 4.6 (3.8k) |
+| Foreplay: Couples Games | Couples | Weekly $2.99, monthly $5.99, yearly $24.99–29.99, lifetime $34.99 | Limited | 18+ | 4.7 (149) |
+| InDare | Couples, kink | Full $5.99, yearly $34.99; named kink packs $1.99–3.99 | Limited | 18+ | 3.9 (44) |
+| Desire | Couples | Platinum $9.99–15.49; "Chili" explicit tier $12.99 sold separately | Limited, ads | 18+ | 4.3 (776) |
+| For the Girls – Bachelorette | Bachelorette | Trial $6.99, monthly $9.99, annual $49.99 | Limited | 16+ | 4.6 (1.8k) |
+| Paired | Relationship (halo comparator) | $14.99/mo, ~$40–75/yr, couple-shared, 7-day trial | 1 question a day | 18+ but light descriptors | 4.7 (207k) |
+| Evil Apples | Cards-against-humanity clone | Unlock all decks $9.99; passes and coin packs | Playable, currency-gated | 16+ | 4.8 (213k) |
+| Heads Up! | Charades | $1.99 app; decks $1.99 | — | 13+ | 4.8 (295k) |
+| Psych! | Bluff trivia | Packs $0.99–1.99; remove ads $2.99 | Playable | 13+ | 4.3 (21k) |
+| Jackbox Party Pack | Multi-device benchmark | $24.99 one-time per pack, no ads, no subscription | — | Teen | — |
+
+### 9.3 What the market has settled on
+
+**Pricing.** The established shape is free download plus $0.99–$4.99 packs, with a $5–$10 "unlock everything" as the escape hatch. Newer entrants launch subscription-first with a 2–3 day trial at $2.99–$4.99 a week and $25–$40 a year, which RevenueCat's 2026 gaming data says is the dominant shape for casual apps (82% offer a weekly plan) and which is also the single largest source of one-star reviews in this genre. Lifetime prices run $10–$35 in the party segment and up to $110 in the couples segment. Yearly plans framed as a monthly-equivalent price lift trial starts by about 30% with no drop in paid conversion, per the same RevenueCat data.
+
+**What is free.** Almost universally the soft tier: Picolo's base deck, Chouic's Fun and Soft levels, Do or Drink's Classic deck. **Explicit content is the paid tier, not the hook,** in every dare app surveyed. The one counter-example, Partybus, gates entry and pays for it in reviews.
+
+**Packs that recur:** Couples, Extreme or NSFW, Never Have I Ever, Would You Rather, Truth or Dare, Bar or pre-game, Girls' Night, Bachelorette, Holiday, Roleplay or Kink (sold by name), LGBTQ+ (a real, ranking niche served by weaker apps). **Under-served:** a first-class sober or no-alcohol mode (essentially undocumented anywhere), office or coworker-safe, Pride, long-distance dares, orientation-neutral phrasing (most decks default to a straight couple), and prompt-level localisation (most apps translate the UI only).
+
+**Features.** Table stakes: a packs store, name personalisation, an intensity ladder, offline play, skip. Differentiators, in rough order of how rare they are: multi-device play (only Jackbox), persistent rule or "Virus" cards (Picolo), mini-game bundles (Cheers), custom prompts, a sober toggle, a drink or turn counter, statistics, share-to-social, both-players-agree consent (Spicer's Yes / Maybe / No matching with hidden No answers), and privacy affordances (Foreplay's passcode and Face ID lock with auto-blur on app switch; Desire's photo pixelation). No app advertises a disguised icon or a safe-word feature.
+
+**Complaints, by frequency across the whole set:** a "lifetime" unlock that re-locks after a reinstall or update; buying a pack without knowing how many cards it holds; a free tier too thin to play; ads that survive a purchase; abandoned apps with dead support; crashes at the moment of purchase; repetition. The first is the one that would hurt most: the entitlement ledger in Part 6 exists to make it impossible.
+
+**What Apple accepts.** Chouic, Spicer, Desire and InDare all ship at 18+ with "Frequent Sexual Content or Nudity" and tier names like Hot / Hard / Extreme / Chili / X-treme in the listing. Bachelorette apps sit a notch lower at 16+ with "infrequent" descriptors despite similar copy. The only documented rejection found in the genre concerned explicit imagery, not text, which supports the Part 6 conclusion that text-only dares are the lower-risk shape.
+
+### 9.4 What this means for After Hours
+
+1. **Gate escalation, not entry.** Make Mild and Medium free in full. That gives a first-night group 400 cards, which fixes the "Mild runs out" problem and matches the free-tier expectation Picolo and Chouic have trained. Extreme, NHIE and every pack are paid.
+2. **Sell a one-time unlock, and price it below the field.** $9.99 for everything today, packs at $2.99–$3.99, and a $19.99 lifetime that includes future packs. Offer a yearly plan only if packs ship on a schedule that justifies it, and do not offer a weekly plan at all: it is the mechanism behind Picolo's rating collapse and Partybus's review gap.
+3. **Say what a purchase contains.** Card counts on the paywall and on each pack ("Extreme: 474 cards"), and an entitlement that survives reinstalls, updates and a new phone. The two most frequent complaints in the genre are both avoidable by design.
+4. **Lead with the consent story.** No surveyed app articulates its opt-out mechanic; After Hours already has a graded ladder and a free Skip. Put it on the card frame and in the listing. Spicer's both-agree matching is the model for a couples pack.
+5. **Build the packs the field is missing before the ones it has.** Sober mode (no competitor documents one), a bachelorette pack (proven demand, lighter descriptors, easier review), and an orientation-neutral or Pride pass over the deck. Couples and Kinky packs come after; they are crowded.
+6. **Borrow two cheap mechanics.** Picolo's persistent rule cards add variety without new content; Cheers's bundling suggests presenting NHIE, Would You Rather and Most Likely To as named games in a lobby rather than a fourth intensity tier.
+7. **Add the privacy affordances this audience pays for**: an optional passcode or biometric lock and a blur on app switch, both cheap in a Capacitor shell.
+8. **Model the listing on Chouic's**: 18+, frequent sexual content declared, tier names in the copy, a quantified deck ("870+ cards"). Multiplayer over the network is the one feature users ask for that nobody in the pass-the-phone segment ships; it is a later bet, not a launch feature.
 
 ---
 
