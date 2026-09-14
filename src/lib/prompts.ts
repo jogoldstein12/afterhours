@@ -562,7 +562,7 @@ export const PROMPTS: Prompt[] = [
   { id: 509, text: "Drink if you've ever had a sugar daddy or sugar mommy. Remove clothing if still active.", nsfwLevel: 'Extreme' },
   { id: 510, text: "Drink if you've ever sent nudes to more than 5 different people. Remove an item if over 10.", nsfwLevel: 'Extreme' },
   { id: 511, text: "Drink if you've ever been fully naked in front of a group. If not, you are now — strip or finish your drink.", nsfwLevel: 'Extreme' },
-  { id: 512, text: "Drink if you've ever masturbated thinking about someone in this room. Make eye contact with them or take a drinkmore.", nsfwLevel: 'Extreme' },
+  { id: 512, text: "Drink if you've ever masturbated thinking about someone in this room. Make eye contact with them or take a drink.", nsfwLevel: 'Extreme' },
 
   // --- Extreme: Drink If (Confessions with Consequences) ---
   { id: 513, text: "Drink if you've ever been someone's 'first.' Name them or take a drink.", nsfwLevel: 'Extreme' },

@@ -49,6 +49,13 @@ const MAX_TALLY_ENTRIES = MAX_PLAYERS * 3;
 export type StoredTurn = {
   promptId: number;
   playerIndex: number;
+  /**
+   * Who actually took this turn. Held by name, not seat: the tally is keyed by
+   * name, and removing a player mid-game reindexes the roster, so a bare
+   * `playerIndex` would point Undo at the wrong person afterwards. Records from
+   * older builds have no name and fall back to whoever now sits in that seat.
+   */
+  playerName: string;
   text: string;
   upcoming: number[];
   countedTurn: boolean;
@@ -132,17 +139,26 @@ const asPromptIds = (value: unknown): number[] =>
 const asText = (value: unknown): string =>
   typeof value === 'string' ? value.slice(0, MAX_PROMPT_TEXT) : '';
 
-const asTurn = (value: unknown, seats: number): StoredTurn | null => {
+const asTurn = (value: unknown, players: string[]): StoredTurn | null => {
   if (!value || typeof value !== 'object') return null;
   const turn = value as Record<string, unknown>;
   if (!isWholeNumber(turn.promptId)) return null;
-  const playerIndex = asSeat(turn.playerIndex, seats);
+  const playerIndex = asSeat(turn.playerIndex, players.length);
   if (playerIndex === null) return null;
+  // A stored name is kept as-is (bounded, like a tally key) so Undo can still
+  // attribute a turn to someone who has since left; only a missing or unusable
+  // one falls back to the current occupant of the seat.
+  const stored = turn.playerName;
+  const playerName =
+    typeof stored === 'string' && stored.length > 0 && stored.length <= MAX_NAME_LENGTH
+      ? stored
+      : players[playerIndex];
   return {
     promptId: turn.promptId,
     playerIndex,
+    playerName,
     text: asText(turn.text),
-    upcoming: asSeatList(turn.upcoming, seats),
+    upcoming: asSeatList(turn.upcoming, players.length),
     countedTurn: turn.countedTurn === true,
   };
 };
@@ -178,7 +194,7 @@ export function readGame(): StoredGame | null {
   const history = Array.isArray(record.history)
     ? record.history
         .slice(-HISTORY_LIMIT)
-        .map((entry) => asTurn(entry, players.length))
+        .map((entry) => asTurn(entry, players))
         .filter((turn): turn is StoredTurn => turn !== null)
     : [];
 

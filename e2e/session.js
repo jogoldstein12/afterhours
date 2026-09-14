@@ -147,6 +147,33 @@ module.exports = async function session(browser, BASE, results) {
     await context.close();
   }
 
+  // --- Undo attributes by name, not by a seat a removal has shifted --------
+  // Regression guard for the wrong-person bug. This record is the state after
+  // Sam took a turn and Alex was then removed: Sam's history entry still holds
+  // the pre-removal seat (1), which now belongs to Jordan. Undo must credit the
+  // turn back to Sam by name, never to whoever now sits in that seat.
+  {
+    context = await freshContext(browser, {
+      'afterhours.game': JSON.stringify({
+        v: 1, savedAt: Date.now(), players: ['Sam', 'Jordan'], nsfwLevel: 'Mild',
+        currentPlayerIndex: 1, currentPromptId: 2, processedPromptText: '',
+        usedPromptIds: [1], upcomingTurns: [0], turnsByName: { Sam: 1 },
+        history: [{ promptId: 1, playerIndex: 1, playerName: 'Sam', text: '', upcoming: [0, 1], countedTurn: true }],
+        gameEnded: false,
+      }),
+    });
+    page = await context.newPage();
+    await page.goto(BASE + '/game', { waitUntil: 'networkidle' });
+    await page.waitForTimeout(500);
+    await page.getByRole('button', { name: /undo/i }).first().click();
+    await page.waitForTimeout(400);
+    const undone = await savedGame(page);
+    check('Undo after a removal credits the turn back to the right player by name',
+      (undone.turnsByName.Sam ?? 0) === 0 && !undone.turnsByName.Jordan,
+      JSON.stringify(undone.turnsByName));
+    await context.close();
+  }
+
   // --- A legacy play URL still opens, and cleans up after itself -----------
   context = await freshContext(browser);
   page = await context.newPage();

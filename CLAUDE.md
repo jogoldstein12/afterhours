@@ -1,7 +1,10 @@
 # After Hours — working notes
 
 An explicit pass-the-phone party game for adults. Next.js 15 App Router, React
-18, Tailwind + shadcn/ui, deployed to Firebase App Hosting.
+18, Tailwind + shadcn/ui. Production (afterhoursgame.com) is served by
+**Vercel**; a second, now-duplicate copy still runs on Firebase App Hosting and
+is being retired. Firebase itself is kept for the backend (auth, database) that
+the paywall will need. See "Where it deploys".
 
 ## Commands
 
@@ -49,26 +52,42 @@ plain `npm install` and `npm ci` work normally afterwards, from the lockfile.
 
 ## Where it deploys
 
-Firebase App Hosting, backend `studio` in project **`glowup-after-hours`**
-(`us-central1`), which serves
-`https://studio--glowup-after-hours.us-central1.hosted.app`. `.firebaserc`
-pins that project, so `firebase` commands need no `-P`.
+**Production is Vercel.** afterhoursgame.com is served by a Vercel project that
+builds from `main`, so a merge to `main` is a release. This is the deploy that
+matters; everything an end user hits goes here.
 
-There is a second Firebase project called **After Hours** (`after-hours-97f19`)
-that looks like the obvious match and is not. Nothing deploys from it. The
-backend id is confirmable without guessing — the live response carries
-`cache-tag: <project number>:<backend>`.
+The environment variables that turn on error monitoring and source-map upload
+live only in `apphosting.yaml`, which **Vercel does not read** — so as things
+stand production has no Sentry. To fix that, set these in the Vercel project's
+Environment Variables (values in `apphosting.yaml`):
 
-The backend builds from `main` and redeploys itself when a pull request merges,
-so a merge is a release. `x-fah-adapter` in the response is **not** the Next.js
-version — it is Firebase's `@apphosting/adapter-nextjs` package, and it reads
-`nextjs-14.0.21` on a Next 15 build. To tell a deploy apart, look at a response
-header the app itself sets (`content-security-policy`) or at `/robots.txt`.
+- `NEXT_PUBLIC_SITE_URL` — `https://afterhoursgame.com` (canonical OG/Twitter URLs)
+- `NEXT_PUBLIC_SENTRY_DSN` — the public DSN; without it monitoring stays off
+- `SENTRY_ORG`, `SENTRY_PROJECT` — both public slugs, needed for source-map upload
+- `SENTRY_AUTH_TOKEN` — a real secret (write access to Sentry); mark it as such
+  in Vercel. All three of ORG/PROJECT/TOKEN must be present or the upload is
+  skipped and the build is unchanged.
 
-`apphosting.yaml` is read by that backend at build time and by nothing else, so
-a variable added there does nothing until the backend redeploys. Secrets it
-references (`SENTRY_AUTH_TOKEN`) must exist in the same project and be granted
-to the backend, or the build falls back to its no-credentials path.
+**Firebase App Hosting** still serves an identical second copy of the site at
+`https://studio--glowup-after-hours.us-central1.hosted.app` — backend `studio`
+in project **`glowup-after-hours`** (`us-central1`; `.firebaserc` pins it, so
+`firebase` commands need no `-P`). It is the old deploy path and is slated to be
+turned off, leaving Vercel as the only site host and Firebase for backend
+services only. While it exists it also builds from `main` on merge, so watch for
+the two hosts drifting. A few facts that have bitten before:
+
+- There is a second Firebase project, **After Hours** (`after-hours-97f19`),
+  that looks like the obvious match and is not. Nothing deploys from it.
+- `x-fah-adapter` in the response is **not** the Next.js version — it is
+  Firebase's `@apphosting/adapter-nextjs` package, and it reads `nextjs-14.0.21`
+  on a Next 15 build. To tell one deploy apart from another, look at a header
+  the app itself sets (`content-security-policy`) or at `/robots.txt`; the
+  backend id is in `cache-tag: <project number>:<backend>`.
+- `apphosting.yaml` is read by that backend at build time and by nothing else
+  (Vercel included), so a variable added there does nothing on Vercel and
+  nothing at all until the backend redeploys. Secrets it references
+  (`SENTRY_AUTH_TOKEN`) must exist in the same project and be granted to the
+  backend, or the build falls back to its no-credentials path.
 
 ## Things that will bite you
 
@@ -171,8 +190,12 @@ its own, Android crops to a circle, and the wordmark is unreadable below about
 
 ## Open work
 
-`docs/public-release-audit-2026-09.md` is the standing list of what is left
-before and after public launch. Read the scorecard and the phased plan at the
+`docs/launch-readiness-audit-2026-09.md` (September 10) is the current plan:
+it reviews the earlier audit against the live site, adds the mobile, payment
+and accounts strategy, and carries the phased roadmap (Parts 6–8).
+
+`docs/public-release-audit-2026-09.md` is the earlier standing list of what was
+left before and after public launch. Read the scorecard and the phased plan at the
 bottom for current state; the findings themselves are left as first written,
 each with a dated **Resolved** note underneath where one has shipped, so the
 original reasoning stays readable next to what was done about it. Phases 1 and
