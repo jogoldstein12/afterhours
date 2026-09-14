@@ -51,9 +51,34 @@ export type Prompt = {
   nsfwLevel: NsfwLevel;
   /** Absent means 'player'; only room-wide cards carry this. */
   scope?: PromptScope;
+  /**
+   * How hands-on a card is. Absent means 'none'. This is data, not something to
+   * infer from the wording — a future consent filter and any "no-contact" mode
+   * read it directly. Populated per card in its own pass; unset on older cards.
+   */
+  contact?: 'none' | 'solo' | 'two-way';
+  /** What the card needs on the table — for a "no props" filter and a shopping list. */
+  props?: ('blindfold' | 'ice' | 'whippedCream' | 'toy' | 'phone')[];
+  /** Floor for group votes and "point at someone" cards. Absent means any roster. */
+  minPlayers?: number;
+  /** A date-night card, for a future couples mode. */
+  couplesOnly?: boolean;
+  /** The card's wording when drink outs are turned off (a future sober mode). */
+  soberAlt?: string;
+  /**
+   * The pack a card belongs to — the unit sold behind the paywall. Absent means
+   * the free core deck, so read it through `packOf`, never `prompt.pack` directly.
+   */
+  pack?: string;
 };
 
 export const isRoomPrompt = (prompt: Prompt): boolean => prompt.scope === 'room';
+
+/** The free, always-included deck; the pack every card carries until one is sold. */
+export const CORE_PACK = 'core';
+
+/** A card's pack, defaulting to the free core deck. The entitlement unit. */
+export const packOf = (prompt: Prompt): string => prompt.pack ?? CORE_PACK;
 
 export const PROMPTS: Prompt[] = [
   // ============================================================================
@@ -1063,4 +1088,83 @@ export const PROMPTS: Prompt[] = [
   { id: 1174, text: "Who here would you most want a lap dance from? They give out 3 drinks.", nsfwLevel: 'Medium' },
   { id: 1175, text: "Everyone vote: who's most likely to make the first move tonight? They take 2 drinks.", nsfwLevel: 'Medium', scope: 'room' },
   { id: 1176, text: "Who's most likely to have a spicy account nobody knows about? They take 3 drinks, or prove everyone wrong.", nsfwLevel: 'Medium' },
+
+  // ============================================================================
+  // MILD — Step 8 additions (IDs 1177+). Light dares, timed bits, and the
+  // bottom "— or take a drink" rung the tier was missing, plus general-audience
+  // questions so Mild plays for any crew, not only a dating one. Grows Mild
+  // toward a 15/35/50 split without cutting the hotter tiers.
+  // ============================================================================
+
+  // --- Light dares (bottom rung) ---
+  { id: 1177, text: "Do your best impression of a celebrity until someone guesses who — or take a drink.", nsfwLevel: 'Mild' },
+  { id: 1178, text: "Talk in an accent of the group's choosing until your next turn — or take a drink.", nsfwLevel: 'Mild' },
+  { id: 1179, text: "Show the group your phone wallpaper and explain it — or take a drink.", nsfwLevel: 'Mild', props: ['phone'] },
+  { id: 1180, text: "Do your best runway walk across the room — or take a drink.", nsfwLevel: 'Mild' },
+  { id: 1181, text: "Sing the chorus of the last song you played out loud — or take a drink.", nsfwLevel: 'Mild', props: ['phone'] },
+  { id: 1182, text: "Act out an emoji the group picks until they guess it — or take a drink.", nsfwLevel: 'Mild' },
+  { id: 1183, text: "Do your most convincing evil-villain laugh — or take a drink.", nsfwLevel: 'Mild' },
+  { id: 1184, text: "Attempt a party trick right now — or take a drink.", nsfwLevel: 'Mild' },
+  { id: 1185, text: "Speak only in questions until your next turn — or take a drink.", nsfwLevel: 'Mild' },
+  { id: 1186, text: "Do your most dramatic fake cry — or take a drink.", nsfwLevel: 'Mild' },
+  { id: 1187, text: "Do your best impression of another player until the group guesses who — or take a drink.", nsfwLevel: 'Mild' },
+  { id: 1188, text: "Narrate the room like a nature documentary until your next turn — or take a drink.", nsfwLevel: 'Mild' },
+
+  // --- Timed dares (the card's duration drives the on-screen countdown) ---
+  { id: 1189, text: "Hold a plank for 30 seconds — or take a drink.", nsfwLevel: 'Mild' },
+  { id: 1190, text: "Keep a straight face for 30 seconds while the group tries to make you laugh — or take a drink.", nsfwLevel: 'Mild' },
+  { id: 1191, text: "Balance on one foot for 30 seconds — or take a drink.", nsfwLevel: 'Mild' },
+  { id: 1192, text: "Talk for 30 seconds without saying \"um\" or \"like\" — or take a drink.", nsfwLevel: 'Mild' },
+  { id: 1193, text: "Name five things in the room in 15 seconds — or take a drink.", nsfwLevel: 'Mild' },
+  { id: 1194, text: "Do 15 seconds of your best dance with no music — or take a drink.", nsfwLevel: 'Mild' },
+  { id: 1195, text: "Hum a song for 20 seconds and let the group guess it — or take a drink.", nsfwLevel: 'Mild' },
+  { id: 1196, text: "List as many breakfast cereals as you can in 15 seconds — or take a drink.", nsfwLevel: 'Mild' },
+
+  // --- Show & tell (bottom rung, phone in hand) ---
+  { id: 1197, text: "Show the group the last photo in your camera roll — or take a drink.", nsfwLevel: 'Mild', props: ['phone'] },
+  { id: 1198, text: "Read out the last text you sent — or take a drink.", nsfwLevel: 'Mild', props: ['phone'] },
+  { id: 1199, text: "Show the last thing you bought online — or take a drink.", nsfwLevel: 'Mild', props: ['phone'] },
+  { id: 1200, text: "Reveal how many alarms you have set — or take a drink.", nsfwLevel: 'Mild', props: ['phone'] },
+  { id: 1201, text: "Show your screen time for today — or take a drink.", nsfwLevel: 'Mild', props: ['phone'] },
+  { id: 1202, text: "Let another player pick any photo in your camera roll for you to explain — or take a drink.", nsfwLevel: 'Mild', props: ['phone'] },
+
+  // --- Light two-player bits ---
+  { id: 1203, text: "Swap one item of clothing — a hat, a jacket, a sock — with another player, or take a drink.", nsfwLevel: 'Mild', contact: 'two-way' },
+  { id: 1204, text: "Thumb-wrestle another player; the loser drinks.", nsfwLevel: 'Mild', contact: 'two-way' },
+  { id: 1205, text: "Stare at another player for 10 seconds; first to blink or laugh drinks.", nsfwLevel: 'Mild' },
+  { id: 1206, text: "Invent a secret handshake with another player in 20 seconds — or take a drink.", nsfwLevel: 'Mild', contact: 'two-way' },
+
+  // --- Would-you-rather & general questions (Mild past the dating theme) ---
+  { id: 1207, text: "Would you rather never use your phone again or never watch another show again? Explain.", nsfwLevel: 'Mild' },
+  { id: 1208, text: "What's the most useless talent you have? Show it — or take a drink.", nsfwLevel: 'Mild' },
+  { id: 1209, text: "What's a hill you'll die on that doesn't matter at all?", nsfwLevel: 'Mild' },
+  { id: 1210, text: "What's the last thing that made you laugh out loud for real?", nsfwLevel: 'Mild' },
+  { id: 1211, text: "What's your most irrational fear?", nsfwLevel: 'Mild' },
+  { id: 1212, text: "What's a small thing that makes you unreasonably happy?", nsfwLevel: 'Mild' },
+  { id: 1213, text: "What's the worst haircut you've ever had? Describe it in detail.", nsfwLevel: 'Mild' },
+  { id: 1214, text: "What's your most controversial food opinion?", nsfwLevel: 'Mild' },
+  { id: 1215, text: "What's the weirdest thing you believed as a kid?", nsfwLevel: 'Mild' },
+  { id: 1216, text: "What's a trend you never understood?", nsfwLevel: 'Mild' },
+  { id: 1217, text: "What's the most embarrassing thing in your bag or pockets right now? Show it — or take a drink.", nsfwLevel: 'Mild', props: ['phone'] },
+  { id: 1218, text: "What's the pettiest thing you've done out of spite?", nsfwLevel: 'Mild' },
+  { id: 1219, text: "Guess which app you've spent the most time in this week, then check — wrong guess, take a drink.", nsfwLevel: 'Mild', props: ['phone'] },
+  { id: 1220, text: "What's the best gift you've ever been given?", nsfwLevel: 'Mild' },
+
+  // --- Group / room ---
+  { id: 1221, text: "Everyone who has checked their phone in the last five minutes, drink.", nsfwLevel: 'Mild', scope: 'room' },
+  { id: 1222, text: "Last person to touch the floor gives out 2 drinks.", nsfwLevel: 'Mild', scope: 'room' },
+  { id: 1223, text: "Everyone point at who's most likely to fall asleep first tonight; most-pointed drinks.", nsfwLevel: 'Mild', scope: 'room' },
+  { id: 1224, text: "Everyone wearing something borrowed or secondhand, drink.", nsfwLevel: 'Mild', scope: 'room' },
+  { id: 1225, text: "Last person to raise a hand drinks.", nsfwLevel: 'Mild', scope: 'room' },
+  { id: 1226, text: "The next person to laugh drinks.", nsfwLevel: 'Mild', scope: 'room' },
+  { id: 1227, text: "Everyone whose phone is not on silent, drink.", nsfwLevel: 'Mild', scope: 'room' },
+
+  // --- Never Have I Ever (Mild) — general, feeds NHIE mode ---
+  { id: 1228, text: "Never have I ever fallen asleep in a public place.", nsfwLevel: 'Mild', scope: 'room' },
+  { id: 1229, text: "Never have I ever walked into a glass door or wall.", nsfwLevel: 'Mild', scope: 'room' },
+  { id: 1230, text: "Never have I ever forgotten someone's name while introducing them.", nsfwLevel: 'Mild', scope: 'room' },
+  { id: 1231, text: "Never have I ever pretended to be on the phone to avoid someone.", nsfwLevel: 'Mild', scope: 'room' },
+  { id: 1232, text: "Never have I ever sent a text to the wrong person.", nsfwLevel: 'Mild', scope: 'room' },
+  { id: 1233, text: "Never have I ever binged an entire series in a single day.", nsfwLevel: 'Mild', scope: 'room' },
+  { id: 1234, text: "Never have I ever lied about having read a book.", nsfwLevel: 'Mild', scope: 'room' },
 ];
