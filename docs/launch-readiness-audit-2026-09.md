@@ -20,6 +20,15 @@ The web app is in good shape and the September audit was largely right. Verified
 3. **The app does not need to be rewritten in Swift.** Apple approves React Native and well-built Capacitor apps and lists several explicit 18+ party-game apps today. What Apple rejects is a thin web wrapper. The mobile plan is therefore a wrapping-and-hardening project on the existing React code, not a rewrite.
 4. **Two real engine bugs and a consent gap the spec calls closed.** A swipe followed by a tap inside a 150 ms window double-counts a turn; removing a player mid-game and then undoing attributes the turn to the wrong person. And five contact cards carry no opt-out at all, so the scorecard's "every prompt carries an out" is not true.
 
+### Decisions confirmed and Phase 1 status (September 14, 2026)
+
+The owner reviewed the roadmap and settled the open questions. Recorded here so the plan reflects them; the reasoning above is left as first written.
+
+- **Hosting (confirmed):** Vercel serves the website (afterhoursgame.com); Firebase is kept for backend services (auth, database) only. The duplicate Firebase App Hosting copy of the *site* is to be turned off. Consolidation onto one host stands as Part 1.1 recommends.
+- **Monetization (confirmed):** a one-time unlock **plus** a cheaper subscription option. **Mild** stays free; **Medium** is in the free trial, then locked behind payment; **Extreme** and **NHIE** stay paid. Stripe is **confirmed** by the owner (Part 1.2 resolved on their word; keep the written-confirmation caveat in mind against Stripe's restricted-business terms).
+- **Native (clarified):** "native" here means a Capacitor wrap of the existing React app, not a Swift rewrite (Part 6.3). Solo build with occasional help; no fixed launch date, roughly a month out for a stronger free product, paid launch later.
+- **Phase 1 shipped on `claude/zen-edison-pzvrtg`:** both engine bugs above are fixed with tests (swipe/tap double-count guarded; Undo now attributes by player *name*, so a mid-game removal no longer mis-credits the turn — new session unit tests and an e2e regression guard). The typo on card 512 is fixed. The five no-opt-out contact cards and the other flagged prompts are **deliberately left for a later content pass** at the owner's direction. `CLAUDE.md` now states Vercel is production and lists the Sentry/site environment variables to set in Vercel; Dependabot no longer raises major-version PRs on its own.
+
 **Scorecard** — what the spec claims today versus what this audit found.
 
 | Area | Spec says | Found | What holds it back |

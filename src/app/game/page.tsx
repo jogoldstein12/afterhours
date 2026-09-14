@@ -138,6 +138,10 @@ const vibrate = (pattern: number | number[]) => {
 type TurnSnapshot = {
   prompt: Prompt;
   playerIndex: number;
+  // Who took the turn, by name. The tally is keyed by name and a player can be
+  // removed mid-game (which reindexes seats), so Undo attributes by name and
+  // only uses `playerIndex` to fall back to a seat when that name is gone.
+  playerName: string;
   text: string;
   upcoming: number[];
   countedTurn: boolean;
@@ -270,7 +274,7 @@ export default function GamePage() {
         saved.history.flatMap((turn) => {
           const prompt = promptById.get(turn.promptId);
           return prompt
-            ? [{ prompt, playerIndex: turn.playerIndex, text: turn.text, upcoming: turn.upcoming, countedTurn: turn.countedTurn }]
+            ? [{ prompt, playerIndex: turn.playerIndex, playerName: turn.playerName, text: turn.text, upcoming: turn.upcoming, countedTurn: turn.countedTurn }]
             : [];
         }),
       );
@@ -302,9 +306,10 @@ export default function GamePage() {
       usedPromptIds: [...usedPromptIds],
       upcomingTurns,
       turnsByName,
-      history: history.map(({ prompt, playerIndex, text, upcoming, countedTurn }) => ({
+      history: history.map(({ prompt, playerIndex, playerName, text, upcoming, countedTurn }) => ({
         promptId: prompt.id,
         playerIndex,
+        playerName,
         text,
         upcoming,
         countedTurn,
@@ -454,7 +459,9 @@ export default function GamePage() {
   }, [currentPrompt, players, currentPlayerIndex, gameEnded]);
 
   const handleNextPlayer = useCallback(() => {
-    if (gameEnded || !currentPrompt) return;
+    // `busy` guards the window while a swiped card is flying off: a tap on the
+    // dock during that ~150ms would otherwise advance a second time.
+    if (gameEnded || !currentPrompt || swipe.current.busy) return;
     vibrate(12);
 
     const outgoing = players[currentPlayerIndex];
@@ -462,7 +469,7 @@ export default function GamePage() {
 
     setHistory(prev => [
       ...prev.slice(-(HISTORY_LIMIT - 1)),
-      { prompt: currentPrompt, playerIndex: currentPlayerIndex, text: processedPromptText, upcoming: upcomingTurns, countedTurn: true },
+      { prompt: currentPrompt, playerIndex: currentPlayerIndex, playerName: outgoing ?? '', text: processedPromptText, upcoming: upcomingTurns, countedTurn: true },
     ]);
 
     const newUsedPromptIds = new Set(usedPromptIds);
@@ -482,12 +489,12 @@ export default function GamePage() {
   // no penalty. Every prompt in this game is optional, and this is the control
   // that makes that true in the product rather than only in the rules.
   const handleSkip = useCallback(() => {
-    if (gameEnded || !currentPrompt) return;
+    if (gameEnded || !currentPrompt || swipe.current.busy) return;
     vibrate(8);
 
     setHistory(prev => [
       ...prev.slice(-(HISTORY_LIMIT - 1)),
-      { prompt: currentPrompt, playerIndex: currentPlayerIndex, text: processedPromptText, upcoming: upcomingTurns, countedTurn: false },
+      { prompt: currentPrompt, playerIndex: currentPlayerIndex, playerName: players[currentPlayerIndex] ?? '', text: processedPromptText, upcoming: upcomingTurns, countedTurn: false },
     ]);
 
     const newUsedPromptIds = new Set(usedPromptIds);
@@ -495,18 +502,23 @@ export default function GamePage() {
     setUsedPromptIds(newUsedPromptIds);
 
     selectNewPrompt(availablePrompts, newUsedPromptIds);
-  }, [gameEnded, currentPrompt, currentPlayerIndex, processedPromptText, upcomingTurns, usedPromptIds, availablePrompts, selectNewPrompt]);
+  }, [gameEnded, currentPrompt, currentPlayerIndex, players, processedPromptText, upcomingTurns, usedPromptIds, availablePrompts, selectNewPrompt]);
 
   const handleUndo = () => {
+    if (swipe.current.busy) return;
     const last = history[history.length - 1];
     if (!last) return;
-    const restoredName = players[Math.min(last.playerIndex, players.length - 1)];
+    // Attribute by name, not by the stored seat: a player removed since this
+    // turn was taken has shifted every later seat, so `playerIndex` alone would
+    // credit the wrong person. The name still keys the tally correctly, and its
+    // current seat (if the player is still here) restores whose turn it is.
+    const restoredSeat = players.indexOf(last.playerName);
     // A skipped card never incremented the tally, so undoing one must not
     // decrement it.
-    if (restoredName && last.countedTurn) {
+    if (last.playerName && last.countedTurn) {
       setTurnsByName(prev => {
         const next = { ...prev };
-        if (next[restoredName]) next[restoredName] -= 1;
+        if (next[last.playerName]) next[last.playerName] -= 1;
         return next;
       });
     }
@@ -519,7 +531,8 @@ export default function GamePage() {
     restoredTextRef.current = { promptId: last.prompt.id, text: last.text };
     setGameEnded(false);
     setCurrentPrompt(last.prompt);
-    setCurrentPlayerIndex(Math.min(last.playerIndex, players.length - 1));
+    // If that player has left, fall back to the clamped stored seat.
+    setCurrentPlayerIndex(restoredSeat >= 0 ? restoredSeat : Math.min(last.playerIndex, players.length - 1));
     setUpcomingTurns(last.upcoming);
     setCardKey(prev => prev + 1);
   };
@@ -591,12 +604,14 @@ export default function GamePage() {
       s.busy = true;
       const card = cardElRef.current;
       if (card) { card.style.transition = 'transform 0.16s ease-out'; card.style.transform = 'translateX(-115%) rotate(-6deg)'; }
-      flyTimeout.current = setTimeout(() => { handleNextPlayer(); settleCard(false); s.busy = false; }, 150);
+      // Clear busy before the action so its own busy guard lets it through;
+      // taps during the fly are what busy is there to block.
+      flyTimeout.current = setTimeout(() => { s.busy = false; handleNextPlayer(); settleCard(false); }, 150);
     } else if (goBack && canBack) {
       s.busy = true;
       const card = cardElRef.current;
       if (card) { card.style.transition = 'transform 0.16s ease-out'; card.style.transform = 'translateX(115%) rotate(6deg)'; }
-      flyTimeout.current = setTimeout(() => { handleUndo(); settleCard(false); s.busy = false; }, 150);
+      flyTimeout.current = setTimeout(() => { s.busy = false; handleUndo(); settleCard(false); }, 150);
     } else {
       settleCard(true);
     }

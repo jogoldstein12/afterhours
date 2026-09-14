@@ -60,7 +60,7 @@ const game = (over: Partial<StoredGame> = {}): StoredGame => ({
   usedPromptIds: [1, 2, 3],
   upcomingTurns: [2, 0],
   turnsByName: { Alex: 2, Sam: 1 },
-  history: [{ promptId: 1, playerIndex: 0, text: 'Alex, go.', upcoming: [1, 2], countedTurn: true }],
+  history: [{ promptId: 1, playerIndex: 0, playerName: 'Alex', text: 'Alex, go.', upcoming: [1, 2], countedTurn: true }],
   gameEnded: false,
   ...over,
 });
@@ -202,6 +202,42 @@ describe('records that are repaired rather than refused', () => {
     const history = readGame()!.history;
     expect(history).toHaveLength(1);
     expect(history[0].promptId).toBe(1);
+  });
+
+  it('backfills a turn from an older build with no player name from the seat', () => {
+    put(
+      stamped({
+        players: ['Alex', 'Sam', 'Jordan'],
+        history: [{ promptId: 1, playerIndex: 1, text: 'Sam, go.', upcoming: [], countedTurn: true }],
+      }),
+    );
+    expect(readGame()!.history[0].playerName).toBe('Sam');
+  });
+
+  it('keeps a stored name even when that player has left the roster, so Undo still attributes it', () => {
+    // The seat now holds someone else; attributing by the stale index would
+    // credit the wrong person, so the recorded name is preserved verbatim.
+    put(
+      stamped({
+        players: ['Alex', 'Sam', 'Jordan'],
+        history: [{ promptId: 1, playerIndex: 0, playerName: 'Kim', text: 'Kim, go.', upcoming: [], countedTurn: true }],
+      }),
+    );
+    expect(readGame()!.history[0].playerName).toBe('Kim');
+  });
+
+  it('ignores an unusable stored name and falls back to the seat', () => {
+    put(
+      stamped({
+        players: ['Alex', 'Sam', 'Jordan'],
+        history: [
+          { promptId: 1, playerIndex: 2, playerName: '', text: 'empty', upcoming: [], countedTurn: true },
+          { promptId: 2, playerIndex: 2, playerName: 'x'.repeat(500), text: 'too long', upcoming: [], countedTurn: true },
+          { promptId: 3, playerIndex: 2, playerName: 7, text: 'not a string', upcoming: [], countedTurn: true },
+        ],
+      }),
+    );
+    for (const turn of readGame()!.history) expect(turn.playerName).toBe('Jordan');
   });
 
   it('caps history at the undo depth', () => {

@@ -11,14 +11,15 @@ updates:
       minor-and-patch:
         update-types: ['minor', 'patch']
     ignore:
-      # A React major moves four packages at once — react, react-dom and both
-      # @types. Dependabot raises them as separate PRs, so each one is half an
-      # upgrade whose peer ranges cannot resolve, and every one fails at
-      # `npm ci`. See the closed #11 and #13. Majors here are ours to do
-      # deliberately, in one PR; minors and patches still come through.
-      - dependency-name: 'react*'
-        update-types: ['version-update:semver-major']
-      - dependency-name: '@types/react*'
+      # Major upgrades are ours to do deliberately, one at a time, on their own
+      # branch — not raised automatically. A React major already proved why: it
+      # moves four packages at once (react, react-dom, both @types) that
+      # Dependabot splits into separate PRs, each half an upgrade whose peer
+      # ranges cannot resolve, every one failing at `npm ci` (the closed #11 and
+      # #13). Framework majors (Next, Tailwind 4, TypeScript 7) carry migrations
+      # of the same kind. So majors are held here across the board; minors and
+      # patches still come through as usual.
+      - dependency-name: '*'
         update-types: ['version-update:semver-major']
 
   - package-ecosystem: github-actions
