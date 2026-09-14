@@ -14,7 +14,7 @@
  * dropped rather than handed to the game screen.
  */
 
-import { GAME_MODES, type GameMode } from './prompts';
+import { GAME_MODES, type GameMode } from './modes';
 import { MAX_NAME_LENGTH, MAX_PLAYERS, MIN_PLAYERS, normaliseRoster } from './roster';
 
 /** The game in progress. Cleared when a night ends or the crew heads back to setup. */

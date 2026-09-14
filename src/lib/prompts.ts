@@ -1,39 +1,14 @@
-export type NsfwLevel = 'Mild' | 'Medium' | 'Extreme';
-
-/**
- * Game modes are the three intensity tiers plus 'NHIE', a Never Have I Ever
- * mode that draws the NHIE prompts out of every tier rather than being a tier
- * of its own. Prompts keep their nsfwLevel either way.
- */
-export type GameMode = NsfwLevel | 'NHIE';
-
-export const NHIE_PATTERN = /^never have i ever\b/i;
+// Mode metadata (GameMode, GAME_MODES, NHIE_PATTERN) lives in ./modes, kept
+// free of the deck so the setup screen can import it without pulling PROMPTS
+// into the home-page bundle. The types are re-exported here for convenience
+// (they erase at build time), but the values are not: importing GAME_MODES or
+// NHIE_PATTERN from ./modes is what keeps the deck off the home-page chunk, so
+// that path is deliberately the only one.
+import { NHIE_PATTERN, type NsfwLevel } from './modes';
+export type { NsfwLevel, GameMode } from './modes';
 
 export const isNhiePrompt = (prompt: Prompt): boolean =>
   NHIE_PATTERN.test(prompt.text.trim());
-
-export const GAME_MODES: {
-  id: GameMode;
-  label: string;
-  badge: string;
-  /** One-line description shown under the selector so the choice isn't blind. */
-  description: string;
-  /** 1-4 chili rating for the spice meter on the setup screen. */
-  spice: number;
-  wide?: boolean;
-}[] = [
-  { id: 'Mild', label: 'Mild', badge: 'Mild Mode', description: 'Icebreakers and embarrassing stories.', spice: 1 },
-  { id: 'Medium', label: 'Medium', badge: 'Medium Mode', description: 'Flirty confessions and light dares.', spice: 2 },
-  { id: 'Extreme', label: 'Extreme', badge: 'Extreme Mode', description: 'No limits. You have been warned.', spice: 4 },
-  {
-    id: 'NHIE',
-    label: 'Never Have I Ever',
-    badge: 'Never Have I Ever',
-    description: 'Every intensity, phrased as Never Have I Ever — includes Extreme.',
-    spice: 3,
-    wide: true,
-  },
-];
 
 /**
  * A coarse "kind" for each card, derived from its text. Purely presentational:

@@ -8,7 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Header } from '@/components/shared/Header';
 import { Users, ShieldAlert, Flame, Plus, X, PlayCircle } from 'lucide-react';
-import { GAME_MODES, type GameMode } from '@/lib/prompts';
+import { GAME_MODES, type GameMode } from '@/lib/modes';
 import { useToast } from '@/hooks/use-toast';
 import { cn, playerColor, rosterFromQuery } from '@/lib/utils';
 import {

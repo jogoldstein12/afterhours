@@ -4,7 +4,8 @@
  * no React, no storage, no DOM.
  */
 
-import { PROMPTS, isNhiePrompt, isRoomPrompt, type GameMode, type Prompt } from './prompts';
+import { PROMPTS, isNhiePrompt, isRoomPrompt, type Prompt } from './prompts';
+import { type GameMode } from './modes';
 
 /** The deck for a mode. NHIE is not a tier — it draws its cards from all three. */
 export const filterDeck = (mode: GameMode): Prompt[] =>

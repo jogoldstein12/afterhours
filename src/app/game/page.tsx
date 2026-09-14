@@ -6,11 +6,10 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import {
   Prompt,
-  GameMode,
-  GAME_MODES,
   getPromptCategory,
   type PromptCategory,
 } from '@/lib/prompts';
+import { GAME_MODES, type GameMode } from '@/lib/modes';
 import {
   extractDurationSeconds,
   filterDeck,

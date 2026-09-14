@@ -43,6 +43,11 @@ jobs:
       - name: Build
         run: npm run build
 
+      # The deck is the paid product; it must ship on the play route only, never
+      # in the home-page bundle. Reads the build manifest to enforce that.
+      - name: Deck stays off the home-page bundle
+        run: npm run check:bundle
+
       - name: Deck export is in sync with the deck
         run: |
           npm run export:deck
