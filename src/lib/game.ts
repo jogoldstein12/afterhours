@@ -46,6 +46,58 @@ export const extractDurationSeconds = (text: string): number | null => {
   return null;
 };
 
+/**
+ * The next card to deal: a uniformly random pick from the deck minus what has
+ * already been played, or null when the deck is spent (the night is over).
+ * `rng` is injectable so a test can pin the pick.
+ */
+export const pickNextPrompt = (
+  deck: Prompt[],
+  usedIds: Set<number>,
+  rng: () => number = Math.random,
+): Prompt | null => {
+  const remaining = deck.filter((p) => !usedIds.has(p.id));
+  if (remaining.length === 0) return null;
+  return remaining[Math.floor(rng() * remaining.length)];
+};
+
+/**
+ * Whose turn is next, and the queue that remains after them. The stored queue
+ * is first cleared of seats that no longer exist (a player left mid-round); an
+ * emptied queue is refilled with a fresh shuffled round, avoiding an immediate
+ * repeat of the player who just went.
+ */
+export const advanceTurnQueue = (
+  queue: number[],
+  playerCount: number,
+  currentIndex: number,
+): { next: number; rest: number[] } => {
+  let q = queue.filter((i) => i < playerCount);
+  if (q.length === 0) q = shuffledIndices(playerCount, currentIndex);
+  return { next: q[0], rest: q.slice(1) };
+};
+
+/**
+ * Remap the current seat and the upcoming-turns queue after a player is removed.
+ * `newLength` is the roster size *after* removal. Seats above the gap shift down
+ * by one; if the removed player was the one up, the turn passes to whoever now
+ * occupies that seat (wrapping at the end).
+ */
+export const remapAfterRemoval = (
+  removeIndex: number,
+  currentIndex: number,
+  queue: number[],
+  newLength: number,
+): { currentIndex: number; queue: number[] } => ({
+  currentIndex:
+    removeIndex < currentIndex
+      ? currentIndex - 1
+      : removeIndex === currentIndex
+        ? currentIndex % newLength
+        : currentIndex,
+  queue: queue.filter((i) => i !== removeIndex).map((i) => (i > removeIndex ? i - 1 : i)),
+});
+
 /** Substituted into `{{randomOtherPlayer}}` when nobody else is in the room. */
 const NO_OTHER_PLAYER = 'another player';
 
