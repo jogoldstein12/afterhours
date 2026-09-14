@@ -1,8 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import {
+  advanceTurnQueue,
   extractDurationSeconds,
   filterDeck,
+  pickNextPrompt,
   promptById,
+  remapAfterRemoval,
   renderPromptText,
   shuffledIndices,
 } from './game';
@@ -176,5 +179,62 @@ describe('extractDurationSeconds', () => {
   it('ignores spelled-out numbers, which are usually hypothetical', () => {
     expect(extractDurationSeconds('If you had ten minutes alone with them...')).toBeNull();
     expect(extractDurationSeconds('No timing here.')).toBeNull();
+  });
+});
+
+describe('pickNextPrompt', () => {
+  const deck = [card({ id: 1 }), card({ id: 2 }), card({ id: 3 })];
+
+  it('returns a card that has not been used', () => {
+    const used = new Set([1, 3]);
+    // rng 0 lands on the first remaining card.
+    expect(pickNextPrompt(deck, used, () => 0)).toEqual(card({ id: 2 }));
+  });
+
+  it('is null when the deck is spent', () => {
+    expect(pickNextPrompt(deck, new Set([1, 2, 3]))).toBeNull();
+    expect(pickNextPrompt([], new Set())).toBeNull();
+  });
+
+  it('spans the remaining cards as rng spans [0,1)', () => {
+    const used = new Set<number>();
+    expect(pickNextPrompt(deck, used, () => 0)?.id).toBe(1);
+    expect(pickNextPrompt(deck, used, () => 0.99)?.id).toBe(3);
+  });
+});
+
+describe('advanceTurnQueue', () => {
+  it('takes the next seat off the queue and keeps the rest', () => {
+    expect(advanceTurnQueue([2, 0, 1], 3, 1)).toEqual({ next: 2, rest: [0, 1] });
+  });
+
+  it('drops seats that no longer exist before taking one', () => {
+    // Player 4 left; seat 4 is gone from a 3-player game.
+    expect(advanceTurnQueue([4, 1], 3, 0)).toEqual({ next: 1, rest: [] });
+  });
+
+  it('refills with a fresh round when the queue empties', () => {
+    const { next, rest } = advanceTurnQueue([], 4, 2);
+    expect([next, ...rest].sort()).toEqual([0, 1, 2, 3]);
+    expect(next).not.toBe(2); // no immediate repeat of who just went
+  });
+});
+
+describe('remapAfterRemoval', () => {
+  it('shifts a seat above the gap down by one', () => {
+    // Remove seat 0; the player at seat 2 keeps their turn, now at seat 1.
+    expect(remapAfterRemoval(0, 2, [1, 3], 3)).toEqual({ currentIndex: 1, queue: [0, 2] });
+  });
+
+  it('leaves a seat below the gap where it is', () => {
+    expect(remapAfterRemoval(2, 0, [1, 3], 3).currentIndex).toBe(0);
+  });
+
+  it('passes the turn on when the player who is up is removed', () => {
+    // Remove the current seat (1) of a 4-player game: turn passes to whoever
+    // now sits there.
+    expect(remapAfterRemoval(1, 1, [], 3).currentIndex).toBe(1);
+    // Removing the last seat wraps the turn to the front.
+    expect(remapAfterRemoval(3, 3, [], 3).currentIndex).toBe(0);
   });
 });

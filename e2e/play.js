@@ -98,11 +98,16 @@ module.exports = async function play(browser, BASE, results) {
     record.players.length === 3 && !record.players.includes('Sam') && record.usedPromptIds.length === usedBefore);
 
   // --- Run the deck out ----------------------------------------------------
-  for (let i = 0; i < 120; i++) {
+  // Deal until the finale shows rather than a fixed count: the Mild deck (the
+  // smallest, and the one this runs) grows over time, so a hard cap silently
+  // stops short of the end. The cap here is only a runaway guard, well above
+  // any plausible Mild size.
+  for (let i = 0; i < 500; i++) {
     const next = page.getByRole('button', { name: /next/i }).first();
     if (!(await next.isVisible().catch(() => false))) break;
     await next.click();
     await page.waitForTimeout(90);
+    if ((await bodyText(page)).includes('Last Call')) break;
   }
   check('Running the deck out reaches the finale', (await bodyText(page)).includes('Last Call'));
   check('The finale is recorded as ended', (await savedGame(page)).gameEnded === true);

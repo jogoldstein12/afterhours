@@ -1,23 +1,19 @@
 "use client";
 
-import { useEffect, useState, useCallback, useRef, type PointerEvent as ReactPointerEvent, type CSSProperties } from 'react';
+import { useEffect, useReducer, useState, useCallback, useRef, type CSSProperties } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import {
-  Prompt,
-  GameMode,
-  GAME_MODES,
   getPromptCategory,
   type PromptCategory,
 } from '@/lib/prompts';
-import {
-  extractDurationSeconds,
-  filterDeck,
-  promptById,
-  renderPromptText,
-  shuffledIndices,
-} from '@/lib/game';
+import { GAME_MODES, type GameMode } from '@/lib/modes';
+import { promptById, renderPromptText } from '@/lib/game';
+import { gameReducer, initialGameState } from '@/lib/game-engine';
+import { useCountdownTimer } from '@/hooks/use-countdown-timer';
+import { useWakeLock } from '@/hooks/use-wake-lock';
+import { useSwipeCard } from '@/hooks/use-swipe-card';
 import {
   ArrowRightCircle,
   RotateCcw,
@@ -55,7 +51,6 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { cn, playerColor, rosterFromQuery } from '@/lib/utils';
 import { MAX_NAME_LENGTH, MAX_PLAYERS, MIN_PLAYERS, hasName, normalisePlayerName, normaliseRoster } from '@/lib/roster';
 import {
-  HISTORY_LIMIT,
   clearGame,
   isGameMode,
   readGame,
@@ -64,12 +59,6 @@ import {
   type StoredGame,
 } from '@/lib/session';
 import { Separator } from '@/components/ui/separator';
-
-// Swipe left deals the next card, swipe right steps back (undo). A gesture
-// commits if it either travels past SWIPE_THRESHOLD or is a quick flick past
-// FLICK_VELOCITY — so a short, fast flick works as well as a long drag.
-const SWIPE_THRESHOLD = 56;
-const FLICK_VELOCITY = 0.35; // px per ms
 
 // Each mode carries its color the whole way through the screen: the card's neon
 // border, the status-strip chip, the progress filament, and the selected pill.
@@ -132,47 +121,40 @@ const vibrate = (pattern: number | number[]) => {
   if (typeof navigator !== 'undefined' && 'vibrate' in navigator) navigator.vibrate(pattern);
 };
 
-// `countedTurn` distinguishes a played card (which incremented the player's
-// tally and advanced the rotation) from a skipped one (which did neither), so
-// Undo can reverse each correctly.
-type TurnSnapshot = {
-  prompt: Prompt;
-  playerIndex: number;
-  // Who took the turn, by name. The tally is keyed by name and a player can be
-  // removed mid-game (which reindexes seats), so Undo attributes by name and
-  // only uses `playerIndex` to fall back to a seat when that name is gone.
-  playerName: string;
-  text: string;
-  upcoming: number[];
-  countedTurn: boolean;
-};
-
 export default function GamePage() {
   const router = useRouter();
   const { toast } = useToast();
 
-  const [players, setPlayers] = useState<string[]>([]);
+  // The whole game loop is one state machine (src/lib/game-engine.ts): the
+  // screen dispatches actions and never mutates game state by hand, which is
+  // what keeps a double-apply structurally impossible.
+  const [state, dispatch] = useReducer(gameReducer, initialGameState);
+  const {
+    players,
+    nsfwLevel,
+    currentPlayerIndex,
+    currentPrompt,
+    availablePrompts,
+    usedPromptIds,
+    gameEnded,
+    cardKey,
+    upcomingTurns,
+    history,
+    turnsByName,
+  } = state;
+
   // Distinguishes "still reading the URL" from "the URL has no roster", so the
   // screen can bounce to setup instead of holding a loader forever.
   const [rosterChecked, setRosterChecked] = useState(false);
-  const [nsfwLevel, setNsfwLevel] = useState<GameMode>('Mild');
-  const [currentPlayerIndex, setCurrentPlayerIndex] = useState(0);
-  const [currentPrompt, setCurrentPrompt] = useState<Prompt | null>(null);
+  // The card's screen text: `{{randomOtherPlayer}}` filled in and the name
+  // prefix added. Derived here rather than in the engine because hydration
+  // lands a restored card's state over several renders and this machinery is
+  // easy to get subtly wrong (see restoredTextRef); the engine only carries the
+  // rendered text in its payloads so the undo stack can store it.
   const [processedPromptText, setProcessedPromptText] = useState<string>('');
-  const [availablePrompts, setAvailablePrompts] = useState<Prompt[]>([]);
-  const [usedPromptIds, setUsedPromptIds] = useState<Set<number>>(new Set());
-  const [gameEnded, setGameEnded] = useState(false);
-  const [cardKey, setCardKey] = useState(0);
   const [isNewGameDialogOpen, setIsNewGameDialogOpen] = useState(false);
   const [isEditSheetOpen, setIsEditSheetOpen] = useState(false);
   const [newPlayerName, setNewPlayerName] = useState('');
-  const [timeLeft, setTimeLeft] = useState<number | null>(null);
-  const [timerRunning, setTimerRunning] = useState(false);
-  const [upcomingTurns, setUpcomingTurns] = useState<number[]>([]);
-  const [history, setHistory] = useState<TurnSnapshot[]>([]);
-  // Running tally of how many cards each player has answered, keyed by name so
-  // it survives roster edits. Feeds the "most drawn" stat on the finale.
-  const [turnsByName, setTurnsByName] = useState<Record<string, number>>({});
   // The text a restored or undone card was showing, tagged with the card it
   // belongs to so the processing effect below can show it instead of deriving
   // the text again and re-rolling {{randomOtherPlayer}} onto somebody else.
@@ -183,47 +165,13 @@ export default function GamePage() {
   // pass to re-derive the text. Refreshing mid-card genuinely changed who the
   // card was pointing at, about half the time with four players.
   const restoredTextRef = useRef<{ promptId: number; text: string } | null>(null);
-  // The level the loaded deck belongs to. The deck only (re)loads when this
-  // changes, never on roster changes — adding or removing a player mid-game
-  // must not reset progress.
-  const deckLevelRef = useRef<GameMode | null>(null);
+  // "A card is flying off": guards the ~150ms swipe fly so that a tap on the
+  // dock during it cannot fire the same action a second time. Owned here rather
+  // than inside the swipe hook so the dock handlers can read it too.
+  const busyRef = useRef(false);
 
-  // Swipe: the card tracks the finger and, past the threshold or on a flick,
-  // flies off — left to deal the next card, right to step back. The transform
-  // is written straight to the DOM during the drag (no React re-render per
-  // move) so it stays smooth on a phone. Button parity is kept in the dock.
-  const cardElRef = useRef<HTMLDivElement>(null);
-  const peekElRef = useRef<HTMLDivElement>(null);
-  const swipe = useRef({ x: 0, y: 0, t: 0, active: false, tracking: false, busy: false });
-  const flyTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  const timerTotal = currentPrompt ? extractDurationSeconds(currentPrompt.text) : null;
-
-  // A fresh prompt resets the timer to its full duration, stopped.
-  useEffect(() => {
-    setTimerRunning(false);
-    setTimeLeft(currentPrompt ? extractDurationSeconds(currentPrompt.text) : null);
-  }, [currentPrompt]);
-
-  useEffect(() => {
-    if (!timerRunning) return;
-    const interval = setInterval(() => {
-      setTimeLeft(prev => {
-        if (prev === null || prev <= 1) {
-          setTimerRunning(false);
-          vibrate([100, 50, 100]);
-          return 0;
-        }
-        return prev - 1;
-      });
-    }, 1000);
-    return () => clearInterval(interval);
-  }, [timerRunning]);
-
-  const startTimer = () => {
-    setTimeLeft(timerTotal);
-    setTimerRunning(true);
-  };
+  useWakeLock();
+  const { total: timerTotal, timeLeft, running: timerRunning, start: startTimer } = useCountdownTimer(currentPrompt);
 
   // The one entry point for a game's state. Setup writes a record and
   // navigates to a bare `/game`; a refresh, a locked phone, or Resume from the
@@ -240,9 +188,8 @@ export default function GamePage() {
     if (fromQuery.length >= MIN_PLAYERS) {
       const levelFromQuery = query.get('nsfwLevel');
       const level = isGameMode(levelFromQuery) ? levelFromQuery : 'Mild';
-      setPlayers(fromQuery);
-      setNsfwLevel(level);
       writeLastSetup({ players: fromQuery, nsfwLevel: level });
+      dispatch({ type: 'START', players: fromQuery, nsfwLevel: level });
       setRosterChecked(true);
       return;
     }
@@ -253,41 +200,16 @@ export default function GamePage() {
       return;
     }
 
-    setPlayers(saved.players);
-    setNsfwLevel(saved.nsfwLevel);
-    setCurrentPlayerIndex(saved.currentPlayerIndex);
-
+    // Show a restored card exactly as it was read out, rather than re-rolling
+    // {{randomOtherPlayer}} under a group looking at it: tag the stored text to
+    // the card id so the effect below only applies it to that card. A card
+    // whose id has since left the deck resolves to null here, and RESTORE deals
+    // a replacement instead.
     const card = saved.currentPromptId === null ? null : promptById.get(saved.currentPromptId) ?? null;
-    // A record written by Start carries a roster and nothing else; let the deck
-    // effect below deal it a first card the normal way. Anything further along
-    // is restored wholesale.
-    if (saved.usedPromptIds.length > 0 || card || saved.gameEnded) {
-      // Claim the level before the deck effect runs, so restoring does not read
-      // as a mid-game level change and wipe the progress just loaded.
-      deckLevelRef.current = saved.nsfwLevel;
-      setAvailablePrompts(filterDeck(saved.nsfwLevel));
-      setUsedPromptIds(new Set(saved.usedPromptIds));
-      setUpcomingTurns(saved.upcomingTurns);
-      setTurnsByName(saved.turnsByName);
-      // A card whose id has since left the deck is dropped from the undo stack.
-      setHistory(
-        saved.history.flatMap((turn) => {
-          const prompt = promptById.get(turn.promptId);
-          return prompt
-            ? [{ prompt, playerIndex: turn.playerIndex, playerName: turn.playerName, text: turn.text, upcoming: turn.upcoming, countedTurn: turn.countedTurn }]
-            : [];
-        }),
-      );
-      setGameEnded(saved.gameEnded);
-      if (card) {
-        // Show the card exactly as it was read out, rather than re-rolling
-        // {{randomOtherPlayer}} under a group that is looking at it.
-        if (saved.processedPromptText) {
-          restoredTextRef.current = { promptId: card.id, text: saved.processedPromptText };
-        }
-        setCurrentPrompt(card);
-      }
+    if (card && saved.processedPromptText) {
+      restoredTextRef.current = { promptId: card.id, text: saved.processedPromptText };
     }
+    dispatch({ type: 'RESTORE', saved });
     setRosterChecked(true);
   }, []);
 
@@ -345,70 +267,13 @@ export default function GamePage() {
     return () => { delete document.documentElement.dataset.mode; };
   }, [nsfwLevel]);
 
-  useEffect(() => () => { if (flyTimeout.current) clearTimeout(flyTimeout.current); }, []);
-
-  // Keep the screen awake during play — pass-the-phone games have long gaps
-  // between touches and the phone sleeping mid-card kills the momentum.
-  useEffect(() => {
-    if (!('wakeLock' in navigator)) return;
-    let sentinel: WakeLockSentinel | null = null;
-    const request = async () => {
-      try {
-        sentinel = await navigator.wakeLock.request('screen');
-      } catch {
-        sentinel = null;
-      }
-    };
-    request();
-    const onVisibility = () => {
-      if (document.visibilityState === 'visible') request();
-    };
-    document.addEventListener('visibilitychange', onVisibility);
-    return () => {
-      document.removeEventListener('visibilitychange', onVisibility);
-      sentinel?.release().catch(() => {});
-    };
-  }, []);
-
-  const selectNewPrompt = useCallback((promptsToUse: Prompt[], currentUsedIds: Set<number>) => {
-    const remainingPrompts = promptsToUse.filter(p => !currentUsedIds.has(p.id));
-    if (remainingPrompts.length === 0) {
-      setGameEnded(true);
-      setCurrentPrompt(null);
-      return null;
-    }
-    const randomIndex = Math.floor(Math.random() * remainingPrompts.length);
-    const newPrompt = remainingPrompts[randomIndex];
-    setCurrentPrompt(newPrompt);
-    setCardKey(prevKey => prevKey + 1);
-    return newPrompt;
-  }, []);
-
-  const loadAndFilterPrompts = useCallback(() => {
-    const filtered = filterDeck(nsfwLevel);
-    setAvailablePrompts(filtered);
-    setUsedPromptIds(new Set());
-    setGameEnded(false);
-    setHistory([]);
-    setUpcomingTurns([]);
-    setTurnsByName({});
-    return filtered;
-  }, [nsfwLevel]);
-
   const restartGame = useCallback(() => {
-    setCurrentPlayerIndex(0);
-    const freshPrompts = loadAndFilterPrompts();
-    if (freshPrompts.length > 0) {
-      selectNewPrompt(freshPrompts, new Set());
-    } else {
-      setCurrentPrompt(null);
-      setGameEnded(true);
-    }
+    dispatch({ type: 'RESTART' });
     setIsNewGameDialogOpen(false);
-  }, [loadAndFilterPrompts, selectNewPrompt]);
+  }, []);
 
   const handleNsfwLevelChange = (newLevel: GameMode) => {
-    setNsfwLevel(newLevel);
+    dispatch({ type: 'SET_MODE', nsfwLevel: newLevel });
   };
 
   // "This crew" is the roster as it stands, which may have changed mid-game.
@@ -419,22 +284,6 @@ export default function GamePage() {
     clearGame();
     router.push('/');
   }, [players, nsfwLevel, router]);
-
-  useEffect(() => {
-    if (players.length === 0 || deckLevelRef.current === nsfwLevel) return;
-    deckLevelRef.current = nsfwLevel;
-    const newPrompts = loadAndFilterPrompts();
-    selectNewPrompt(newPrompts, new Set());
-  }, [nsfwLevel, players.length, loadAndFilterPrompts, selectNewPrompt]);
-
-  // A restored game can come back without a card: the saved id no longer
-  // resolves because the deck changed under it. The effect above has already
-  // claimed the level and will not deal one, so the group would be left staring
-  // at an empty card. Deal the next one instead of restarting the night.
-  useEffect(() => {
-    if (!rosterChecked || gameEnded || currentPrompt || availablePrompts.length === 0) return;
-    selectNewPrompt(availablePrompts, usedPromptIds);
-  }, [rosterChecked, gameEnded, currentPrompt, availablePrompts, usedPromptIds, selectNewPrompt]);
 
   useEffect(() => {
     // Held until a different card is actually dealt, so every render of the
@@ -459,163 +308,43 @@ export default function GamePage() {
   }, [currentPrompt, players, currentPlayerIndex, gameEnded]);
 
   const handleNextPlayer = useCallback(() => {
-    // `busy` guards the window while a swiped card is flying off: a tap on the
-    // dock during that ~150ms would otherwise advance a second time.
-    if (gameEnded || !currentPrompt || swipe.current.busy) return;
+    // busyRef guards the ~150ms window while a swiped card is flying off, so a
+    // tap on the dock during it cannot advance a second time.
+    if (busyRef.current || gameEnded || !currentPrompt) return;
     vibrate(12);
-
-    const outgoing = players[currentPlayerIndex];
-    if (outgoing) setTurnsByName(prev => ({ ...prev, [outgoing]: (prev[outgoing] ?? 0) + 1 }));
-
-    setHistory(prev => [
-      ...prev.slice(-(HISTORY_LIMIT - 1)),
-      { prompt: currentPrompt, playerIndex: currentPlayerIndex, playerName: outgoing ?? '', text: processedPromptText, upcoming: upcomingTurns, countedTurn: true },
-    ]);
-
-    const newUsedPromptIds = new Set(usedPromptIds);
-    newUsedPromptIds.add(currentPrompt.id);
-    setUsedPromptIds(newUsedPromptIds);
-
-    let queue = upcomingTurns.filter(i => i < players.length);
-    if (queue.length === 0) queue = shuffledIndices(players.length, currentPlayerIndex);
-    setCurrentPlayerIndex(queue[0]);
-    setUpcomingTurns(queue.slice(1));
-
-    selectNewPrompt(availablePrompts, newUsedPromptIds);
-  }, [gameEnded, currentPrompt, players, currentPlayerIndex, processedPromptText, upcomingTurns, usedPromptIds, availablePrompts, selectNewPrompt]);
+    dispatch({ type: 'NEXT', text: processedPromptText });
+  }, [gameEnded, currentPrompt, processedPromptText]);
 
   // Pass on a card without doing it. Deals a fresh prompt to the *same* player,
   // so declining costs nothing and skips no one's turn: no tally, no rotation,
   // no penalty. Every prompt in this game is optional, and this is the control
   // that makes that true in the product rather than only in the rules.
   const handleSkip = useCallback(() => {
-    if (gameEnded || !currentPrompt || swipe.current.busy) return;
+    if (busyRef.current || gameEnded || !currentPrompt) return;
     vibrate(8);
+    dispatch({ type: 'SKIP', text: processedPromptText });
+  }, [gameEnded, currentPrompt, processedPromptText]);
 
-    setHistory(prev => [
-      ...prev.slice(-(HISTORY_LIMIT - 1)),
-      { prompt: currentPrompt, playerIndex: currentPlayerIndex, playerName: players[currentPlayerIndex] ?? '', text: processedPromptText, upcoming: upcomingTurns, countedTurn: false },
-    ]);
-
-    const newUsedPromptIds = new Set(usedPromptIds);
-    newUsedPromptIds.add(currentPrompt.id);
-    setUsedPromptIds(newUsedPromptIds);
-
-    selectNewPrompt(availablePrompts, newUsedPromptIds);
-  }, [gameEnded, currentPrompt, currentPlayerIndex, players, processedPromptText, upcomingTurns, usedPromptIds, availablePrompts, selectNewPrompt]);
-
-  const handleUndo = () => {
-    if (swipe.current.busy) return;
+  const handleUndo = useCallback(() => {
+    if (busyRef.current) return;
     const last = history[history.length - 1];
     if (!last) return;
-    // Attribute by name, not by the stored seat: a player removed since this
-    // turn was taken has shifted every later seat, so `playerIndex` alone would
-    // credit the wrong person. The name still keys the tally correctly, and its
-    // current seat (if the player is still here) restores whose turn it is.
-    const restoredSeat = players.indexOf(last.playerName);
-    // A skipped card never incremented the tally, so undoing one must not
-    // decrement it.
-    if (last.playerName && last.countedTurn) {
-      setTurnsByName(prev => {
-        const next = { ...prev };
-        if (next[last.playerName]) next[last.playerName] -= 1;
-        return next;
-      });
-    }
-    setHistory(prev => prev.slice(0, -1));
-    setUsedPromptIds(prev => {
-      const next = new Set(prev);
-      next.delete(last.prompt.id);
-      return next;
-    });
+    // Show the undone card exactly as it read the first time (its stored text),
+    // rather than re-rolling {{randomOtherPlayer}}. Tagged to the card id so the
+    // text effect only applies it to that card.
     restoredTextRef.current = { promptId: last.prompt.id, text: last.text };
-    setGameEnded(false);
-    setCurrentPrompt(last.prompt);
-    // If that player has left, fall back to the clamped stored seat.
-    setCurrentPlayerIndex(restoredSeat >= 0 ? restoredSeat : Math.min(last.playerIndex, players.length - 1));
-    setUpcomingTurns(last.upcoming);
-    setCardKey(prev => prev + 1);
-  };
+    dispatch({ type: 'UNDO' });
+  }, [history]);
 
-  // --- Swipe handlers (imperative, for a smooth 60fps drag) -----------------
-  const paintDrag = (dx: number) => {
-    const card = cardElRef.current;
-    if (card) card.style.transform = `translateX(${dx}px) rotate(${dx * 0.02}deg)`;
-    const peek = peekElRef.current;
-    if (peek) {
-      const p = Math.min(1, Math.abs(dx) / SWIPE_THRESHOLD);
-      peek.style.opacity = String(0.2 + 0.55 * p);
-      peek.style.transform = `scale(${0.93 + 0.07 * p})`;
-    }
-  };
-  const settleCard = (animate: boolean) => {
-    const card = cardElRef.current;
-    if (card) {
-      card.style.transition = animate ? 'transform 0.2s ease-out' : 'none';
-      card.style.transform = 'translateX(0px) rotate(0deg)';
-    }
-    const peek = peekElRef.current;
-    if (peek) {
-      peek.style.transition = animate ? 'opacity 0.2s ease-out, transform 0.2s ease-out' : 'none';
-      peek.style.opacity = '0';
-      peek.style.transform = 'scale(0.93)';
-    }
-  };
-
-  const onCardPointerDown = (e: ReactPointerEvent) => {
-    if (gameEnded || !currentPrompt || swipe.current.busy) return;
-    swipe.current = { x: e.clientX, y: e.clientY, t: e.timeStamp, active: true, tracking: false, busy: false };
-    const card = cardElRef.current;
-    if (card) card.style.transition = 'none';
-  };
-  const onCardPointerMove = (e: ReactPointerEvent) => {
-    const s = swipe.current;
-    if (!s.active || s.busy) return;
-    const dx = e.clientX - s.x;
-    const dy = e.clientY - s.y;
-    if (!s.tracking) {
-      // Decide intent once: horizontal → swipe; vertical → let the card scroll.
-      if (Math.abs(dx) > 6 && Math.abs(dx) > Math.abs(dy)) {
-        s.tracking = true;
-        try { (e.target as HTMLElement).setPointerCapture?.(e.pointerId); } catch {}
-      } else if (Math.abs(dy) > 8) {
-        s.active = false;
-        return;
-      } else {
-        return;
-      }
-    }
-    paintDrag(dx);
-  };
-  const endDrag = (e: ReactPointerEvent) => {
-    const s = swipe.current;
-    if (!s.active) return;
-    if (!s.tracking) { s.active = false; return; }
-    const dx = e.clientX - s.x;
-    const dt = Math.max(1, e.timeStamp - s.t);
-    const v = dx / dt; // signed px/ms
-    s.active = false;
-
-    const goNext = dx < -SWIPE_THRESHOLD || v < -FLICK_VELOCITY;
-    const goBack = dx > SWIPE_THRESHOLD || v > FLICK_VELOCITY;
-    const canBack = history.length > 0;
-
-    if (goNext && !goBack) {
-      s.busy = true;
-      const card = cardElRef.current;
-      if (card) { card.style.transition = 'transform 0.16s ease-out'; card.style.transform = 'translateX(-115%) rotate(-6deg)'; }
-      // Clear busy before the action so its own busy guard lets it through;
-      // taps during the fly are what busy is there to block.
-      flyTimeout.current = setTimeout(() => { s.busy = false; handleNextPlayer(); settleCard(false); }, 150);
-    } else if (goBack && canBack) {
-      s.busy = true;
-      const card = cardElRef.current;
-      if (card) { card.style.transition = 'transform 0.16s ease-out'; card.style.transform = 'translateX(115%) rotate(6deg)'; }
-      flyTimeout.current = setTimeout(() => { s.busy = false; handleUndo(); settleCard(false); }, 150);
-    } else {
-      settleCard(true);
-    }
-  };
+  // The card's drag-to-deal gesture. `busyRef` is shared so the dock handlers
+  // above and the swipe fly cannot both fire an action in the same window.
+  const { cardRef, peekRef, onPointerDown, onPointerMove, endDrag } = useSwipeCard({
+    busyRef,
+    onNext: handleNextPlayer,
+    onBack: handleUndo,
+    canBack: history.length > 0,
+    canStart: !gameEnded && !!currentPrompt,
+  });
 
   const handleAddPlayer = () => {
     const name = normalisePlayerName(newPlayerName);
@@ -627,12 +356,7 @@ export default function GamePage() {
       return toast({ title: `${name} is already in`, description: 'Give this one a different name.', variant: 'destructive' });
     }
 
-    setUpcomingTurns(prev => {
-      const queue = [...prev];
-      queue.splice(Math.floor(Math.random() * (queue.length + 1)), 0, players.length);
-      return queue;
-    });
-    setPlayers(prev => [...prev, name]);
+    dispatch({ type: 'ADD_PLAYER', name });
     setNewPlayerName('');
   };
 
@@ -640,14 +364,7 @@ export default function GamePage() {
     if (players.length <= MIN_PLAYERS) {
       return toast({ title: `Minimum ${MIN_PLAYERS} players required.`, variant: 'destructive' });
     }
-    const newLength = players.length - 1;
-    setPlayers(prev => prev.filter((_, index) => index !== indexToRemove));
-    setCurrentPlayerIndex(prev => {
-      if (indexToRemove < prev) return prev - 1; // same person keeps the turn
-      if (indexToRemove === prev) return prev % newLength; // turn passes to the next player
-      return prev;
-    });
-    setUpcomingTurns(prev => prev.filter(i => i !== indexToRemove).map(i => (i > indexToRemove ? i - 1 : i)));
+    dispatch({ type: 'REMOVE_PLAYER', index: indexToRemove });
   };
 
   if (players.length === 0) {
@@ -680,7 +397,7 @@ export default function GamePage() {
         cardsPlayed={cardsPlayed}
         turnsByName={turnsByName}
         onRunItBack={restartGame}
-        onTurnItUp={() => { const hotter = HOTTER_MODE[nsfwLevel]; if (hotter) setNsfwLevel(hotter); }}
+        onTurnItUp={() => { const hotter = HOTTER_MODE[nsfwLevel]; if (hotter) dispatch({ type: 'SET_MODE', nsfwLevel: hotter }); }}
         onNewCrew={leaveToSetup}
       />
     );
@@ -826,7 +543,7 @@ export default function GamePage() {
           <div className="relative flex h-full w-full max-w-2xl items-stretch">
             {/* Card peek: rises from behind as the live card is swiped away. */}
             <div
-              ref={peekElRef}
+              ref={peekRef}
               aria-hidden
               className={cn(
                 "absolute inset-0 flex items-center justify-center rounded-2xl border glass-card",
@@ -839,10 +556,10 @@ export default function GamePage() {
 
             {/* Live card. */}
             <div
-              ref={cardElRef}
+              ref={cardRef}
               className="relative h-full w-full"
-              onPointerDown={onCardPointerDown}
-              onPointerMove={onCardPointerMove}
+              onPointerDown={onPointerDown}
+              onPointerMove={onPointerMove}
               onPointerUp={endDrag}
               onPointerCancel={endDrag}
               style={{ touchAction: 'pan-y' }}

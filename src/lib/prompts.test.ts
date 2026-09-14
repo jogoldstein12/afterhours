@@ -1,13 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import {
-  GAME_MODES,
-  NHIE_PATTERN,
   PROMPTS,
   getPromptCategory,
   isNhiePrompt,
   isRoomPrompt,
   type Prompt,
 } from './prompts';
+import { GAME_MODES, NHIE_PATTERN } from './modes';
 
 const card = (over: Partial<Prompt> = {}): Prompt => ({ id: 1, text: 'Go.', nsfwLevel: 'Mild', ...over });
 
