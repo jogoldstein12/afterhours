@@ -190,14 +190,13 @@ its own, Android crops to a circle, and the wordmark is unreadable below about
 
 ## Open work
 
-`docs/launch-readiness-audit-2026-09.md` (September 10) is the current plan:
-it reviews the earlier audit against the live site, adds the mobile, payment
-and accounts strategy, and carries the phased roadmap (Parts 6–8).
-
-`docs/public-release-audit-2026-09.md` is the earlier standing list of what was
-left before and after public launch. Read the scorecard and the phased plan at the
-bottom for current state; the findings themselves are left as first written,
-each with a dated **Resolved** note underneath where one has shipped, so the
-original reasoning stays readable next to what was done about it. Phases 1 and
-2 are complete bar the lawyer review; Phase 3 is analytics, deck balance and
-the two owner tasks; Phase 4 is the paywall.
+`docs/launch-audit-2026-09.md` is the current plan: one consolidated,
+phased audit of what has shipped and what remains, from stabilisation through
+the paywall and the app stores. It supersedes the two earlier September audits
+(`launch-readiness-audit-2026-09.md` and `public-release-audit-2026-09.md`),
+whose finding-by-finding history stays in git. Phases 1 (stabilise) and 2
+(portable engine + separable deck) are shipped; Phase 3 (analytics + Privacy
+Policy, prompt feedback, the NHIE signal) is next; Phase 4 is accounts and the
+paywall; Phase 5 is the app stores. Some owner tasks (Sentry in Vercel,
+hosting consolidation, uptime, repo visibility, processor confirmation, legal
+review) carry across the phases.
