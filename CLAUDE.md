@@ -89,6 +89,28 @@ the two hosts drifting. A few facts that have bitten before:
   (`SENTRY_AUTH_TOKEN`) must exist in the same project and be granted to the
   backend, or the build falls back to its no-credentials path.
 
+## Prompt feedback (opt-in)
+
+The 👍/👎 on a card is two things. **Hiding** (👎) is device-local: the id goes
+into `afterhours.hidden` in `localStorage` (via `session.ts`), and the reducer
+excludes hidden cards from every deal. That always works and sends nothing.
+
+**Rating** (the anonymous curation signal) is opt-in exactly like Sentry, and
+**off by default**. `src/lib/feedback.ts` posts a single atomic increment to a
+per-card counter at `promptStats/{id}` in Firestore, over the REST API (no SDK
+is bundled, so the home-page budget is untouched). It runs only when both
+`NEXT_PUBLIC_FIREBASE_PROJECT_ID` and `NEXT_PUBLIC_FIREBASE_API_KEY` are set;
+with neither, `feedbackEnabled()` is false, the 👍 is hidden, and no request is
+made. The CSP already allows `https://firestore.googleapis.com` (see
+`next.config.ts`), for the same reason Sentry's origin is allowed unconditionally.
+To turn it on: set both env vars in Vercel, and deploy the rules with
+`firebase deploy --only firestore:rules` (`firestore.rules` allows only a +1
+increment to `up`/`down` on `promptStats`, denies everything else, and denies
+client reads). Read the counters back from the Firebase console, or export them
+and join to `docs/prompts.csv` by id. The write carries only the card number and
+the direction — no name, account, or device id — so the Privacy Policy discloses
+it conditionally under "Card ratings".
+
 ## Things that will bite you
 
 - **Every route is statically prerendered** (`○ Static` on all five). Calling

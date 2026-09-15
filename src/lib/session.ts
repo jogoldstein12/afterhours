@@ -21,6 +21,14 @@ import { MAX_NAME_LENGTH, MAX_PLAYERS, MIN_PLAYERS, normaliseRoster } from './ro
 export const GAME_STATE_KEY = 'afterhours.game';
 /** The last crew to play on this device, so setup prefills. Outlives the game above. */
 export const LAST_SETUP_KEY = 'afterhours.lastSetup';
+/** Cards the player chose never to see again on this device. Outlives any game. */
+export const HIDDEN_CARDS_KEY = 'afterhours.hidden';
+
+/**
+ * A generous ceiling on the hidden list. The whole deck is under a thousand
+ * cards, so anything past this is a corrupt or hand-edited record, not real use.
+ */
+const MAX_HIDDEN = 2000;
 
 /**
  * A saved game is a party in progress, not an archive. Twelve hours covers
@@ -242,3 +250,20 @@ export function readLastSetup(): LastSetup | null {
 export const writeLastSetup = (setup: LastSetup): void => writeJson(LAST_SETUP_KEY, setup);
 
 export const clearLastSetup = (): void => remove(LAST_SETUP_KEY);
+
+// --- hidden cards -----------------------------------------------------------
+// A device-local "never show this again" list, kept apart from any game so it
+// survives a night ending and applies to every future one. Like every other
+// record here it is treated as untrusted input on read.
+
+/** The card ids hidden on this device: whole numbers, de-duplicated, capped. */
+export function readHiddenIds(): number[] {
+  const raw = readJson(HIDDEN_CARDS_KEY);
+  if (!Array.isArray(raw)) return [];
+  const ids = raw.filter(isWholeNumber);
+  return [...new Set(ids)].slice(0, MAX_HIDDEN);
+}
+
+/** Persist the hidden list, normalised the same way it is read back. */
+export const writeHiddenIds = (ids: number[]): void =>
+  writeJson(HIDDEN_CARDS_KEY, [...new Set(ids.filter(isWholeNumber))].slice(0, MAX_HIDDEN));

@@ -62,6 +62,60 @@ describe('SKIP', () => {
   });
 });
 
+describe('HIDE', () => {
+  it('hides the card, drops it from the deck, and deals another to the same player', () => {
+    const state = base({ currentPlayerIndex: 1, currentPrompt: P(1), usedPromptIds: new Set(), turnsByName: {} });
+    const hidden = gameReducer(state, { type: 'HIDE' });
+
+    expect(hidden.hiddenIds.has(1)).toBe(true);
+    expect(hidden.availablePrompts.some((p) => p.id === 1)).toBe(false);
+    expect(hidden.currentPlayerIndex).toBe(1); // same player up
+    expect(hidden.turnsByName).toEqual({}); // no tally
+    expect(hidden.history).toHaveLength(0); // deliberate, not undoable
+    expect(hidden.currentPrompt).not.toBeNull();
+    expect(hidden.currentPrompt!.id).not.toBe(1);
+  });
+
+  it('ends the night when the hidden card was the last one', () => {
+    const state = base({ availablePrompts: [P(1)], currentPrompt: P(1), usedPromptIds: new Set() });
+    const hidden = gameReducer(state, { type: 'HIDE' });
+    expect(hidden.gameEnded).toBe(true);
+    expect(hidden.currentPrompt).toBeNull();
+  });
+
+  it('does nothing once the game has ended', () => {
+    const state = base({ gameEnded: true, currentPrompt: null });
+    expect(gameReducer(state, { type: 'HIDE' })).toBe(state);
+  });
+});
+
+describe('hidden cards keep out of the deck', () => {
+  // 1177 is a Mild card, so it is in a Mild deck unless the device has hidden it.
+  it('START excludes a hidden id from the fresh deck', () => {
+    const started = gameReducer(initialGameState, {
+      type: 'START', players: ['A', 'B'], nsfwLevel: 'Mild', hiddenIds: [1177],
+    });
+    expect(started.availablePrompts.some((p) => p.id === 1177)).toBe(false);
+  });
+
+  it('RESTORE excludes a hidden id, one fewer card than without it', () => {
+    const restore = (hiddenIds: number[]) =>
+      gameReducer(initialGameState, {
+        type: 'RESTORE',
+        saved: {
+          players: ['Alex', 'Sam'], nsfwLevel: 'Mild', currentPlayerIndex: 0,
+          currentPromptId: null, processedPromptText: '', usedPromptIds: [],
+          upcomingTurns: [], turnsByName: {}, history: [], gameEnded: false,
+        },
+        hiddenIds,
+      });
+    const full = restore([]).availablePrompts.length;
+    const trimmed = restore([1177]);
+    expect(trimmed.availablePrompts.some((p) => p.id === 1177)).toBe(false);
+    expect(trimmed.availablePrompts.length).toBe(full - 1);
+  });
+});
+
 describe('UNDO', () => {
   it('reverses a counted turn: tally, used id, prompt and seat', () => {
     const state = base({
@@ -185,7 +239,7 @@ describe('RESTORE', () => {
   });
 
   it('rehydrates a night in progress', () => {
-    const state = gameReducer(initialGameState, { type: 'RESTORE', saved: stored() });
+    const state = gameReducer(initialGameState, { type: 'RESTORE', saved: stored(), hiddenIds: [] });
     expect(state.players).toEqual(['Alex', 'Sam', 'Jordan']);
     expect(state.currentPlayerIndex).toBe(1);
     expect([...state.usedPromptIds]).toEqual([1]);
@@ -198,6 +252,7 @@ describe('RESTORE', () => {
     const state = gameReducer(initialGameState, {
       type: 'RESTORE',
       saved: stored({ currentPromptId: null, usedPromptIds: [], upcomingTurns: [], turnsByName: {}, gameEnded: false }),
+      hiddenIds: [],
     });
     expect(state.currentPrompt).not.toBeNull();
     expect(state.usedPromptIds.size).toBe(0);
@@ -207,6 +262,7 @@ describe('RESTORE', () => {
     const state = gameReducer(initialGameState, {
       type: 'RESTORE',
       saved: stored({ currentPromptId: 9_999_999, usedPromptIds: [1] }),
+      hiddenIds: [],
     });
     expect(state.currentPrompt).not.toBeNull();
     expect(state.currentPrompt?.id).not.toBe(9_999_999);
@@ -222,6 +278,7 @@ describe('RESTORE', () => {
           { promptId: 9_999_999, playerIndex: 1, playerName: 'Sam', text: 'gone', upcoming: [], countedTurn: true },
         ],
       }),
+      hiddenIds: [],
     });
     expect(state.history).toHaveLength(1);
     expect(state.history[0].prompt.id).toBe(1);

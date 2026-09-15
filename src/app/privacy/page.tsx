@@ -58,9 +58,20 @@ export default function PrivacyPage() {
         <li>No accounts, names, email addresses, or phone numbers.</li>
         <li>No cookies of any kind, and no third-party ad or analytics networks.</li>
         <li>No location data.</li>
-        <li>No record reaches us of which prompts you saw, skipped, or played — the part-finished game described above stays on your device.</li>
+        <li>No record reaches us of which prompts you saw, skipped, or played. The one thing you can choose to send is a card rating &mdash; see &ldquo;Card ratings&rdquo; below &mdash; and hiding a card is handled entirely on your device.</li>
         <li>We never sell or share personal information, because we do not hold any.</li>
       </ul>
+
+      <h2>Card ratings</h2>
+      <p>
+        If card ratings are enabled on this site, tapping the rate buttons on a
+        card sends that card&rsquo;s number and your rating &mdash; a simple up
+        or down &mdash; to our database, so we can learn which cards land and
+        improve the deck. It is anonymous: no name, no account, nothing that
+        identifies you or your device, and it is never linked to anything else.
+        Choosing to hide a card is always kept on your own device and sent
+        nowhere.
+      </p>
 
       <h2>Error reporting</h2>
       <p>

@@ -9,6 +9,12 @@ const isDev = process.env.NODE_ENV === 'development';
 // origin is simply never contacted.
 const SENTRY_INGEST = 'https://*.ingest.sentry.io https://*.ingest.us.sentry.io';
 
+// Anonymous prompt feedback posts to the Firestore REST API (see
+// `src/lib/feedback.ts`). Allowed unconditionally for the same reason as Sentry:
+// with no `NEXT_PUBLIC_FIREBASE_*` config the writer never runs, so the origin
+// is simply never contacted, and the CSP need not change when the config lands.
+const FIRESTORE_INGEST = 'https://firestore.googleapis.com';
+
 /**
  * The app loads no third-party scripts, styles, fonts, or images — everything
  * is self-hosted (fonts via next/font, icons as inline SVG) — so the policy can
@@ -27,7 +33,7 @@ const csp = [
   "style-src 'self' 'unsafe-inline'",
   "img-src 'self' data: blob:",
   "font-src 'self' data:",
-  `connect-src 'self' ${SENTRY_INGEST}`,
+  `connect-src 'self' ${SENTRY_INGEST} ${FIRESTORE_INGEST}`,
   "manifest-src 'self'",
   "frame-ancestors 'none'",
   "base-uri 'self'",

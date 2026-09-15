@@ -68,6 +68,28 @@ module.exports = async function play(browser, BASE, results) {
   await page.reload({ waitUntil: 'networkidle' });
   check('A refresh after a skip keeps the card', (await cardText(page, { expect: skipped })) === skipped);
 
+  // --- Never show this (device-local hide) ---------------------------------
+  const readHidden = () =>
+    page.evaluate(() => {
+      try { return JSON.parse(localStorage.getItem('afterhours.hidden') || '[]'); } catch { return []; }
+    });
+  const beforeHide = await savedGame(page);
+  const hiddenCardId = beforeHide.currentPromptId;
+  await page.getByRole('button', { name: 'Never show this card' }).click();
+  await settledCard(page, { not: skipped });
+  const hiddenList = await readHidden();
+  check('Hiding a card records it in the device hidden list',
+    Array.isArray(hiddenList) && hiddenList.includes(hiddenCardId), JSON.stringify(hiddenList));
+  const afterHide = await savedGame(page);
+  check('Hiding deals a new card to the same player',
+    afterHide.currentPromptId !== hiddenCardId && afterHide.currentPlayerIndex === beforeHide.currentPlayerIndex);
+
+  await page.reload({ waitUntil: 'networkidle' });
+  await page.waitForTimeout(500);
+  check('The hidden list survives a refresh', (await readHidden()).includes(hiddenCardId));
+  check('A refresh does not bring the hidden card back',
+    (await savedGame(page)).currentPromptId !== hiddenCardId);
+
   // --- Roster edits mid-game -----------------------------------------------
   await page.getByRole('button', { name: /^group$/i }).click();
   await page.waitForTimeout(400);
