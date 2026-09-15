@@ -12,9 +12,9 @@ export default function PrivacyPage() {
     <LegalShell title="Privacy Policy" lastUpdated={LEGAL.privacyLastUpdated}>
       <p>
         This policy explains what After Hours does with information when you play.
-        The short version: there are no accounts, we have no server that stores
-        anything about you, and everything the game remembers stays on your own
-        device.
+        The short version: there are no accounts, no cookies, and no server that
+        stores anything about you — everything the game remembers stays on your
+        own device.
       </p>
 
       <h2>What stays on your device</h2>
@@ -44,10 +44,19 @@ export default function PrivacyPage() {
         immediately.
       </p>
 
+      <h2>Cookies</h2>
+      <p>
+        After Hours sets no cookies at all &mdash; none for advertising, none for
+        analytics, none for anything. The few things the game remembers live in
+        your browser&rsquo;s local storage, described above; unlike a cookie,
+        local storage is never attached to a request, so nothing about it is sent
+        to us, to our hosting provider, or to anyone else.
+      </p>
+
       <h2>What we do not collect</h2>
       <ul>
         <li>No accounts, names, email addresses, or phone numbers.</li>
-        <li>No advertising or tracking cookies, and no third-party ad networks.</li>
+        <li>No cookies of any kind, and no third-party ad or analytics networks.</li>
         <li>No location data.</li>
         <li>No record reaches us of which prompts you saw, skipped, or played — the part-finished game described above stays on your device.</li>
         <li>We never sell or share personal information, because we do not hold any.</li>

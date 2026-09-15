@@ -58,9 +58,9 @@ The web app is in good shape. Phases 1 and 2 have shipped and are verified on th
 
 Ship the free product, measure how it is actually played, and use that evidence to place the paywall. This is the deliberate gate before Phase 4.
 
-- ☐ **Privacy-respecting analytics** (cookieless — Plausible ~$9/mo, or self-hosted Umami), with the **Privacy Policy updated in the same PR** — today it promises "no cookies / no server / no tracking", which analytics changes. This is the headline item and the input to the paywall decision.
-- ☐ **Prompt feedback (👍/👎).** The cheapest way to learn which cards land; it becomes the curation signal for the first paid pack.
-- ☐ **Fix the NHIE intensity signal.** "Never Have I Ever" is 61% Extreme cards but presents as spice 3 of 4. Either show spice 4 or offer a "Mild + Medium only" NHIE variant so the friendly-sounding mode isn't secretly an Extreme deck. *(The Mild half of the old deck-balance finding is done — see Phase 2.)*
+- ☐ **Privacy-respecting analytics** (cookieless — Plausible ~$9/mo, or self-hosted Umami), with the **Privacy Policy updated in the same PR**. **On hold** at the owner's direction — no vendor installed yet. In the meantime the Privacy Policy has been made precise about the *current* state: the app sets no cookies of any kind (only `localStorage`), so the "no cookies" claim is now unambiguous and accurate until analytics ships. This remains the input to the paywall decision.
+- ☐ **Prompt feedback (👍/👎).** The cheapest way to learn which cards land; it becomes the curation signal for the first paid pack. **Storage approach not yet decided** — with no analytics vendor and no backend yet, the open question is where the votes go (a candidate: the retained Firebase backend).
+- ✅ **NHIE intensity signal fixed** *(September 15 2026)*. The mode is majority-Extreme, so its spice meter now reads 4 of 4 instead of 3, matching how the deck actually plays. *(The Mild half of the old deck-balance finding shipped in Phase 2.)*
 - Then watch where groups drop off for a few weeks before committing to where the wall goes.
 
 ---

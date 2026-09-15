@@ -16,7 +16,7 @@ export const LEGAL = {
   /** Shown as "Last updated" on the Terms. Bump when the Terms change. */
   termsLastUpdated: 'September 9, 2026',
   /** Shown as "Last updated" on the Privacy Policy. Bump when it changes. */
-  privacyLastUpdated: 'September 10, 2026',
+  privacyLastUpdated: 'September 15, 2026',
 } as const;
 
 /** True while any placeholder is still unfilled, so the UI can say so plainly. */
