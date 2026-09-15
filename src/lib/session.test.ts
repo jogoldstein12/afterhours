@@ -1,14 +1,17 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   GAME_STATE_KEY,
+  HIDDEN_CARDS_KEY,
   HISTORY_LIMIT,
   LAST_SETUP_KEY,
   clearGame,
   isGameMode,
   isResumable,
   readGame,
+  readHiddenIds,
   readLastSetup,
   writeGame,
+  writeHiddenIds,
   writeLastSetup,
   type StoredGame,
 } from './session';
@@ -307,5 +310,35 @@ describe('isGameMode', () => {
   it('accepts every real mode and nothing else', () => {
     for (const mode of ['Mild', 'Medium', 'Extreme', 'NHIE']) expect(isGameMode(mode)).toBe(true);
     for (const mode of ['mild', 'Nuclear', '', null, undefined, 3]) expect(isGameMode(mode)).toBe(false);
+  });
+});
+
+describe('hidden cards', () => {
+  const putHidden = (record: unknown) => storage.put(HIDDEN_CARDS_KEY, JSON.stringify(record));
+
+  it('round-trips a list of ids', () => {
+    writeHiddenIds([3, 1, 2]);
+    expect(readHiddenIds().sort((a, b) => a - b)).toEqual([1, 2, 3]);
+  });
+
+  it('is empty when nothing has been hidden', () => {
+    expect(readHiddenIds()).toEqual([]);
+  });
+
+  it('de-duplicates and drops non-whole-number junk on read', () => {
+    putHidden([1, 1, 2, -3, 2.5, 'x', null]);
+    expect(readHiddenIds().sort((a, b) => a - b)).toEqual([1, 2]);
+  });
+
+  it('returns empty for a non-array or corrupt record', () => {
+    putHidden({ not: 'an array' });
+    expect(readHiddenIds()).toEqual([]);
+    storage.put(HIDDEN_CARDS_KEY, 'not json');
+    expect(readHiddenIds()).toEqual([]);
+  });
+
+  it('normalises what it writes, the same way it reads', () => {
+    writeHiddenIds([5, 5, 4.2, -1, 7]);
+    expect(readHiddenIds().sort((a, b) => a - b)).toEqual([5, 7]);
   });
 });

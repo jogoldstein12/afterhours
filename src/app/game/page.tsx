@@ -10,6 +10,7 @@ import {
 } from '@/lib/prompts';
 import { GAME_MODES, type GameMode } from '@/lib/modes';
 import { promptById, renderPromptText } from '@/lib/game';
+import { sendPromptFeedback, feedbackEnabled } from '@/lib/feedback';
 import { gameReducer, initialGameState } from '@/lib/game-engine';
 import { useCountdownTimer } from '@/hooks/use-countdown-timer';
 import { useWakeLock } from '@/hooks/use-wake-lock';
@@ -31,6 +32,8 @@ import {
   Trophy,
   Sparkles,
   SkipForward,
+  ThumbsUp,
+  ThumbsDown,
   type LucideIcon,
 } from 'lucide-react';
 import {
@@ -54,7 +57,9 @@ import {
   clearGame,
   isGameMode,
   readGame,
+  readHiddenIds,
   writeGame,
+  writeHiddenIds,
   writeLastSetup,
   type StoredGame,
 } from '@/lib/session';
@@ -136,6 +141,7 @@ export default function GamePage() {
     currentPrompt,
     availablePrompts,
     usedPromptIds,
+    hiddenIds,
     gameEnded,
     cardKey,
     upcomingTurns,
@@ -155,6 +161,9 @@ export default function GamePage() {
   const [isNewGameDialogOpen, setIsNewGameDialogOpen] = useState(false);
   const [isEditSheetOpen, setIsEditSheetOpen] = useState(false);
   const [newPlayerName, setNewPlayerName] = useState('');
+  // A 👍 stays lit only on the card it was given to; the effect below clears it
+  // whenever a new card is dealt (cardKey changes).
+  const [liked, setLiked] = useState(false);
   // The text a restored or undone card was showing, tagged with the card it
   // belongs to so the processing effect below can show it instead of deriving
   // the text again and re-rolling {{randomOtherPlayer}} onto somebody else.
@@ -185,11 +194,15 @@ export default function GamePage() {
     const fromQuery = normaliseRoster(rosterFromQuery(query));
     if (query.toString()) window.history.replaceState(null, '', window.location.pathname);
 
+    // The device's "never show this" list, read once and handed to the reducer;
+    // it is excluded from every deal for the life of this game.
+    const hidden = readHiddenIds();
+
     if (fromQuery.length >= MIN_PLAYERS) {
       const levelFromQuery = query.get('nsfwLevel');
       const level = isGameMode(levelFromQuery) ? levelFromQuery : 'Mild';
       writeLastSetup({ players: fromQuery, nsfwLevel: level });
-      dispatch({ type: 'START', players: fromQuery, nsfwLevel: level });
+      dispatch({ type: 'START', players: fromQuery, nsfwLevel: level, hiddenIds: hidden });
       setRosterChecked(true);
       return;
     }
@@ -209,7 +222,7 @@ export default function GamePage() {
     if (card && saved.processedPromptText) {
       restoredTextRef.current = { promptId: card.id, text: saved.processedPromptText };
     }
-    dispatch({ type: 'RESTORE', saved });
+    dispatch({ type: 'RESTORE', saved, hiddenIds: hidden });
     setRosterChecked(true);
   }, []);
 
@@ -252,6 +265,18 @@ export default function GamePage() {
     history,
     gameEnded,
   ]);
+
+  // Persist the hidden-cards list. Guarded on rosterChecked so it never fires
+  // before the mount effect has loaded the stored list into the reducer — a
+  // write before then would clobber it with the empty initial state.
+  useEffect(() => {
+    if (!rosterChecked) return;
+    writeHiddenIds([...hiddenIds]);
+  }, [rosterChecked, hiddenIds]);
+
+  // A 👍 lights only the card it was given to. Clear it whenever a new card is
+  // dealt (cardKey changes) or the mode/game resets.
+  useEffect(() => { setLiked(false); }, [cardKey]);
 
   // Reaching /game without a roster — a bookmark, a shared link with the query
   // stripped, a crawler — used to hold "Charging Neon..." forever with no way
@@ -335,6 +360,26 @@ export default function GamePage() {
     restoredTextRef.current = { promptId: last.prompt.id, text: last.text };
     dispatch({ type: 'UNDO' });
   }, [history]);
+
+  // 👍 — report the card as one that landed, and light the thumb on this card.
+  // Purely a signal: it does not change the deck or whose turn it is, so the
+  // group can still play the card. No-op on the deck when feedback is off.
+  const handleLove = useCallback(() => {
+    if (!currentPrompt) return;
+    sendPromptFeedback(currentPrompt.id, 'up');
+    setLiked(true);
+    vibrate(6);
+  }, [currentPrompt]);
+
+  // 👎 — "never show this": hide the card on this device and deal the same
+  // player another. Reports the down-vote too when feedback is enabled. Shares
+  // busyRef with the swipe so a tap mid-fly cannot fire it twice.
+  const handleHide = useCallback(() => {
+    if (busyRef.current || gameEnded || !currentPrompt) return;
+    sendPromptFeedback(currentPrompt.id, 'down');
+    vibrate(10);
+    dispatch({ type: 'HIDE' });
+  }, [gameEnded, currentPrompt]);
 
   // The card's drag-to-deal gesture. `busyRef` is shared so the dock handlers
   // above and the swipe fly cannot both fire an action in the same window.
@@ -611,6 +656,36 @@ export default function GamePage() {
                       )}
                     </div>
                   )}
+                </div>
+
+                {/* 👍 / 👎 — rate the card. 👎 also hides it on this device so
+                    it never comes up again; 👍 shows only when feedback is on. */}
+                <div
+                  className="mx-auto flex w-fit shrink-0 items-center justify-center gap-1 pb-3"
+                  onPointerDown={(e) => e.stopPropagation()}
+                >
+                  {feedbackEnabled() && (
+                    <button
+                      type="button"
+                      onClick={handleLove}
+                      aria-label="Love this card"
+                      aria-pressed={liked}
+                      className={cn(
+                        "flex h-11 w-11 items-center justify-center rounded-full transition-colors touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
+                        liked ? "text-secondary" : "text-white/55 hover:bg-white/5 hover:text-white/90",
+                      )}
+                    >
+                      <ThumbsUp className={cn("h-5 w-5", liked && "fill-current")} />
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    onClick={handleHide}
+                    aria-label="Never show this card"
+                    className="flex h-11 w-11 items-center justify-center rounded-full text-white/55 transition-colors hover:bg-white/5 hover:text-white/90 touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                  >
+                    <ThumbsDown className="h-5 w-5" />
+                  </button>
                 </div>
               </Card>
 

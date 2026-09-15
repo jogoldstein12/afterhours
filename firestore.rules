@@ -1,0 +1,49 @@
+rules_version = '2';
+
+// Firestore security for After Hours.
+//
+// The app is otherwise a static, backend-less site; the ONLY thing an
+// unauthenticated client may write is the anonymous prompt-feedback counter at
+// `promptStats/{id}` (see `src/lib/feedback.ts`), and only as a +1 increment to
+// one of two non-negative integer fields, `up` or `down`. No client reads are
+// allowed — the owner reads aggregates from the Firebase console or an
+// authenticated export, both of which bypass these rules. Everything else is
+// denied by the catch-all at the bottom.
+//
+// Deploy with: firebase deploy --only firestore:rules
+// Test the increment/create paths in the console Rules Playground before
+// enabling the client (this file ships before the feature is switched on).
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Only `up` and `down`, each a non-negative integer when present.
+    function isVoteShape(data) {
+      return data.keys().hasOnly(['up', 'down'])
+        && (!('up' in data) || (data.up is int && data.up >= 0))
+        && (!('down' in data) || (data.down is int && data.down >= 0));
+    }
+
+    match /promptStats/{promptId} {
+      allow read: if false;
+
+      // First vote for a card: the counter is created with a single field at 1.
+      allow create: if isVoteShape(request.resource.data)
+        && request.resource.data.get('up', 0) + request.resource.data.get('down', 0) == 1;
+
+      // Every later vote adds exactly one to exactly one field, never lowering
+      // the other — so a write cannot inflate or reset the totals.
+      allow update: if isVoteShape(request.resource.data)
+        && request.resource.data.get('up', 0) >= resource.data.get('up', 0)
+        && request.resource.data.get('down', 0) >= resource.data.get('down', 0)
+        && (request.resource.data.get('up', 0) + request.resource.data.get('down', 0))
+           == (resource.data.get('up', 0) + resource.data.get('down', 0)) + 1;
+
+      allow delete: if false;
+    }
+
+    // Nothing else is reachable from a client.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

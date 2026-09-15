@@ -38,7 +38,9 @@ export const GAME_MODES: {
     label: 'Never Have I Ever',
     badge: 'Never Have I Ever',
     description: 'Every intensity, phrased as Never Have I Ever — includes Extreme.',
-    spice: 3,
+    // Spice 4: the NHIE pool is majority-Extreme, so the meter must read as hot
+    // as the deck actually plays rather than sitting a notch below it.
+    spice: 4,
     wide: true,
   },
 ];

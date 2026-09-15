@@ -47,6 +47,8 @@ export type GameState = {
   currentPrompt: Prompt | null;
   availablePrompts: Prompt[];
   usedPromptIds: Set<number>;
+  /** Cards hidden on this device ("never show this"). Excluded from every deal. */
+  hiddenIds: Set<number>;
   gameEnded: boolean;
   /** Bumped whenever a new card is dealt, to key the card-enter animation. */
   cardKey: number;
@@ -57,15 +59,19 @@ export type GameState = {
 };
 
 export type GameAction =
-  // Fresh game from a roster (setup, or a legacy /game?player= link).
-  | { type: 'START'; players: string[]; nsfwLevel: GameMode }
-  // Rehydrate a saved night as it was.
-  | { type: 'RESTORE'; saved: StoredGame }
+  // Fresh game from a roster (setup, or a legacy /game?player= link). `hiddenIds`
+  // is the device's "never show this" list, read from storage by the caller.
+  | { type: 'START'; players: string[]; nsfwLevel: GameMode; hiddenIds: number[] }
+  // Rehydrate a saved night as it was; `hiddenIds` as for START.
+  | { type: 'RESTORE'; saved: StoredGame; hiddenIds: number[] }
   // Pass the phone: count the turn, deal the next card. `text` is the card as
   // shown, stored for Undo.
   | { type: 'NEXT'; text: string }
   // Decline the card: deal a fresh one to the same player, no tally, no rotation.
   | { type: 'SKIP'; text: string }
+  // "Never show this": hide the current card on this device and deal another to
+  // the same player. Like a skip, but the card leaves the deck for good.
+  | { type: 'HIDE' }
   | { type: 'UNDO' }
   | { type: 'RESTART' }
   | { type: 'SET_MODE'; nsfwLevel: GameMode }
@@ -81,6 +87,7 @@ export const initialGameState: GameState = {
   currentPrompt: null,
   availablePrompts: [],
   usedPromptIds: new Set(),
+  hiddenIds: new Set(),
   gameEnded: false,
   cardKey: 0,
   upcomingTurns: [],
@@ -88,9 +95,13 @@ export const initialGameState: GameState = {
   turnsByName: {},
 };
 
+/** The mode's deck, minus the cards this device has hidden. */
+const playableDeck = (mode: GameMode, hiddenIds: Set<number>): Prompt[] =>
+  filterDeck(mode).filter((prompt) => !hiddenIds.has(prompt.id));
+
 /** Deal from a fresh (fully unused) deck for `mode`; the shape a new game takes. */
 const dealFreshDeck = (state: GameState, mode: GameMode): GameState => {
-  const availablePrompts = filterDeck(mode);
+  const availablePrompts = playableDeck(mode, state.hiddenIds);
   const currentPrompt = pickNextPrompt(availablePrompts, new Set());
   return {
     ...state,
@@ -108,23 +119,30 @@ const dealFreshDeck = (state: GameState, mode: GameMode): GameState => {
 
 export function gameReducer(state: GameState, action: GameAction): GameState {
   switch (action.type) {
-    case 'START':
+    case 'START': {
+      const withHidden = { ...state, hiddenIds: new Set(action.hiddenIds) };
       return {
-        ...dealFreshDeck(state, action.nsfwLevel),
+        ...dealFreshDeck(withHidden, action.nsfwLevel),
         players: action.players,
         currentPlayerIndex: 0,
       };
+    }
 
     case 'RESTORE': {
       const { saved } = action;
+      const hiddenIds = new Set(action.hiddenIds);
       const base = {
         ...state,
+        hiddenIds,
         players: saved.players,
         nsfwLevel: saved.nsfwLevel,
         currentPlayerIndex: saved.currentPlayerIndex,
       };
 
-      const card = saved.currentPromptId === null ? null : promptById.get(saved.currentPromptId) ?? null;
+      // Resolve the saved card, unless it has since been hidden on this device —
+      // then treat it as gone and deal a replacement below.
+      const resolved = saved.currentPromptId === null ? null : promptById.get(saved.currentPromptId) ?? null;
+      const card = resolved && hiddenIds.has(resolved.id) ? null : resolved;
 
       // A record written by Start carries a roster and nothing else — treat it
       // as a fresh game and deal the first card. Anything with progress is
@@ -133,7 +151,7 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
         return { ...dealFreshDeck(base, saved.nsfwLevel), players: saved.players, currentPlayerIndex: saved.currentPlayerIndex };
       }
 
-      const availablePrompts = filterDeck(saved.nsfwLevel);
+      const availablePrompts = playableDeck(saved.nsfwLevel, hiddenIds);
       const usedPromptIds = new Set(saved.usedPromptIds);
       // A card whose id has since left the deck is dropped from the undo stack.
       const history = saved.history.flatMap((turn) => {
@@ -229,6 +247,26 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
         ...state,
         history,
         usedPromptIds,
+        currentPrompt,
+        gameEnded: currentPrompt === null,
+        cardKey: currentPrompt ? state.cardKey + 1 : state.cardKey,
+      };
+    }
+
+    case 'HIDE': {
+      if (state.gameEnded || !state.currentPrompt) return state;
+      const hiddenId = state.currentPrompt.id;
+      const hiddenIds = new Set(state.hiddenIds);
+      hiddenIds.add(hiddenId);
+      // Drop the card from the deck entirely, then deal the same player another
+      // one. No tally and no rotation (like a skip); no history, because "never
+      // show this" is deliberate and the card is gone rather than undoable.
+      const availablePrompts = state.availablePrompts.filter((prompt) => prompt.id !== hiddenId);
+      const currentPrompt = pickNextPrompt(availablePrompts, state.usedPromptIds);
+      return {
+        ...state,
+        hiddenIds,
+        availablePrompts,
         currentPrompt,
         gameEnded: currentPrompt === null,
         cardKey: currentPrompt ? state.cardKey + 1 : state.cardKey,
