@@ -37,7 +37,7 @@ against the running site on September 10 (§0.6).
 | Infrastructure | D+ | B− | `maxInstances: 10`, cpu/memory/concurrency set; Sentry has a real DSN, live and reporting, with the build plugin emitting debug ids. Still open: the Sentry project's own settings, no analytics, no uptime check, no staging, and the domain still points at a parked page. |
 | Architecture (for monetisation) | D | D | Unchanged by design — the whole of it is Phase 4. |
 | Code correctness | B− | A− | Both bugs fixed; 78 unit cases gate every push and 74 browser checks cover a full night of play. |
-| Design / UX | B+ | A− | Error states, share metadata and contrast all landed. The Mild deck is still thin and the NHIE intensity signal still misleads (§1.6). |
+| Design / UX | B+ | A− | Error states, share metadata and contrast all landed. Mild is no longer thin (grown to 147, Sept 15 2026); the NHIE intensity signal still misleads (§1.6). |
 | Repo hygiene | C+ | A− | Licence, metadata, `CLAUDE.md`, one engine, a live test suite. Whether the repo stays public is a Phase 4 decision. |
 
 ---
@@ -410,6 +410,8 @@ never dealt a card, leaving the group on a blank one.
 
 Two problems. First, a new group that picks the default reaches "Last Call" more than five times faster than one that picks Extreme — the mode most likely to be a first impression is the one most likely to run out. Second, "Never Have I Ever" presents as spice 3 of 4 but is majority-Extreme content; the description does say "includes Extreme", but a group choosing the friendly-sounding named mode is not choosing an Extreme deck.
 
+**Partly resolved, September 15 2026 — PR #23.** The first problem is fixed: Mild grew 89 → 147 cards (~16% of the now-932-card deck), weighted to light dares, timed cards and the bottom `— or take a drink` rung it previously had none of, so the default on-ramp no longer runs dry five times faster than Extreme. Grown by adding, not by cutting the other tiers. The second problem is **still open**: NHIE is now 61% Extreme (was 64%) and still presents as spice 3 of 4 — it neither shows spice 4 nor offers a "Mild + Medium only" variant. That signal fix is the remaining half of this finding.
+
 ---
 
 ## P2 — Architecture and infrastructure
@@ -426,6 +428,8 @@ Two consequences:
 2. **Monetisation.** This is the paywall problem, already present. Any client-side gate is `view-source` away from being bypassed. Whatever the paid tier turns out to be, its content cannot live in the static bundle.
 
 **Fix now (cheap, independently worthwhile):** split `GAME_MODES` and the type definitions into their own module so the homepage stops loading the deck, and load the deck per-mode via dynamic import so a Mild game does not download 474 Extreme prompts.
+
+**Resolved (the homepage leak), September 15 2026 — PR #23.** `GAME_MODES`, `NHIE_PATTERN` and the mode types moved to `src/lib/modes.ts`, which carries no reference to `PROMPTS`; `home-screen.tsx` and `session.ts` import from there, so `/` no longer loads the deck. `/` first load dropped to ~134 kB. The module graph enforces the split, and a `check:bundle` CI step reads the build manifest and fails the build if the deck reappears in a chunk `/page` loads — a re-leak is now a red build, not a silent regression. The per-mode dynamic import in the original fix is **not** done: `/game` still loads the whole deck, so a Mild game still downloads the Extreme prompts. That is a play-route optimisation, and the same seam the paywall will use to move paid tiers server-side (Phase 4, §2.2); consequence 2 above stands until then.
 
 ### 2.2 🟠 Nothing in the current architecture can support a paywall
 
@@ -763,7 +767,7 @@ using what the measurement shows.
 14. ⚠️ Sentry DSN set and source map upload wired (§2.4) — September 10 2026, live and reporting since the deploy. Owner tasks remaining: the Sentry project's own settings, confirming the artifact bundle arrived, and external uptime monitoring
 15. Add privacy-respecting analytics (§2.4) — the input to Phase 4
 16. ✅ Persist and resume mid-game state (§1.3) — September 10 2026, pulled forward: it is the same record as 11
-17. Rebalance Mild and clarify the NHIE intensity signal (§1.6)
+17. Rebalance Mild ✅ *(89 → 147, September 15 2026, PR #23)* and clarify the NHIE intensity signal *(still open)* (§1.6)
 18. ✅ Decided and removed (§2.5) — one engine, September 10 2026
 
 ---
@@ -771,7 +775,7 @@ using what the measurement shows.
 **Phase 4 — The paywall, last and on its own**
 
 19. ✅ Payment-processor eligibility confirmed (§2.2) — Stripe, September 10 2026
-20. Split `GAME_MODES` out of `prompts.ts` and load decks dynamically (§2.1) — the deck must be separable before any of it can be gated
+20. Split `GAME_MODES` out of `prompts.ts` ✅ *(September 15 2026, PR #23)* and load decks dynamically *(dynamic per-mode load still open)* (§2.1) — the deck must be separable before any of it can be gated; the split is done, the server-gated dynamic load is the paywall's own work
 21. Design the backend: identity, entitlements, server-gated content (§2.2)
 22. Move age gating server-side (§0.2), which the backend in 21 makes possible for the first time
 

@@ -28,6 +28,12 @@ The owner reviewed the roadmap and settled the open questions. Recorded here so 
 - **Monetization (confirmed):** a one-time unlock **plus** a cheaper subscription option. **Mild** stays free; **Medium** is in the free trial, then locked behind payment; **Extreme** and **NHIE** stay paid. Stripe is **confirmed** by the owner (Part 1.2 resolved on their word; keep the written-confirmation caveat in mind against Stripe's restricted-business terms).
 - **Native (clarified):** "native" here means a Capacitor wrap of the existing React app, not a Swift rewrite (Part 6.3). Solo build with occasional help; no fixed launch date, roughly a month out for a stronger free product, paid launch later.
 - **Phase 1 shipped on `claude/zen-edison-pzvrtg`:** both engine bugs above are fixed with tests (swipe/tap double-count guarded; Undo now attributes by player *name*, so a mid-game removal no longer mis-credits the turn — new session unit tests and an e2e regression guard). The typo on card 512 is fixed. The five no-opt-out contact cards and the other flagged prompts are **deliberately left for a later content pass** at the owner's direction. `CLAUDE.md` now states Vercel is production and lists the Sentry/site environment variables to set in Vercel; Dependabot no longer raises major-version PRs on its own.
+- **Phase 2 shipped on `claude/zen-edison-pzvrtg` (merged September 15, 2026 as PR #23):** the Part 8 "Phase B" work, less the items called out as deferred below.
+  - *3.4 refactor (done).* The game loop is now a pure reducer in `src/lib/game-engine.ts`, with `pickNextPrompt` / `advanceTurnQueue` / `remapAfterRemoval` extracted into `src/lib/game.ts` and `useSwipeCard` / `useCountdownTimer` / `useWakeLock` hooks. The screen only dispatches, which makes the 3.1/3.2 double-apply *structurally* impossible on top of the Phase 1 guards, and the whole loop is unit-tested without a browser.
+  - *Deck off the home bundle (1.4 / §2.1, done).* Mode metadata (`GAME_MODES`, `NHIE_PATTERN`, the types) moved to `src/lib/modes.ts`, which carries no reference to `PROMPTS`; the module graph enforces the split and a `check:bundle` CI step fails the build if the deck reappears on `/`. Home first-load dropped to ~134 kB. **Per-mode dynamic import is not done** — `/game` still loads the whole deck — but the homepage leak this finding is about is closed.
+  - *Schema (5.3, done).* All six optional `Prompt` fields shipped; `pack` is optional and read through a `packOf()` helper that defaults to the free `core` deck, so no existing card was edited.
+  - *Mild growth (§5.2, done — pulled forward from Phase D item 15).* Mild grew 89 → 147 cards (~16%), weighted to light dares, timed cards and the bottom `— or take a drink` rung it previously lacked, hitting the 15/35/50 target by adding, not cutting. Deck total 874 → 932.
+  - **Deferred, not in this work:** per-mode dynamic import; the contact-opt-out unit test; the scope pass on the 85 `Drink if` cards; ladder normalisation of the 44 `finish your drink` cards (§5.2); the 5.1 content rewrites; and the Part 7 hand-off / share / block-list / settings items (Phase B item 9). The NHIE spice signal (§1.5) is unchanged and still open.
 
 **Scorecard** — what the spec claims today versus what this audit found.
 
@@ -342,11 +348,11 @@ Ordered so that each phase leaves a shippable product. Effort is for one enginee
 4. 🟠 Close or defer the five major-version Dependabot PRs deliberately; extend the `ignore` block to majors generally, or schedule the Next 16 upgrade as its own PR with the browser suite run.
 5. Decide the repository's visibility.
 
-**Phase B — Make the engine portable and the deck separable (2–3 weeks)**
-6. The 3.4 refactor: reducer, gesture hook, timer hook, pure helpers into `src/lib/game.ts`, unit tests for the loop. Browser suite run.
-7. Split `GAME_MODES` from the deck; per-mode dynamic import; bundle budget in CI (1.4).
-8. Deck schema from 5.3, the contact-opt-out test, scope pass on the 85 cards, ladder normalisation of the 44.
-9. Hand-off screen, share card, per-card block list, settings screen (Part 7, the S items).
+**Phase B — Make the engine portable and the deck separable (2–3 weeks)** — *shipped September 15 2026 as PR #23, less the deferred items noted.*
+6. ✅ *Done.* The 3.4 refactor: reducer, gesture hook, timer hook, pure helpers into `src/lib/game.ts`, unit tests for the loop. Browser suite run.
+7. ⚠️ *Split + CI budget done; per-mode dynamic import deferred.* `GAME_MODES` split into `src/lib/modes.ts` and a `check:bundle` step keeps the deck off `/` (1.4). The deck still loads whole on `/game`.
+8. ⚠️ *Schema done; the rest deferred.* Deck schema from 5.3 ✅. The contact-opt-out test, the scope pass on the 85 cards, and ladder normalisation of the 44 remain.
+9. Hand-off screen, share card, per-card block list, settings screen (Part 7, the S items). *Not started.*
 
 **Phase C — Instrument and learn (1 week, then wait)**
 10. Cookieless analytics (Plausible from $9/mo, or self-hosted Umami) with the Privacy Policy updated in the same PR. Prompt feedback. Watch where people stop for a few weeks before placing the wall.
@@ -356,7 +362,7 @@ Ordered so that each phase leaves a shippable product. Effort is for one enginee
 12. Supabase Auth + Postgres, entitlements table, Stripe (or fallback) webhooks, RevenueCat ledger, account deletion and export.
 13. Deck route handler with entitlement check; free tier stays a static import; server-side age attestation.
 14. CSP additions with a browser-suite assertion; dynamic routes excluded from the CDN cache; `minInstances` for the webhook route.
-15. Mild rebalance and the first paid pack, so there is something to buy.
+15. Mild rebalance ✅ *(done early in Phase B — 89 → 147 cards, September 15 2026, PR #23)* and the first paid pack, so there is something to buy *(remains)*.
 
 **Phase E — App stores (4–6 weeks after D)**
 16. Capacitor shell with haptics, wake lock, share, RevenueCat StoreKit/Play Billing, Declared Age Range and Play Age Signals.
