@@ -6,6 +6,13 @@
 
 > **Status:** ✅ done · ◐ partly done / deferred · ☐ open · 👤 owner task (not code)
 
+> **Keeping this current:** this file is the single source of truth for launch
+> progress. Update it in the same change that completes a task — flip the
+> status marker, and add a dated parenthetical noting what shipped and any
+> deviation from the plan. It may be pushed **directly to `main`** without a PR
+> (docs-only, no effect on the build). Record deviations in the
+> **Deviations & decisions log** at the foot of the file so the *why* survives.
+
 ---
 
 ## Where things stand (verified September 15, 2026)
@@ -59,7 +66,10 @@ The web app is in good shape. Phases 1 and 2 have shipped and are verified on th
 Ship the free product, measure how it is actually played, and use that evidence to place the paywall. This is the deliberate gate before Phase 4.
 
 - ☐ **Privacy-respecting analytics** (cookieless — Plausible ~$9/mo, or self-hosted Umami), with the **Privacy Policy updated in the same PR**. **On hold** at the owner's direction — no vendor installed yet. In the meantime the Privacy Policy has been made precise about the *current* state: the app sets no cookies of any kind (only `localStorage`), so the "no cookies" claim is now unambiguous and accurate until analytics ships. This remains the input to the paywall decision.
-- ◐ **Prompt feedback (👍/👎)** *(built September 15 2026; owner to enable)*. Each card carries a 👍/👎. **Hiding (👎) is device-local and always on** — the card never comes up again on that device. **Rating is the anonymous curation signal**, opt-in exactly like Sentry: `src/lib/feedback.ts` increments a per-card counter in Firestore over REST (no SDK bundled), and runs only when `NEXT_PUBLIC_FIREBASE_PROJECT_ID` + `NEXT_PUBLIC_FIREBASE_API_KEY` are set. To turn it on the owner sets those in Vercel and deploys `firestore.rules` (`firebase deploy --only firestore:rules`); the Privacy Policy already discloses it conditionally. Read the counters from the Firebase console or export and join to `prompts.csv` by id; a card crossing a threshold (e.g. ≥20 votes, >40% 👎) is a candidate for the next content pass.
+- ◐ **Prompt feedback (👍/👎)** *(built September 15 2026; rules deployed; one owner step left to collect ratings)*. Each card carries a 👍/👎. **Hiding (👎) is device-local and always on** — the card never comes up again on that device. **Rating is the anonymous curation signal**, opt-in exactly like Sentry: `src/lib/feedback.ts` increments a per-card counter in Firestore over REST (no SDK bundled), and runs only when `NEXT_PUBLIC_FIREBASE_PROJECT_ID` + `NEXT_PUBLIC_FIREBASE_API_KEY` are set. The Privacy Policy already discloses it conditionally under "Card ratings".
+  - ✅ `firestore.rules` **deployed** to project `glowup-after-hours` (Sept 15 2026) — allows only a +1 increment to `up`/`down` on `promptStats`, denies client reads, denies everything else.
+  - ✅ **Read-back tooling shipped** — `npm run export:feedback` (`tools/export-feedback-csv.js`) reads `promptStats` with the Firebase Admin SDK (rules deny client reads, so it needs `gcloud auth application-default login` or `GOOGLE_APPLICATION_CREDENTIALS`), joins each counter to the card text, and writes a CSV sorted most-disliked first. `firebase-admin` is loaded on demand, not a dependency. A card crossing a threshold (e.g. ≥20 votes, >40% 👎) is a candidate for the next content pass.
+  - ☐ 👤 **To start collecting ratings:** set `NEXT_PUBLIC_FIREBASE_PROJECT_ID=glowup-after-hours` and `NEXT_PUBLIC_FIREBASE_API_KEY` in the Vercel project and redeploy, and confirm a Firestore database exists (`us-central1`). Until then 👎 hide works and 👍 rating stays dormant (the 👍 is hidden and no request is made).
 - ✅ **NHIE intensity signal fixed** *(September 15 2026)*. The mode is majority-Extreme, so its spice meter now reads 4 of 4 instead of 3, matching how the deck actually plays. *(The Mild half of the old deck-balance finding shipped in Phase 2.)*
 - Then watch where groups drop off for a few weeks before committing to where the wall goes.
 
@@ -114,3 +124,31 @@ The decision the rest of the roadmap hangs on. **Monetization shape (owner-confi
 - `src/lib` is exactly the shape a native port needs: pure functions, no DOM, well tested.
 - Mobile craft is real: safe areas, `100dvh`, 44 px targets, wake lock, haptics, reduced motion, and a contrast gate enforced in CI.
 - Apple already lists this genre, so the store path is a wrapping project on code that already behaves like an app — not a rewrite.
+
+---
+
+## Deviations & decisions log
+
+Dated record of where execution diverged from the plan as written, and why.
+Append here rather than rewriting phase text, so the reasoning survives.
+
+- **2026-09-15 — Analytics vendor held; Privacy Policy tightened instead.** Phase 3
+  opens with "install cookieless analytics." At the owner's direction no vendor
+  (Plausible/Umami) is installed yet. Rather than ship a policy that anticipates
+  tracking, the Privacy Policy was made precise about the *current* state — the
+  app sets **no cookies**, only `localStorage` — so the disclosure is accurate
+  today and the analytics line stays open.
+- **2026-09-15 — Prompt feedback became two features, not one.** The 👍/👎 splits
+  into device-local **hiding** (always on, sends nothing) and an opt-in
+  **rating** signal (Firestore counter, off until env vars are set). Rating
+  crosses the same privacy line as analytics, so it was gated exactly like
+  Sentry and disclosed conditionally, keeping the "ships inert" property.
+  Implemented over the Firestore **REST API with no SDK bundled**, to protect the
+  ~134 kB home-page budget and the deck-split guarantee.
+- **2026-09-15 — Rating read-back is an on-demand owner tool.** `firebase-admin`
+  is deliberately **not** an app dependency; `npm run export:feedback` installs
+  it on demand (same pattern as Playwright for the e2e suite), so an occasional
+  heavy owner tool never weighs on the app or CI.
+- **2026-09-15 — This audit is pushed straight to `main`.** Docs-only updates to
+  this file skip the PR flow (no build impact). Code changes still go through the
+  designated feature branch and a PR.
