@@ -53,3 +53,6 @@ firestore-debug.log
 /public/workbox-*.js.map
 # Sentry CLI credentials, if the CLI is ever run locally.
 .sentryclirc
+
+# Local export of the prompt-feedback counters (npm run export:feedback).
+/prompt-feedback.csv

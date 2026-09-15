@@ -106,8 +106,13 @@ made. The CSP already allows `https://firestore.googleapis.com` (see
 To turn it on: set both env vars in Vercel, and deploy the rules with
 `firebase deploy --only firestore:rules` (`firestore.rules` allows only a +1
 increment to `up`/`down` on `promptStats`, denies everything else, and denies
-client reads). Read the counters back from the Firebase console, or export them
-and join to `docs/prompts.csv` by id. The write carries only the card number and
+client reads). Read the counters back from the Firebase console, or run
+`npm run export:feedback` (`tools/export-feedback-csv.js`) — it reads
+`promptStats` with the Firebase Admin SDK (rules deny client reads, so this
+needs an admin credential: `gcloud auth application-default login` or
+`GOOGLE_APPLICATION_CREDENTIALS`), joins each counter to the card text, and
+writes a CSV sorted most-disliked first. `firebase-admin` is installed on
+demand, not a dependency. The write carries only the card number and
 the direction — no name, account, or device id — so the Privacy Policy discloses
 it conditionally under "Card ratings".
 
